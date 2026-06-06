@@ -170,10 +170,11 @@
 
   .el-menu {
     box-sizing: border-box;
-    min-height: calc(100vh - 60px);
-	  overflow: visible;
+    // 防止菜单内的滚动影响整个页面滚动
+    overscroll-behavior: contain;
     border-right: 0;
     scrollbar-width: none;
+    -ms-scroll-chaining: contain;
 
     &::-webkit-scrollbar {
       width: 0 !important;
@@ -195,7 +196,7 @@
     }
 
     .el-menu {
-      min-height: calc(100dvh - 50px);
+      height: calc(100vh - 60px);
     }
 
     .el-menu--collapse {
