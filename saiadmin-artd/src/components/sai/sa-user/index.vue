@@ -242,7 +242,7 @@
       if (props.multiple) {
         tableRef.value.clearSelection()
       } else {
-        tableRef.value.setCurrentRow(null)
+        tableRef.value.setCurrentRow(undefined)
       }
     }
   }

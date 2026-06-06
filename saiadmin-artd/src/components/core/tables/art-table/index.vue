@@ -101,7 +101,7 @@
         </ElTableColumn>
       </template>
 
-      <template v-if="$slots.default" #default><slot /></template>
+      <template v-if="$slots.default"><slot /></template>
 
       <template #empty>
         <div v-if="loading"></div>
@@ -129,8 +129,8 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, nextTick, watchEffect } from 'vue'
-  import type { ElTable, TableProps } from 'element-plus'
+  import { ref, computed, nextTick, watchEffect, type ComponentPublicInstance } from 'vue'
+  import type { ElTable, TableColumnCtx, TableProps } from 'element-plus'
   import { QuestionFilled } from '@element-plus/icons-vue'
   import { storeToRefs } from 'pinia'
   import { ColumnOption } from '@/types'
@@ -142,7 +142,12 @@
   defineOptions({ name: 'ArtTable' })
 
   const { width } = useWindowSize()
-  const elTableRef = ref<InstanceType<typeof ElTable> | null>(null)
+
+  interface ArtTableRefInstance extends ComponentPublicInstance {
+    setScrollTop: (top: number) => void
+  }
+
+  const elTableRef = ref<ArtTableRefInstance | null>(null)
   const paginationRef = ref<HTMLElement>()
   const tableHeaderRef = ref<HTMLElement>()
   const tableStore = useTableStore()
@@ -331,9 +336,9 @@
 
   // 表格排序变化
   const handleSortChange = (payload: {
-    column?: any
-    prop?: string
-    order?: 'ascending' | 'descending' | null
+    column: TableColumnCtx<Record<string, any>>
+    prop: string | null
+    order: 'ascending' | 'descending' | null
   }) => {
     emit('sort-change', payload)
   }
@@ -360,7 +365,7 @@
     (e: 'pagination:current-change', val: number): void
     (
       e: 'sort-change',
-      payload: { column?: any; prop?: string; order?: 'ascending' | 'descending' | null }
+      payload: { column: TableColumnCtx<Record<string, any>>; prop: string | null; order: 'ascending' | 'descending' | null }
     ): void
   }>()
 

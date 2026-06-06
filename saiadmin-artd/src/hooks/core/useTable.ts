@@ -21,6 +21,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, nextTick, readonly } f
 import { useWindowSize } from '@vueuse/core'
 import { useTableColumns } from './useTableColumns'
 import type { ColumnOption } from '@/types/component'
+import type { TableColumnCtx } from 'element-plus'
 import {
   TableCache,
   CacheInvalidationStrategy,
@@ -535,9 +536,9 @@ function useTableImpl<TApiFn extends (params: any) => Promise<any>>(
 
   // 处理表格排序变化：更新查询参数中的排序字段与排序类型，并请求后端数据
   const handleSortChange = async (payload: {
-    column?: unknown
-    prop?: string
-    order?: 'ascending' | 'descending' | null
+    column: TableColumnCtx<Record<string, any>>
+    prop: string | null
+    order: 'ascending' | 'descending' | null
   }): Promise<void> => {
     const paramsRecord = searchParams as Record<string, unknown>
 
