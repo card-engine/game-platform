@@ -64,30 +64,32 @@
       v-show="menuList.length > 0"
       class="menu-left"
       :class="`menu-left-${getMenuTheme.theme} menu-left-${!menuOpen ? 'close' : 'open'}`"
-      :style="{ background: getMenuTheme.background }"
+      :style="{
+        background: getMenuTheme.background,
+        width: isDualMenuCollapsed ? MENU_CLOSE_WIDTH : undefined
+      }"
     >
-      <ElScrollbar :style="scrollbarStyle">
-        <!-- Logo、系统名称 -->
-        <div
-          class="header"
-          @click="navigateToHome"
+      <!-- Logo、系统名称 -->
+      <div
+        class="header"
+        @click="navigateToHome"
+        :style="{
+          background: getMenuTheme.background
+        }"
+      >
+        <ArtLogo v-if="!isDualMenu" class="logo" />
+
+        <p
+          :class="{ 'is-dual-menu-name': isDualMenu }"
           :style="{
-            background: getMenuTheme.background
+            color: getMenuTheme.systemNameColor,
+            opacity: !menuOpen ? 0 : 1
           }"
         >
-          <ArtLogo v-if="!isDualMenu" class="logo" />
-
-          <p
-            :class="{ 'is-dual-menu-name': isDualMenu }"
-            :style="{
-              color: getMenuTheme.systemNameColor,
-              opacity: !menuOpen ? 0 : 1
-            }"
-          >
-            {{ AppConfig.systemInfo.name }}
-          </p>
-        </div>
-
+          {{ AppConfig.systemInfo.name }}
+        </p>
+      </div>
+      <ElScrollbar :style="scrollbarStyle">
         <ElMenu
           :class="'el-menu-' + getMenuTheme.theme"
           :collapse="!menuOpen"
@@ -171,6 +173,7 @@
     () => menuType.value === MenuTypeEnum.LEFT || menuType.value === MenuTypeEnum.TOP_LEFT
   )
   const isDualMenu = computed(() => menuType.value === MenuTypeEnum.DUAL_MENU)
+  const isDualMenuCollapsed = computed(() => isDualMenu.value && !menuOpen.value)
 
   // 移动端屏幕判断（使用 computed 避免重复计算）
   const isMobileScreen = computed(() => width.value < MOBILE_BREAKPOINT)
@@ -211,10 +214,21 @@
 
   // 双列菜单收起时的滚动条样式
   const scrollbarStyle = computed(() => {
-    const isCollapsed = isDualMenu.value && !menuOpen.value
+    if (isDualMenuCollapsed.value) {
+      return {
+        position: 'absolute',
+        top: '60px',
+        right: 0,
+        left: 0,
+        height: 'calc(100% - 10px)',
+        transform: 'translateY(-50px)',
+        transition: 'transform 0.3s ease'
+      }
+    }
+
     return {
-      transform: isCollapsed ? 'translateY(-50px)' : 'translateY(0)',
-      height: isCollapsed ? 'calc(100% + 50px)' : '100%',
+      transform: 'translateY(0)',
+      height: 'calc(100% - 60px)',
       transition: 'transform 0.3s ease'
     }
   })
