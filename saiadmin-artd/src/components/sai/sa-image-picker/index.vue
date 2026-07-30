@@ -103,16 +103,25 @@
     height: '120px'
   })
 
-  // 计算容器样式
+  // 计算容器样式（多选模式下不限制宽高，避免缩略图被挤到换行）
   const containerStyle = computed(() => {
+    if (props.multiple) {
+      return { width: '100%', height: 'auto' }
+    }
     return {
       width: typeof props.width === 'number' ? `${props.width}px` : props.width,
       height: typeof props.height === 'number' ? `${props.height}px` : props.height
     }
   })
 
-  // 计算触发器样式
+  // 计算触发器样式（多选空状态时容器不再限制尺寸，需自行撑开）
   const triggerStyle = computed(() => {
+    if (props.multiple) {
+      return {
+        width: typeof props.width === 'number' ? `${props.width}px` : props.width,
+        height: typeof props.height === 'number' ? `${props.height}px` : props.height
+      }
+    }
     return {
       width: '100%',
       height: '100%'
@@ -202,8 +211,11 @@
 
     .image-list-display {
       display: flex;
-      flex-wrap: wrap;
+      flex-flow: row wrap;
+      align-items: flex-start;
+      justify-content: flex-start;
       gap: 10px;
+      width: 100%;
     }
 
     .picker-trigger {
@@ -220,6 +232,7 @@
       }
 
       &.mini {
+        flex: 0 0 auto;
         width: 60px;
         height: 60px;
       }
