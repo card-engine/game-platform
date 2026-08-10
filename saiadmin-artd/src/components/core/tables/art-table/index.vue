@@ -55,7 +55,7 @@
                 :src="col.prop ? row[col.prop] : ''"
                 :preview-src-list="col.prop ? [row[col.prop]] : []"
                 :preview-teleported="true"
-                class="size-9.5 rounded-md"
+                class="size-9.5 shrink-0 rounded-md"
               />
               <div class="ml-2">
                 <p>{{ col.saiFirst ? row[col.saiFirst] : '' }}</p>
