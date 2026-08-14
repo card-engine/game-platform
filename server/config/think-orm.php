@@ -21,7 +21,7 @@ return [
                 // 连接超时3秒
                 \PDO::ATTR_TIMEOUT => 3,
             ],
-            // 数据库编码默认采用utf8mb4
+            // 数据库编码默认采用utf8
             'charset' => env('DB_CHARSET', 'utf8mb4'),
             // 数据库表前缀
             'prefix' => env('DB_PREFIX', ''),

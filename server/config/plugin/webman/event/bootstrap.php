@@ -13,6 +13,5 @@
  */
 
 return [
-    support\bootstrap\Session::class,
-    Webman\ThinkOrm\ThinkOrm::class,
+    Webman\Event\BootStrap::class,
 ];

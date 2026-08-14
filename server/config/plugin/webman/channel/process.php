@@ -12,7 +12,16 @@
  * @license   http://www.opensource.org/licenses/mit-license.php MIT License
  */
 
+
+use Webman\Channel\Server;
+use Workerman\Protocols\Frame;
+
 return [
-    support\bootstrap\Session::class,
-    Webman\ThinkOrm\ThinkOrm::class,
+    'server' => [
+        'listen'  => 'frame://0.0.0.0:2206',
+        'protocol' => Frame::class,
+        'handler' => Server::class,
+        'reloadable' => false,
+        'count' => 1, // 必须是1
+    ]
 ];
