@@ -26,7 +26,7 @@ return [
         'user' => '',
         'group' => '',
         'reusePort' => false,
-        'eventLoop' => '',
+        'eventLoop' => Workerman\Events\Swoole::class,
         'context' => [],
         'constructor' => [
             'requestClass' => Request::class,
