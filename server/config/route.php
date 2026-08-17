@@ -76,3 +76,4 @@ Route::group('/open_api', function () {
 })->middleware([app\middleware\MerchantAuth::class]);
 
 Route::post('/provider/{platform:wxgame|acewin|tada|goldengatex}/{action:[A-Za-z-]+}', [app\controller\provider\ProviderController::class, 'callback']);
+Route::post('/self-wallet/{action:balance|bet|win|cancel}', [app\controller\openapi\SelfWalletController::class, 'callback']);

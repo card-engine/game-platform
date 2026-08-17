@@ -25,10 +25,13 @@ $property = new ReflectionProperty(Config::class, 'config');
 $cache = new ReflectionProperty(Config::class, 'flatCache');
 $originalConfig = $property->getValue();
 $config = $originalConfig;
+$user = User::find(1);
+checkSelf($user && (int) $user->merchant_id === 0 && (int) $user->status === 1, '系统试玩玩家未初始化');
+$originalUser = $user->only(['last_launch_time', 'last_ip']);
 $config['game_platforms']['self_merchant'] = [
     'callback_url' => "http://127.0.0.1:{$wallet['port']}/app", 'secret' => $wallet['secret'],
-    'currencies' => ['USD'], 'user_id' => "demo_{$suffix}", 'language' => 'en',
-    'timezone' => 'UTC', 'timeout_ms' => 1000, 'back_url' => '',
+    'currencies' => ['USD'], 'user_id' => $user->merchant_user_id, 'language' => 'en',
+    'timezone' => 'UTC', 'timeout_ms' => 1000, 'balance' => '1000000', 'back_url' => '',
 ];
 $config['game_platforms']['platforms']['wxgame']['accounts']['sc'] = [
     'url' => "http://127.0.0.1:{$wallet['port']}", 'app_id' => 'test', 'app_key' => 'test', 'app_secret' => 'test',
@@ -49,7 +52,6 @@ try {
     checkSelf((int) $merchant->id === 0 && !$merchant->exists && !Merchant::whereKey(0)->exists(), '虚拟商户被持久化或参数错误');
     $trial = (new IndexLogic())->trial((int) $game->id, 'USD', '127.0.0.1');
     checkSelf($trial['game_url'] === 'https://example.test/demo', '未归并游戏试玩失败');
-    $user = User::where(['merchant_id' => 0, 'merchant_user_id' => "demo_{$suffix}"])->firstOrFail();
     $playerId = 'mg_' . id2big((int) $user->id) . '_usd';
     checkSelf((new TradeService())->balance($playerId)['status'] === 2, '试玩余额回调失败');
     $result = (new TradeService())->handle('wxgame', [
@@ -59,7 +61,7 @@ try {
     ]);
     checkSelf($result['status'] === 2, '试玩下注回调失败');
     $betTable = 'mg_bets_' . gmdate('ym');
-    $bet = (array) Db::table($betTable)->where(['merchant_id' => 0, 'user_id' => $user->id])->first();
+    $bet = (array) Db::table($betTable)->where('bet_no', $result['bet_no'])->first();
     checkSelf((int) $bet['settlement_enabled'] === 0 && $bet['merchant_fee'] === '0.00000000' && (int) $bet['status'] === 2, '试玩注单进入了额度或计费');
     (new DailyStatService())->rebuild($bet['business_date']);
     checkSelf(!Db::table('mg_daily_stats')->where(['merchant_id' => 0, 'game_id' => $game->id])->exists(), '试玩注单进入了日报');
@@ -71,10 +73,9 @@ try {
 
     echo "Self merchant smoke test passed\n";
 } finally {
-    foreach (['mg_bets_' . gmdate('ym') => 'user_id', 'mg_bills_' . gmdate('ym') => 'user_id'] as $table => $field) {
-        Db::table($table)->where($field, $user->id ?? 0)->delete();
-    }
-    User::where(['merchant_id' => 0, 'merchant_user_id' => "demo_{$suffix}"])->forceDelete();
+    if (!empty($result['bet_no'])) Db::table('mg_bets_' . substr($result['bet_no'], 2, 4))->where('bet_no', $result['bet_no'])->delete();
+    if (!empty($result['bill_no'])) Db::table('mg_bills_' . substr($result['bill_no'], 2, 4))->where('bill_no', $result['bill_no'])->delete();
+    $user->forceFill($originalUser)->save();
     $game->forceDelete();
     $brand->forceDelete();
     $property->setValue(null, $originalConfig);

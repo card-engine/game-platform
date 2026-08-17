@@ -97,6 +97,15 @@
             @pagination:size-change="handleSizeChange"
             @pagination:current-change="handleCurrentChange"
           >
+            <template #currencies-header>
+              <span class="relative inline-flex items-center pr-8">
+                {{ $t('game.currency') }}
+                <SuperBadge
+                  v-if="canTrial"
+                  class="!right-0 !top-1/2 !-translate-y-1/2 !rotate-[12deg]"
+                />
+              </span>
+            </template>
             <template #icon="{ row }"
               ><ElImage v-if="row.icon_url" :src="row.icon_url" fit="contain" class="game-icon" lazy
                 ><template #error><div class="game-icon bg-g-100" /></template></ElImage
@@ -114,22 +123,19 @@
                   :content="$t('game.clickToTrial')"
                   :disabled="!canTrial"
                 >
-                  <span class="relative inline-flex !overflow-visible">
-                    <ElTag
-                      :class="canTrial && 'cursor-pointer'"
-                      size="small"
-                      :disable-transitions="true"
-                      @click="canTrial && trial(row, item)"
-                    >
-                      {{ item }}
-                      <ArtSvgIcon
-                        v-if="canTrial"
-                        icon="ri:play-mini-fill"
-                        class="ml-0.5 inline-block align-[-2px]"
-                      />
-                    </ElTag>
-                    <SuperBadge v-if="canTrial" />
-                  </span> </ElTooltip></ElSpace
+                  <ElTag
+                    :class="canTrial && 'cursor-pointer'"
+                    size="small"
+                    :disable-transitions="true"
+                    @click="canTrial && trial(row, item)"
+                  >
+                    {{ item }}
+                    <ArtSvgIcon
+                      v-if="canTrial"
+                      icon="ri:play-mini-fill"
+                      class="ml-0.5 inline-block align-[-2px]"
+                    />
+                  </ElTag> </ElTooltip></ElSpace
             ></template>
             <template #capabilities="{ row }"
               ><ElTag v-if="row.support_demo" size="small" type="info">{{ $t('game.demo') }}</ElTag
@@ -280,7 +286,13 @@
           minWidth: 150,
           showOverflowTooltip: true
         },
-        { prop: 'currencies', label: t('game.currency'), minWidth: 130, useSlot: true },
+        {
+          prop: 'currencies',
+          label: t('game.currency'),
+          minWidth: 130,
+          useSlot: true,
+          useHeaderSlot: true
+        },
         { prop: 'capabilities', label: t('game.capability'), width: 105, useSlot: true },
         { prop: 'last_sync_time', label: t('game.lastSync'), width: 170 },
         { prop: 'status', label: t('game.status'), width: 105, fixed: 'right', useSlot: true }

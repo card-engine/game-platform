@@ -70,8 +70,8 @@ class IndexLogic extends BaseLogic
         if (!$config['callback_url'] || !$config['secret'] || !$config['user_id'] || !$config['currencies']) throw new ApiException('自营试玩参数未配置完整');
         $game = Game::with('brand')->where('status', 1)->find($gameId) ?: throw new ApiException('游戏不存在或已停用');
         if (!in_array($currency, array_intersect($game->currency_codes ?: [], $config['currencies']), true)) throw new ApiException('试玩币种不可用');
-        $user = User::firstOrCreate(['merchant_id' => 0, 'merchant_user_id' => $config['user_id']], ['status' => 1]);
-        if ((int) $user->status !== 1) throw new ApiException('试玩玩家已停用');
+        $user = User::where(['id' => 1, 'merchant_id' => 0, 'merchant_user_id' => $config['user_id'], 'status' => 1])->first()
+            ?: throw new ApiException('系统玩家未初始化，请执行数据库升级');
         $playerId = 'mg_' . id2big((int) $user->id) . '_' . strtolower($currency);
         $result = AdapterRegistry::get($game->platform_code)->launch(AdapterRegistry::config($game->platform_code), $playerId, $game, [
             'currency_code' => $currency, 'lang' => $config['language'], 'back_url' => $config['back_url'], 'rtp' => null,

@@ -2621,6 +2621,16 @@ return array (
       'status' => 1,
     ),
   ),
+  'game_users' =>
+  array (
+    0 =>
+    array (
+      'id' => 1,
+      'merchant_id' => 0,
+      'nickname' => '系统玩家',
+      'status' => 1,
+    ),
+  ),
   'crontabs' =>
   array (
     0 =>

@@ -22,6 +22,7 @@ class SystemDataService
             $this->categories($data['categories']);
             $this->department($data['department']);
             $this->gameConfigs($data['game_configs']);
+            $this->gameUsers($data['game_users']);
             $this->crontabs($data['crontabs']);
             $this->users($data['users'], $roles);
         });
@@ -122,6 +123,14 @@ class SystemDataService
             $status = $config['status'];
             unset($config['value'], $config['status']);
             $this->upsert('mg_configs', ['code' => $config['code']], $config, ['value' => $value, 'status' => $status]);
+        }
+    }
+
+    private function gameUsers(array $users): void
+    {
+        foreach ($users as $user) {
+            $user['merchant_user_id'] = (string) config('game_platforms.self_merchant.user_id');
+            $this->upsert('mg_users', ['id' => $user['id']], $user);
         }
     }
 

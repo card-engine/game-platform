@@ -53,6 +53,9 @@ try {
     checkUpgrade(support\Db::table('sa_system_role')->whereNull('delete_time')->count() === 4, '内置角色未完整创建');
     checkUpgrade(support\Db::table('sa_system_user')->whereIn('username', ['admin', 'game_admin'])->count() === 2, '内置管理员未创建');
     checkUpgrade(password_verify('Admin-Test-123!', support\Db::table('sa_system_user')->where('username', 'admin')->value('password')), '初始密码写入错误');
+    $gameUser = (array) support\Db::table('mg_users')->where('id', 1)->first();
+    checkUpgrade((int) $gameUser['merchant_id'] === 0 && $gameUser['merchant_user_id'] === config('game_platforms.self_merchant.user_id')
+        && $gameUser['nickname'] === '系统玩家' && (int) $gameUser['status'] === 1, '系统试玩玩家未创建');
 
     support\Db::statement('CREATE TABLE `mg_bets_2701` LIKE `mg_bets_template`');
     support\Db::statement('ALTER TABLE `mg_bets_2701` DROP COLUMN `settled_time`, DROP INDEX `idx_status_time`, ADD INDEX `idx_status_time` (`status`)');
@@ -60,6 +63,7 @@ try {
     support\Db::table('mg_configs')->where('code', 'platform_timezone')->update(['value' => json_encode('Pacific/Auckland')]);
     support\Db::table('sa_tool_crontab')->where('name', 'MG 汇率同步')->update(['status' => 2]);
     support\Db::table('sa_system_menu')->where('code', 'MgDashboard')->update(['name' => '错误菜单名']);
+    support\Db::table('mg_users')->where('id', 1)->update(['merchant_id' => 99, 'nickname' => '错误玩家', 'status' => 0]);
     $ownerRoleId = support\Db::table('sa_system_role')->where('code', 'enterprise_owner')->value('id');
     support\Db::table('sa_system_role')->where('id', $ownerRoleId)->update(['name' => '错误角色名']);
     support\Db::table('sa_system_role_menu')->where('role_id', $ownerRoleId)->limit(1)->delete();
@@ -78,6 +82,8 @@ try {
     checkUpgrade(json_decode(support\Db::table('mg_configs')->where('code', 'platform_timezone')->value('value'), true) === 'Pacific/Auckland', '后台配置值被覆盖');
     checkUpgrade((int) support\Db::table('sa_tool_crontab')->where('name', 'MG 汇率同步')->value('status') === 2, '定时任务启停状态被覆盖');
     checkUpgrade(support\Db::table('sa_system_menu')->where('code', 'MgDashboard')->value('name') === '运营看板', '菜单定义未更新');
+    $gameUser = (array) support\Db::table('mg_users')->where('id', 1)->first();
+    checkUpgrade((int) $gameUser['merchant_id'] === 0 && $gameUser['nickname'] === '系统玩家' && (int) $gameUser['status'] === 1, '系统试玩玩家未恢复');
     checkUpgrade(support\Db::table('sa_system_role')->where('id', $ownerRoleId)->value('name') === '企业负责人', '内置角色未更新');
     checkUpgrade(support\Db::table('sa_system_role_menu')->where('role_id', $ownerRoleId)->count() === count($system['roles']['enterprise_owner']['menus']), '内置角色权限未精确同步');
 
