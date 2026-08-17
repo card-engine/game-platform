@@ -106,11 +106,12 @@
                 />
               </span>
             </template>
-            <template #icon="{ row }"
-              ><ElImage v-if="row.icon_url" :src="row.icon_url" fit="contain" class="game-icon" lazy
-                ><template #error><div class="game-icon bg-g-100" /></template></ElImage
-              ><div v-else class="game-icon bg-g-100"
-            /></template>
+            <template #icon="{ row }">
+              <ElImage v-if="row.icon_url" :src="row.icon_url" fit="contain" class="game-icon" lazy>
+                <template #error><GameDefaultIcon :id="row.id" class="game-icon" /></template>
+              </ElImage>
+              <GameDefaultIcon v-else :id="row.id" class="game-icon" />
+            </template>
             <template #game="{ row }"
               ><div class="font-medium leading-4">{{ row.name }}</div
               ><div class="text-xs leading-4 text-g-500">{{ row.game_code }}</div></template
@@ -175,6 +176,7 @@
   import { useTable } from '@/hooks/core/useTable'
   import api from '@/api/game/list'
   import BrandResources from './modules/brand-resources.vue'
+  import GameDefaultIcon from './modules/game-default-icon.vue'
   import SuperBadge from '@/components/business/super-badge.vue'
   import { checkAuth } from '@/utils/tool'
   import { useI18n } from 'vue-i18n'
