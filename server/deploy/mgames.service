@@ -1,0 +1,21 @@
+[Unit]
+Description=MGames Webman Service
+After=network-online.target mysql.service redis-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www
+Group=www
+WorkingDirectory=/www/wwwroot/game-platform/server
+ExecStart=/usr/bin/php start.php start
+ExecReload=/usr/bin/php start.php reload
+ExecStop=/usr/bin/php start.php stop
+Restart=always
+RestartSec=3
+TimeoutStopSec=30
+LimitNOFILE=65535
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target
