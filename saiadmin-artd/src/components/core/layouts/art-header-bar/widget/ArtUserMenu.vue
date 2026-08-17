@@ -13,23 +13,45 @@
   >
     <template #reference>
       <img
+        v-if="showAvatar"
         class="size-8.5 mr-5 c-p rounded-full max-sm:w-6.5 max-sm:h-6.5 max-sm:mr-[16px]"
-        :src="userInfo.avatar || '@imgs/user/avatar.webp'"
+        :src="userInfo.avatar"
         alt="avatar"
+        @error="avatarFailed = true"
+      />
+      <ArtLogo
+        v-else
+        class="mr-5 c-p max-sm:mr-[16px]"
+        size="34"
+        :title="$t('login.roles.admin')"
       />
     </template>
     <template #default>
       <div class="pt-3">
         <div class="flex-c pb-1 px-0">
           <img
+            v-if="showAvatar"
             class="w-10 h-10 mr-3 ml-0 overflow-hidden rounded-full float-left"
-            :src="userInfo.avatar || '@imgs/user/avatar.webp'"
+            :src="userInfo.avatar"
+            @error="avatarFailed = true"
           />
+          <ArtLogo v-else class="mr-3" size="40" />
           <div class="w-[calc(100%-60px)] h-full">
             <span class="block text-sm font-medium text-g-800 truncate">{{
               userInfo.username
             }}</span>
             <span class="block mt-0.5 text-xs text-g-500 truncate">{{ userInfo.email }}</span>
+            <ElTag
+              v-if="role"
+              class="mt-1"
+              :type="
+                role === 'super_admin' ? 'danger' : role === 'enterprise_owner' ? 'primary' : 'info'
+              "
+              size="small"
+              disable-transitions
+            >
+              {{ roleName }}
+            </ElTag>
           </div>
         </div>
         <ul class="py-4 mt-3 border-t border-g-300/80">
@@ -39,7 +61,7 @@
           </li>
           <li class="btn-item" @click="clearCache()">
             <ArtSvgIcon icon="ri:eraser-line" />
-            <span>清除缓存</span>
+            <span>{{ $t('topBar.user.clearCache') }}</span>
           </li>
           <li class="btn-item" @click="lockScreen()">
             <ArtSvgIcon icon="ri:lock-line" />
@@ -60,6 +82,7 @@
   import { useRouter } from 'vue-router'
   import { ElMessageBox, ElMessage } from 'element-plus'
   import { useUserStore } from '@/store/modules/user'
+  import { useGameStore } from '@/store/modules/game'
   import { mittBus } from '@/utils/sys'
 
   defineOptions({ name: 'ArtUserMenu' })
@@ -67,9 +90,30 @@
   const router = useRouter()
   const { t } = useI18n()
   const userStore = useUserStore()
+  const gameStore = useGameStore()
 
   const { getUserInfo: userInfo } = storeToRefs(userStore)
+  const { role } = storeToRefs(gameStore)
   const userMenuPopover = ref()
+  const avatarFailed = ref(false)
+  const showAvatar = computed(
+    () =>
+      !!userInfo.value.avatar &&
+      userInfo.value.avatar !== 'https://image.saithink.top/saiadmin/avatar.jpg' &&
+      !avatarFailed.value
+  )
+  const roleName = computed(() =>
+    role.value === 'super_admin'
+      ? t('game.superAdmin')
+      : role.value === 'enterprise_owner'
+        ? t('game.enterpriseOwner')
+        : t('game.enterpriseStaff')
+  )
+
+  watch(
+    () => userInfo.value.avatar,
+    () => (avatarFailed.value = false)
+  )
 
   /**
    * 页面跳转
@@ -84,7 +128,7 @@
    */
   const clearCache = (): void => {
     userStore.clearCache()
-    ElMessage.success('清理缓存成功')
+    ElMessage.success(t('topBar.user.clearCacheSuccess'))
   }
 
   /**

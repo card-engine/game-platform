@@ -28,7 +28,7 @@ import { SystemThemeEnum, MenuThemeEnum, MenuTypeEnum, ContainerWidthEnum } from
  */
 export const SETTING_DEFAULT_CONFIG = {
   /** 菜单类型 */
-  menuType: MenuTypeEnum.LEFT,
+  menuType: MenuTypeEnum.TOP_LEFT,
   /** 菜单展开宽度 */
   menuOpenWidth: 230,
   /** 菜单是否展开 */
@@ -40,9 +40,9 @@ export const SETTING_DEFAULT_CONFIG = {
   /** 系统主题模式 */
   systemThemeMode: SystemThemeEnum.AUTO,
   /** 菜单风格 */
-  menuThemeType: MenuThemeEnum.DESIGN,
+  menuThemeType: MenuThemeEnum.LIGHT,
   /** 系统主题颜色 */
-  systemThemeColor: AppConfig.systemMainColor[0],
+  systemThemeColor: AppConfig.systemMainColor[2],
   /** 是否显示菜单按钮 */
   showMenuButton: true,
   /** 是否显示快速入口 */
@@ -62,7 +62,7 @@ export const SETTING_DEFAULT_CONFIG = {
   /** 是否显示节日文本 */
   showFestivalText: false,
   /** 是否显示水印 */
-  watermarkVisible: false,
+  watermarkVisible: true,
   /** 是否自动关闭 */
   autoClose: false,
   /** 是否唯一展开 */
@@ -76,7 +76,7 @@ export const SETTING_DEFAULT_CONFIG = {
   /** 边框模式 */
   boxBorderMode: true,
   /** 页面过渡效果 */
-  pageTransition: 'slide-left',
+  pageTransition: 'fade',
   /** 标签页样式 */
   tabStyle: 'tab-default',
   /** 自定义圆角 */

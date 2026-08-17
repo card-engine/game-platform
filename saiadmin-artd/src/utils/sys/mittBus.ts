@@ -55,6 +55,8 @@ type Events = {
   openChat: void
   // 打开锁屏事件 - 无参数
   openLockScreen: void
+  // 游戏平台当前商户参数切换
+  gameMerchantChanged: number
 }
 
 // 创建类型安全的事件总线实例

@@ -131,6 +131,7 @@ class Helper
                     'isHide' => $value['is_hidden'] === 1,
                     'fixedTab' => $value['is_fixed_tab'] === 1,
                     'isFullPage' => $value['is_full_page'] === 1,
+                    'showTextBadge' => $value['remark'] === 'game_super_admin' ? '超管' : null,
                 ],
             ];
             if ($value['type'] === 4) {

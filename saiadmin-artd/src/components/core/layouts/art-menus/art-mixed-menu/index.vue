@@ -24,7 +24,7 @@
             :class="{
               'menu-item-active text-theme': item.isActive
             }"
-            @click="handleMenuJump(item, true)"
+            @click="handleMenuClick(item, $event)"
           >
             <ArtSvgIcon
               :icon="item.meta.icon"
@@ -53,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, onMounted, nextTick } from 'vue'
+  import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
   import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
   import { useThrottleFn } from '@vueuse/core'
   import { formatMenuTitle } from '@/utils/router'
@@ -83,6 +83,7 @@
   const scrollbarRef = ref<any>()
   const showLeftArrow = ref(false)
   const showRightArrow = ref(false)
+  let menuClickScrolling = false
 
   /** 滚动配置 */
   const SCROLL_CONFIG = {
@@ -181,6 +182,32 @@
     })
   }
 
+  const handleMenuClick = (item: AppRouteRecord, event: MouseEvent): void => {
+    const wrap = scrollbarRef.value?.wrapRef
+    const element = event.currentTarget as HTMLElement
+    if (wrap) {
+      const viewport = wrap.getBoundingClientRect()
+      const rect = element.getBoundingClientRect()
+      let sibling: Element | null = null
+      if (rect.right > viewport.right - rect.width / 2) sibling = element.nextElementSibling
+      else if (rect.left < viewport.left + rect.width / 2) sibling = element.previousElementSibling
+
+      if (sibling) {
+        const siblingRect = sibling.getBoundingClientRect()
+        let delta = 0
+        if (siblingRect.right > viewport.right) delta = siblingRect.right - viewport.right + 12
+        else if (siblingRect.left < viewport.left) delta = siblingRect.left - viewport.left - 12
+        wrap.scrollTo({
+          left: wrap.scrollLeft + delta,
+          behavior: 'smooth'
+        })
+      }
+    }
+    menuClickScrolling = true
+    window.setTimeout(() => (menuClickScrolling = false), 350)
+    handleMenuJump(item, true)
+  }
+
   /**
    * 处理鼠标滚轮事件
    * 优化滚轮响应性能
@@ -217,11 +244,31 @@
    */
   const initScrollState = (): void => {
     nextTick(() => {
+      const wrap = scrollbarRef.value?.wrapRef
+      const active = wrap?.querySelector('.menu-item-active') as HTMLElement | null
+      if (wrap && active) {
+        const viewport = wrap.getBoundingClientRect()
+        const rect = active.getBoundingClientRect()
+        if (rect.left < viewport.left || rect.right > viewport.right) {
+          wrap.scrollTo({
+            left: wrap.scrollLeft + rect.left - viewport.left - (viewport.width - rect.width) / 2,
+            behavior: 'smooth'
+          })
+        }
+      }
       handleScrollCore()
     })
   }
 
-  onMounted(initScrollState)
+  let resizeObserver: ResizeObserver
+  watch(currentActivePath, () => !menuClickScrolling && initScrollState())
+  watch(() => processedMenuList.value.length, initScrollState)
+  onMounted(() => {
+    initScrollState()
+    resizeObserver = new ResizeObserver(initScrollState)
+    resizeObserver.observe(scrollbarRef.value.wrapRef)
+  })
+  onBeforeUnmount(() => resizeObserver.disconnect())
 </script>
 
 <style scoped>
