@@ -22,7 +22,7 @@ class OpenApiService
         $blocked = $overrides->keys()->all();
         $brands = MerchantBrand::where(['merchant_id' => $merchant->id, 'status' => 1, 'merchant_status' => 1])->pluck('unique_brand_id')->all();
 
-        return Game::with('brand:id,name,names,provider_brand_code,unique_brand_id,is_gc', 'brand.uniqueBrand:id,name,names,code')->where('status', 1)
+        return Game::with('brand:id,name,names,provider_brand_code,unique_brand_id,is_gc', 'brand.uniqueBrand:id,name,names,code')->where('status', 1)->whereNotNull('game_code')
             ->whereHas('brand', fn ($query) => $query->whereNotNull('unique_brand_id'))
             ->where(function ($query) use ($currencies) {
                 if (!$currencies) $query->whereRaw('0 = 1');

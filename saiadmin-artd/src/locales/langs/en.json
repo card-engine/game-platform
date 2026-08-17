@@ -367,6 +367,7 @@
     "selectUnifiedBrand": "Select a unified brand",
     "enterBrandIdentity": "Enter a name and code",
     "brandMapped": "Brand mapped",
+    "brandCodeQueued": "Brand mapped; game codes are being generated",
     "currencyModeUpdated": "Currency mode updated"
   },
   "search": {

@@ -243,7 +243,7 @@
           ? { unique_brand_id: form.unique_brand_id }
           : { name: form.name, code: form.code })
       })
-      ElMessage.success(t('game.brandMapped'))
+      ElMessage.success(t('game.brandCodeQueued'))
       visible.value = false
       refreshData()
     } finally {

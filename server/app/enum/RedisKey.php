@@ -18,6 +18,7 @@ enum RedisKey: string
     case LockUserWallet = 'lock:mg:user_wallet:%d:%d:%s'; // string 玩家资金锁，格式：merchant_id:user_id:currency_code
     case LockExchangeRateSync = 'lock:mg:exchange_rate:sync:%s'; // string 汇率同步锁，格式：rate_date
     case LockStatsRefresh = 'lock:mg:stats:refresh:%s'; // string 统计时间桶刷新锁，格式：bucket_hash
+    case LockGameBrandCode = 'lock:mg:game_brand_code:%d'; // string 品牌游戏编码生成锁，格式：brand_id
 
     /** Permanent caches. */
     case ForeverConfigs = 'forever:mg:configs'; // string 启用中的全局配置 JSON

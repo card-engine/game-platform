@@ -27,15 +27,14 @@ class SyncService
                 );
                 if ($brand->wasRecentlyCreated && isset($item['is_gc'])) $brand->update(['is_gc' => (int) $item['is_gc']]);
                 if (!$brand->unique_brand_id) {
-                    $unique = UniqueBrand::firstOrCreate(
-                        ['code' => strtolower(trim($item['provider_brand_code']))],
-                        ['name' => $item['name'], 'names' => $item['names'] ?? null, 'logo_url' => $item['logo_url'] ?? null, 'status' => 1],
-                    );
-                    $brand->update(['unique_brand_id' => $unique->id, 'mapping_status' => 1, 'mapped_by' => null, 'mapped_time' => $now]);
+                    $unique = UniqueBrand::where('status', 1)->where('code', strtolower(trim($item['provider_brand_code'])))->first();
+                    $brand->update($unique
+                        ? ['unique_brand_id' => $unique->id, 'mapping_status' => 1, 'mapped_by' => null, 'mapped_time' => $now]
+                        : ['mapping_status' => 0, 'mapped_by' => null, 'mapped_time' => null]);
                 }
                 $brands[$item['provider_brand_code']] = $brand;
             }
-            $uniqueCodes = UniqueBrand::whereKey(array_map(fn ($brand) => $brand->unique_brand_id, $brands))->pluck('code', 'id');
+            $uniqueCodes = UniqueBrand::whereKey(array_filter(array_map(fn ($brand) => $brand->unique_brand_id, $brands)))->pluck('code', 'id');
 
             $seen = [];
             foreach ($data['games'] as $item) {
@@ -47,7 +46,8 @@ class SyncService
                     ['platform_code' => $platform, 'brand_id' => $brand->id, 'provider_game_code' => $item['provider_game_code']],
                     $item + ['status' => 1, 'last_sync_time' => $now, 'delete_time' => null],
                 );
-                $gameCode = Game::makeCode($uniqueCodes[$brand->unique_brand_id], (int) $game->id);
+                $brandCode = $uniqueCodes->get($brand->unique_brand_id);
+                $gameCode = $brandCode ? Game::makeCode($brandCode, (int) $game->id) : null;
                 if ($game->game_code !== $gameCode) $game->update(['game_code' => $gameCode]);
                 $seen[] = $game->id;
             }

@@ -8,10 +8,13 @@ use app\model\Merchant;
 use app\model\MerchantBrand;
 use app\model\UniqueBrand;
 use app\model\User;
+use app\enum\RedisKey;
 use app\service\game\EnterpriseScope;
 use app\service\game\OpenApiService;
 use plugin\saiadmin\basic\eloquent\BaseLogic;
 use plugin\saiadmin\exception\ApiException;
+use support\Redis as Cache;
+use Webman\RedisQueue\Redis;
 
 class IndexLogic extends BaseLogic
 {
@@ -87,22 +90,31 @@ class IndexLogic extends BaseLogic
 
     public function mapBrand(int $brandId, array $data): array
     {
-        return $this->transaction(function () use ($brandId, $data) {
-            $brand = GameBrand::findOrFail($brandId);
-            if ($data['unique_brand_id'] ?? null) {
-                $unique = UniqueBrand::where('status', 1)->findOrFail($data['unique_brand_id']);
-            } else {
-                $code = strtolower(trim((string) ($data['code'] ?? '')));
-                $name = trim((string) ($data['name'] ?? ''));
-                if ($code === '' || $name === '') throw new ApiException('请填写统一品牌名称和 Code');
-                $unique = UniqueBrand::firstOrCreate(['code' => $code], ['name' => $name, 'status' => 1]);
-            }
-            $brand->update(['unique_brand_id' => $unique->id, 'mapping_status' => 2, 'mapped_by' => $this->adminInfo['id'], 'mapped_time' => date('Y-m-d H:i:s')]);
-            foreach ($brand->games()->get(['id', 'game_code']) as $game) {
-                $game->update(['game_code' => Game::makeCode($unique->code, (int) $game->id)]);
-            }
-            return $unique->only(['id', 'code', 'name']);
-        });
+        $lock = RedisKey::LockGameBrandCode->format($brandId);
+        $token = bin2hex(random_bytes(12));
+        if (!Cache::set($lock, $token, 'EX', RedisKey::EXPIRE_1_MINUTE, 'NX')) throw new ApiException('该品牌正在生成游戏编码，请稍后重试');
+
+        try {
+            $result = $this->transaction(function () use ($brandId, $data) {
+                $brand = GameBrand::findOrFail($brandId);
+                if ($data['unique_brand_id'] ?? null) {
+                    $unique = UniqueBrand::where('status', 1)->findOrFail($data['unique_brand_id']);
+                } else {
+                    $code = strtolower(trim((string) ($data['code'] ?? '')));
+                    $name = trim((string) ($data['name'] ?? ''));
+                    if ($code === '' || $name === '') throw new ApiException('请填写统一品牌名称和 Code');
+                    $unique = UniqueBrand::firstOrCreate(['code' => $code], ['name' => $name, 'status' => 1]);
+                }
+                $brand->update(['unique_brand_id' => $unique->id, 'mapping_status' => 2, 'mapped_by' => $this->adminInfo['id'], 'mapped_time' => date('Y-m-d H:i:s')]);
+                Game::where('brand_id', $brand->id)->update(['game_code' => null]);
+                return $unique->only(['id', 'code', 'name']);
+            });
+        } finally {
+            Cache::eval("if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) end return 0", 1, $lock, $token);
+        }
+
+        Redis::send('game_brand_code_rebuild', ['brand_id' => $brandId]);
+        return $result + ['queued' => true];
     }
 
     public function status(array $ids, int $status): int

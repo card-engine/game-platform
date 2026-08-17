@@ -367,6 +367,7 @@
     "selectUnifiedBrand": "请选择统一品牌",
     "enterBrandIdentity": "请填写名称和 Code",
     "brandMapped": "品牌已归并",
+    "brandCodeQueued": "品牌已归并，游戏编码生成中",
     "currencyModeUpdated": "币种模式已更新"
   },
   "search": {
