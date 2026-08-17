@@ -23,7 +23,7 @@ class GameStatsRefresh implements Consumer
     public static function dispatch(string $table, string $betNo): void
     {
         $bet = Db::table($table)->where('bet_no', $betNo)->first();
-        if (!$bet) return;
+        if (!$bet || (int) $bet->merchant_id === 0) return;
         $hash = hash('sha256', "{$bet->merchant_id}|{$bet->business_date}|{$bet->platform_date}|" . substr($bet->create_time, 0, 13));
         $key = RedisKey::TempStatsRefresh->format($hash);
         if (!Cache::set($key, '1', 'EX', RedisKey::EXPIRE_5_SECONDS, 'NX')) return;
@@ -34,7 +34,7 @@ class GameStatsRefresh implements Consumer
     {
         try {
             $bet = Db::table((string) $data['table'])->where('bet_no', $data['bet_no'])->first();
-            if (!$bet) return;
+            if (!$bet || (int) $bet->merchant_id === 0) return;
             $daily = new DailyStatService();
             $daily->rebuild($bet->business_date);
             if ($bet->platform_date !== $bet->business_date) $daily->rebuild($bet->platform_date);

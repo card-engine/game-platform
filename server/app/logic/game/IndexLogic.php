@@ -9,8 +9,7 @@ use app\model\MerchantBrand;
 use app\model\UniqueBrand;
 use app\model\User;
 use app\enum\RedisKey;
-use app\service\game\EnterpriseScope;
-use app\service\game\OpenApiService;
+use app\service\game\adapter\AdapterRegistry;
 use plugin\saiadmin\basic\eloquent\BaseLogic;
 use plugin\saiadmin\exception\ApiException;
 use support\Redis as Cache;
@@ -65,19 +64,20 @@ class IndexLogic extends BaseLogic
         return $this->getList($query);
     }
 
-    public function trial(int $gameId, int $merchantId, string $currency, string $ip): array
+    public function trial(int $gameId, string $currency, string $ip): array
     {
-        $merchant = Merchant::whereKey($merchantId)->where('status', 1);
-        if (($ids = EnterpriseScope::merchantIds((int) $this->adminInfo['id'])) !== null) $merchant->whereIn('id', $ids);
-        $merchant = $merchant->first() ?: throw new ApiException('请先选择可用的商户参数');
-        $user = User::where(['merchant_id' => $merchant->id, 'status' => 1])->orderByDesc('last_launch_time')->latest('id')->first()
-            ?: throw new ApiException('当前商户暂无可用玩家，请先通过商户接口进游一次');
-        return (new OpenApiService())->launch($merchant, [
-            'user_id' => $user->merchant_user_id,
-            'game_id' => (string) id2big($gameId),
-            'currency' => $currency,
-            'language' => $merchant->default_language,
-        ], $ip);
+        $config = config('game_platforms.self_merchant');
+        if (!$config['callback_url'] || !$config['secret'] || !$config['user_id'] || !$config['currencies']) throw new ApiException('自营试玩参数未配置完整');
+        $game = Game::with('brand')->where('status', 1)->find($gameId) ?: throw new ApiException('游戏不存在或已停用');
+        if (!in_array($currency, array_intersect($game->currency_codes ?: [], $config['currencies']), true)) throw new ApiException('试玩币种不可用');
+        $user = User::firstOrCreate(['merchant_id' => 0, 'merchant_user_id' => $config['user_id']], ['status' => 1]);
+        if ((int) $user->status !== 1) throw new ApiException('试玩玩家已停用');
+        $playerId = 'mg_' . id2big((int) $user->id) . '_' . strtolower($currency);
+        $result = AdapterRegistry::get($game->platform_code)->launch(AdapterRegistry::config($game->platform_code), $playerId, $game, [
+            'currency_code' => $currency, 'lang' => $config['language'], 'back_url' => $config['back_url'], 'rtp' => null,
+        ]);
+        $user->update(['last_launch_time' => date('Y-m-d H:i:s'), 'last_ip' => $ip]);
+        return ['game_url' => $result['game_url'], 'currency' => $currency];
     }
 
     public function mappingImpact(int $brandId, int $uniqueBrandId): array

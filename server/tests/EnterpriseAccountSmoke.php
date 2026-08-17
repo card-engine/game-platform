@@ -2,7 +2,6 @@
 
 use app\model\Enterprise;
 use app\model\EnterpriseUser;
-use app\model\Game;
 use app\model\Merchant;
 use app\service\game\SecretService;
 use plugin\saiadmin\app\cache\UserAuthCache;
@@ -91,6 +90,8 @@ try {
     checkAccount(($ownerContext['body']['data']['role'] ?? '') === 'enterprise_owner' && count($ownerContext['body']['data']['merchants'] ?? []) === 1, '负责人顶部商户范围错误');
     $overview = requestAccount($token, 'GET', '/game/operations/overview');
     checkAccount(collect($overview['body']['data']['hourly'] ?? [])->contains(fn ($row) => (int) $row['merchant_id'] === (int) $merchant->id), '负责人趋势错误使用平台口径');
+    $ownerTrial = requestAccount($token, 'POST', '/game/trial', ['game_id' => 0, 'currency' => 'USD']);
+    checkAccount(($ownerTrial['body']['code'] ?? 200) !== 200, '企业负责人获得了自营试玩权限');
 
     $created = requestAccount($token, 'POST', '/game/enterprise/user', [
         'username' => "mgs{$suffix}", 'password' => $password, 'realname' => 'MG Smoke Staff', 'merchant_ids' => [$merchant->id],
@@ -117,11 +118,8 @@ try {
     checkAccount(($enterpriseList['body']['code'] ?? 200) !== 200, '子账号可以访问企业账号管理');
     $forbidden = requestAccount($staffToken, 'GET', '/game/merchant/secret', ['id' => $otherMerchant->id]);
     checkAccount(($forbidden['body']['code'] ?? 200) !== 200, '子账号可读取其他企业密钥');
-    $game = Game::where('status', 1)->firstOrFail();
-    $otherTrial = requestAccount($staffToken, 'POST', '/game/trial', ['merchant_id' => $otherMerchant->id, 'game_id' => $game->id, 'currency' => 'USD']);
-    checkAccount(($otherTrial['body']['code'] ?? 200) !== 200, '子账号可使用其他企业商户试玩');
-    $ownTrial = requestAccount($staffToken, 'POST', '/game/trial', ['merchant_id' => $merchant->id, 'game_id' => $game->id, 'currency' => 'USD']);
-    checkAccount(str_contains((string) ($ownTrial['body']['message'] ?? ''), '暂无可用玩家'), '无玩家试玩提示不明确: ' . json_encode($ownTrial, JSON_UNESCAPED_UNICODE));
+    $staffTrial = requestAccount($staffToken, 'POST', '/game/trial', ['game_id' => 0, 'currency' => 'USD']);
+    checkAccount(($staffTrial['body']['code'] ?? 200) !== 200, '企业子账号获得了自营试玩权限');
 
     $enterprise->update(['status' => 0]);
     $disabled = requestAccount($token, 'GET', '/game/brands', ['page' => 1, 'limit' => 1]);

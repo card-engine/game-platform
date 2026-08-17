@@ -36,12 +36,11 @@ class IndexController extends BaseController
         return $this->success($this->logic->lists($request->more([['platform_code', ''], ['brand_id', ''], ['unique_brand_id', ''], ['merchant_id', ''], ['status', ''], ['keyword', '']])));
     }
 
-    #[Permission('试玩游戏', 'app:game:list:index')]
+    #[Permission('试玩游戏', 'app:game:list:trial')]
     public function trial(Request $request): Response
     {
         return $this->success($this->logic->trial(
             (int) $request->post('game_id'),
-            (int) $request->post('merchant_id'),
             strtoupper((string) $request->post('currency')),
             $request->getRealIp(),
         ));

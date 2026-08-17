@@ -17,6 +17,17 @@ class Merchant extends BaseModel
         ]);
     }
 
+    public static function system(): self
+    {
+        $config = config('game_platforms.self_merchant');
+        return (new self())->forceFill([
+            'id' => 0, 'enterprise_id' => 0, 'mch_id' => '0', 'name' => 'MGames Demo',
+            'wallet_mode' => 1, 'billing_mode' => 2, 'callback_url' => $config['callback_url'],
+            'language_codes' => [$config['language']], 'default_language' => $config['language'],
+            'timezone' => $config['timezone'], 'timeout_ms' => $config['timeout_ms'], 'status' => 1,
+        ]);
+    }
+
     public function enterprise()
     {
         return $this->belongsTo(Enterprise::class, 'enterprise_id');

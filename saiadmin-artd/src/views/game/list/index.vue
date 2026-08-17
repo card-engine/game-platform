@@ -112,16 +112,24 @@
                   v-for="item in row.currency_codes"
                   :key="item"
                   :content="$t('game.clickToTrial')"
+                  :disabled="!canTrial"
                 >
-                  <ElTag
-                    class="cursor-pointer"
-                    size="small"
-                    :disable-transitions="true"
-                    @click="trial(row, item)"
-                  >
-                    {{ item }}
-                    <ArtSvgIcon icon="ri:play-mini-fill" class="ml-0.5 inline-block align-[-2px]" />
-                  </ElTag> </ElTooltip></ElSpace
+                  <span class="relative inline-flex !overflow-visible">
+                    <ElTag
+                      :class="canTrial && 'cursor-pointer'"
+                      size="small"
+                      :disable-transitions="true"
+                      @click="canTrial && trial(row, item)"
+                    >
+                      {{ item }}
+                      <ArtSvgIcon
+                        v-if="canTrial"
+                        icon="ri:play-mini-fill"
+                        class="ml-0.5 inline-block align-[-2px]"
+                      />
+                    </ElTag>
+                    <SuperBadge v-if="canTrial" />
+                  </span> </ElTooltip></ElSpace
             ></template>
             <template #capabilities="{ row }"
               ><ElTag v-if="row.support_demo" size="small" type="info">{{ $t('game.demo') }}</ElTag
@@ -162,11 +170,11 @@
   import api from '@/api/game/list'
   import BrandResources from './modules/brand-resources.vue'
   import SuperBadge from '@/components/business/super-badge.vue'
-  import { useGameStore } from '@/store/modules/game'
+  import { checkAuth } from '@/utils/tool'
   import { useI18n } from 'vue-i18n'
 
   const { t, locale } = useI18n()
-  const gameStore = useGameStore()
+  const canTrial = computed(() => checkAuth('app:game:list:trial'))
   const tab = ref('games')
   const platforms = [
     { label: 'WXGAME', value: 'wxgame' },
@@ -226,14 +234,9 @@
     }
   }
   const trial = async (game: any, currency: string) => {
-    if (!gameStore.merchantId) return ElMessage.warning(t('game.selectMerchantFirst'))
     const page = window.open('about:blank', '_blank')
     try {
-      const data = await api.trial({
-        game_id: game.id,
-        merchant_id: gameStore.merchantId,
-        currency
-      })
+      const data = await api.trial({ game_id: game.id, currency })
       if (page) page.location.href = data.game_url
       else ElMessage.warning(t('game.popupBlocked'))
     } catch (error) {

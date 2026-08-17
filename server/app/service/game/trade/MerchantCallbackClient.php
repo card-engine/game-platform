@@ -15,7 +15,10 @@ class MerchantCallbackClient
 
         $data['mch_id'] = $merchant->mch_id;
         $data['timestamp'] = time();
-        $data['sign'] = game_platform_sign($data, SecretService::decrypt($merchant->getRawOriginal('secret')));
+        $secret = (int) $merchant->id === 0
+            ? (string) config('game_platforms.self_merchant.secret')
+            : SecretService::decrypt($merchant->getRawOriginal('secret'));
+        $data['sign'] = game_platform_sign($data, $secret);
         try {
             $response = (new Client([
                 'base_uri' => rtrim((string) $merchant->callback_url, '/') . '/',

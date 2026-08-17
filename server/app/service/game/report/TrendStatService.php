@@ -97,7 +97,7 @@ class TrendStatService
             $tables[] = (new MonthlyTableService())->table('bets', $month->format('ym'));
             $month = $month->modify('+1 month');
         }
-        $where = $merchantId ? ' AND merchant_id = ?' : '';
+        $where = $merchantId ? ' AND merchant_id = ?' : ' AND merchant_id > 0';
         $union = implode(' UNION ALL ', array_map(fn ($table) => "SELECT user_id, currency_code, bet_amount, bet_rollback_amount FROM `{$table}` WHERE create_time >= ? AND create_time < ?{$where} AND delete_time IS NULL", $tables));
         $bindings = [];
         foreach ($tables as $_) array_push($bindings, $startUtc->format('Y-m-d H:i:s'), $endUtc->format('Y-m-d H:i:s'), ...($merchantId ? [$merchantId] : []));

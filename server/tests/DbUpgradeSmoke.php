@@ -8,6 +8,7 @@ use Webman\Database\Initializer;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 require dirname(__DIR__) . '/support/bootstrap.php';
+$system = require dirname(__DIR__) . '/database/system.php';
 
 function checkUpgrade(bool $result, string $message): void
 {
@@ -48,7 +49,7 @@ try {
     checkUpgrade($upgrade->execute([]) === 0, $upgrade->getDisplay());
     $tableCount = support\Db::table('information_schema.tables')->where('table_schema', $database)->count();
     checkUpgrade($tableCount === 44, "空库结构未完整创建：{$tableCount}");
-    checkUpgrade(support\Db::table('sa_system_menu')->whereNull('delete_time')->count() === 128, '菜单未完整创建');
+    checkUpgrade(support\Db::table('sa_system_menu')->whereNull('delete_time')->count() === count($system['menus']), '菜单未完整创建');
     checkUpgrade(support\Db::table('sa_system_role')->whereNull('delete_time')->count() === 4, '内置角色未完整创建');
     checkUpgrade(support\Db::table('sa_system_user')->whereIn('username', ['admin', 'game_admin'])->count() === 2, '内置管理员未创建');
     checkUpgrade(password_verify('Admin-Test-123!', support\Db::table('sa_system_user')->where('username', 'admin')->value('password')), '初始密码写入错误');
@@ -78,7 +79,7 @@ try {
     checkUpgrade((int) support\Db::table('sa_tool_crontab')->where('name', 'MG 汇率同步')->value('status') === 2, '定时任务启停状态被覆盖');
     checkUpgrade(support\Db::table('sa_system_menu')->where('code', 'MgDashboard')->value('name') === '运营看板', '菜单定义未更新');
     checkUpgrade(support\Db::table('sa_system_role')->where('id', $ownerRoleId)->value('name') === '企业负责人', '内置角色未更新');
-    checkUpgrade(support\Db::table('sa_system_role_menu')->where('role_id', $ownerRoleId)->count() === 26, '内置角色权限未精确同步');
+    checkUpgrade(support\Db::table('sa_system_role_menu')->where('role_id', $ownerRoleId)->count() === count($system['roles']['enterprise_owner']['menus']), '内置角色权限未精确同步');
 
     $final = new CommandTester(new DbUpgradeCommand());
     checkUpgrade($final->execute(['--dry-run' => true]) === 0, $final->getDisplay());

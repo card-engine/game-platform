@@ -7,7 +7,7 @@ export default {
     request.get<Api.Common.ApiPage>({ url: '/game/unique-brands', params }),
   list: (params: Record<string, any>) =>
     request.get<Api.Common.ApiPage>({ url: '/game/lists', params }),
-  trial: (data: { game_id: number; merchant_id: number; currency: string }) =>
+  trial: (data: { game_id: number; currency: string }) =>
     request.post<{ game_url: string }>({ url: '/game/trial', data }),
   sync: (platform_code: string) =>
     request.post<any>({ url: '/game/sync', data: { platform_code } }),

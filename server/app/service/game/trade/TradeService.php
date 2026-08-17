@@ -190,9 +190,9 @@ class TradeService
                     }
                 }
                 if (!isset($betNo)) {
-                    $credit = MerchantCredit::where(['merchant_id' => $merchant->id, 'currency_code' => $currency, 'status' => 1])->first();
-                    if (!$credit) return ['result' => $this->result(3, 1003, '商户币种未开通', [], $action)];
-                    $rate = (int) $merchant->billing_mode === 1
+                    $credit = (int) $merchant->id === 0 ? null : MerchantCredit::where(['merchant_id' => $merchant->id, 'currency_code' => $currency, 'status' => 1])->first();
+                    if ((int) $merchant->id !== 0 && !$credit) return ['result' => $this->result(3, 1003, '商户币种未开通', [], $action)];
+                    $rate = $credit && (int) $merchant->billing_mode === 1
                         ? (MerchantGame::where(['merchant_id' => $merchant->id, 'game_id' => $game->id, 'status' => 1])->value('rate_value') ?? $credit->rate_value ?? '0')
                         : '0';
                     $betNo = mg_no('BT', $month);
@@ -200,7 +200,7 @@ class TradeService
                         'bet_no' => $betNo, 'merchant_id' => $merchant->id, 'user_id' => $user->id, 'platform_code' => $platform,
                         'brand_id' => $game->brand_id, 'game_id' => $game->id, 'currency_code' => $currency,
                         'round_key' => $roundKey, 'provider_parent_round_id' => $operation['parent_round_id'] ?? null, 'provider_round_id' => $operation['round_id'],
-                        'billing_mode' => $merchant->billing_mode, 'settlement_enabled' => (int) $merchant->billing_mode === 1 ? $credit->settlement_enabled : 0,
+                        'billing_mode' => $merchant->billing_mode, 'settlement_enabled' => $credit && (int) $merchant->billing_mode === 1 ? $credit->settlement_enabled : 0,
                         'merchant_rate_value' => $rate, 'business_date' => $this->businessDate($merchant), 'platform_date' => $this->platformDate(),
                         'create_time' => $this->now(), 'update_time' => $this->now(),
                     ]);
@@ -316,6 +316,7 @@ class TradeService
 
     private function settle(array $bet, Merchant $merchant, string $currency, bool $late = false, string $reserved = '0.00000000'): array
     {
+        if ((int) $merchant->id === 0) return $late ? [] : ['merchant_fee' => '0.00000000', 'reserved_fee' => '0.00000000', 'status' => 2, 'settled_time' => $this->now()];
         $fee = $this->fee($bet);
         if ($late) {
             $difference = bcsub($fee, (string) $bet['merchant_fee'], 8);
@@ -401,9 +402,11 @@ class TradeService
         if (preg_match('/^mg_(\d+)_([a-z0-9]{2,16})$/i', $playerId, $match) !== 1 || ($id = big2id((int) $match[1])) === false) throw new RuntimeException('玩家账号无效');
         $user = User::find($id);
         if (!$user || (int) $user->status !== 1) throw new RuntimeException('玩家不存在或已停用');
-        $merchant = Merchant::find($user->merchant_id);
+        $merchant = (int) $user->merchant_id === 0 ? Merchant::system() : Merchant::find($user->merchant_id);
         if (!$merchant || (int) $merchant->status !== 1) throw new RuntimeException('商户未启用');
-        return [$user, $merchant, strtoupper($match[2])];
+        $currency = strtoupper($match[2]);
+        if ((int) $merchant->id === 0 && !in_array($currency, config('game_platforms.self_merchant.currencies'), true)) throw new RuntimeException('试玩币种不可用');
+        return [$user, $merchant, $currency];
     }
 
     private function result(int $status, int $code, string $message, array $data, string $operation, array $bill = []): array

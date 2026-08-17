@@ -3,6 +3,11 @@
 $file = getenv('MOCK_WALLET_STATE');
 $secret = getenv('MOCK_WALLET_SECRET');
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+if ($path === '/v1/api/get_game_url') {
+    header('content-type: application/json');
+    echo json_encode(['code' => 0, 'msg' => 'success', 'data' => ['url' => 'https://example.test/demo']]);
+    return;
+}
 $action = '/' . basename($path);
 if (!str_starts_with($path, '/app/') || !in_array($action, ['/balance', '/bet', '/win', '/cancel'], true)) {
     http_response_code(404);
