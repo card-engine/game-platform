@@ -29,7 +29,8 @@
     "workerman/webman-framework": "^2.1",
     "monolog/monolog": "^2.0",
     "saithink/saiadmin": "^6.0",
-    "saithink/saipackage": "^6.0"
+    "saithink/saipackage": "^6.0",
+    "webman/redis-queue": "^2.1"
   },
   "suggest": {
     "ext-event": "For better performance. "

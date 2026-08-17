@@ -13,5 +13,5 @@
  */
 
 return [
-    '' => support\exception\Handler::class,
+    '' => plugin\saiadmin\app\exception\Handler::class,
 ];
