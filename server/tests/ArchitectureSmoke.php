@@ -1,6 +1,7 @@
 <?php
 
 use app\enum\RedisKey;
+use app\model\Game;
 use app\service\game\ConfigService;
 use app\service\game\report\ExchangeRateService;
 use support\Db;
@@ -8,6 +9,8 @@ use support\Redis;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 require dirname(__DIR__) . '/support/bootstrap.php';
+
+if (Game::makeCode('JILI', 1) !== 'jili_' . id2big(1)) throw new RuntimeException('MG 游戏编码格式错误');
 
 $tables = Db::table('information_schema.tables')->selectRaw('TABLE_NAME AS name')->where('table_schema', config('database.connections.mysql.database'))->pluck('name')->all();
 if (in_array('mg_trade_routes', $tables, true) || in_array('mg_trade_indexes', $tables, true)) throw new RuntimeException('仍存在全局交易路由或索引表');

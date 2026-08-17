@@ -228,7 +228,7 @@ CREATE TABLE `mg_game_brands` (
 
 CREATE TABLE `mg_games` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `game_code` varchar(48) DEFAULT NULL COMMENT 'MG 全局游戏编码',
+  `game_code` varchar(96) DEFAULT NULL COMMENT 'MG 全局游戏编码：小写统一品牌编码_MG游戏标识',
   `brand_id` bigint unsigned NOT NULL COMMENT '品牌资源 ID',
   `platform_code` varchar(32) NOT NULL COMMENT '游戏平台编码',
   `provider_game_code` varchar(128) NOT NULL COMMENT '上游游戏编码',

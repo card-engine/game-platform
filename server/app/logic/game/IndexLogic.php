@@ -87,17 +87,22 @@ class IndexLogic extends BaseLogic
 
     public function mapBrand(int $brandId, array $data): array
     {
-        $brand = GameBrand::findOrFail($brandId);
-        if ($data['unique_brand_id'] ?? null) {
-            $unique = UniqueBrand::where('status', 1)->findOrFail($data['unique_brand_id']);
-        } else {
-            $code = strtolower(trim((string) ($data['code'] ?? '')));
-            $name = trim((string) ($data['name'] ?? ''));
-            if ($code === '' || $name === '') throw new ApiException('请填写统一品牌名称和 Code');
-            $unique = UniqueBrand::firstOrCreate(['code' => $code], ['name' => $name, 'status' => 1]);
-        }
-        $brand->update(['unique_brand_id' => $unique->id, 'mapping_status' => 2, 'mapped_by' => $this->adminInfo['id'], 'mapped_time' => date('Y-m-d H:i:s')]);
-        return $unique->only(['id', 'code', 'name']);
+        return $this->transaction(function () use ($brandId, $data) {
+            $brand = GameBrand::findOrFail($brandId);
+            if ($data['unique_brand_id'] ?? null) {
+                $unique = UniqueBrand::where('status', 1)->findOrFail($data['unique_brand_id']);
+            } else {
+                $code = strtolower(trim((string) ($data['code'] ?? '')));
+                $name = trim((string) ($data['name'] ?? ''));
+                if ($code === '' || $name === '') throw new ApiException('请填写统一品牌名称和 Code');
+                $unique = UniqueBrand::firstOrCreate(['code' => $code], ['name' => $name, 'status' => 1]);
+            }
+            $brand->update(['unique_brand_id' => $unique->id, 'mapping_status' => 2, 'mapped_by' => $this->adminInfo['id'], 'mapped_time' => date('Y-m-d H:i:s')]);
+            foreach ($brand->games()->get(['id', 'game_code']) as $game) {
+                $game->update(['game_code' => Game::makeCode($unique->code, (int) $game->id)]);
+            }
+            return $unique->only(['id', 'code', 'name']);
+        });
     }
 
     public function status(array $ids, int $status): int

@@ -35,6 +35,7 @@ class SyncService
                 }
                 $brands[$item['provider_brand_code']] = $brand;
             }
+            $uniqueCodes = UniqueBrand::whereKey(array_map(fn ($brand) => $brand->unique_brand_id, $brands))->pluck('code', 'id');
 
             $seen = [];
             foreach ($data['games'] as $item) {
@@ -46,10 +47,8 @@ class SyncService
                     ['platform_code' => $platform, 'brand_id' => $brand->id, 'provider_game_code' => $item['provider_game_code']],
                     $item + ['status' => 1, 'last_sync_time' => $now, 'delete_time' => null],
                 );
-                if (!$game->game_code) {
-                    $game->game_code = $platform . '_' . id2big((int) $game->id);
-                    $game->save();
-                }
+                $gameCode = Game::makeCode($uniqueCodes[$brand->unique_brand_id], (int) $game->id);
+                if ($game->game_code !== $gameCode) $game->update(['game_code' => $gameCode]);
                 $seen[] = $game->id;
             }
             if ($data['complete'] ?? true) {

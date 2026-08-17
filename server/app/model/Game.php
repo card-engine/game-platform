@@ -14,6 +14,11 @@ class Game extends BaseModel
         return array_merge(parent::casts(), ['names' => 'array', 'currency_codes' => 'array', 'rtp_options' => 'array', 'extra' => 'array']);
     }
 
+    public static function makeCode(string $brandCode, int $id): string
+    {
+        return strtolower($brandCode) . '_' . id2big($id);
+    }
+
     public function brand()
     {
         return $this->belongsTo(GameBrand::class, 'brand_id');
