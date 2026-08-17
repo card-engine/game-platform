@@ -7,6 +7,7 @@ use app\model\ExchangeRate;
 use DateTimeImmutable;
 use DateTimeZone;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 use RuntimeException;
 use support\Redis;
 
@@ -20,9 +21,9 @@ class ExchangeRateService
         if (!Redis::set($key, $token, 'EX', RedisKey::EXPIRE_1_MINUTE, 'NX')) throw new RuntimeException('今日汇率正在同步');
 
         try {
-            $response = (new Client(['base_uri' => 'https://api.currencyapi.com', 'timeout' => 10]))->get('/v3/latest', [
-                'query' => ['apikey' => env('CURRENCY_API_KEY'), 'base_currency' => 'USD'],
-            ]);
+            $response = (new Client([
+                'base_uri' => 'https://api.currencyapi.com', 'connect_timeout' => 5, 'timeout' => 30, 'force_ip_resolve' => 'v4',
+            ]))->get('/v3/latest', ['query' => ['apikey' => env('CURRENCY_API_KEY'), 'base_currency' => 'USD']]);
             $body = json_decode((string) $response->getBody(), true);
             if (!is_array($body['data'] ?? null) || !$body['data']) throw new RuntimeException('汇率接口返回无效');
             $rates = array_map(fn ($item) => (string) $item['value'], $body['data']);
@@ -31,6 +32,8 @@ class ExchangeRateService
                 ['rate_date' => $date, 'base_currency_code' => 'USD', 'source' => 'currencyapi'],
                 ['rate_json' => $rates, 'source_update_time' => $sourceTime->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s.v')],
             );
+        } catch (GuzzleException) {
+            throw new RuntimeException('汇率接口请求失败');
         } finally {
             Redis::eval("if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) end return 0", 1, $key, $token);
         }
