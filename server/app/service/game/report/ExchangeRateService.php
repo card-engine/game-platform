@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Handler\StreamHandler;
 use RuntimeException;
 use support\Redis;
 
@@ -22,6 +23,7 @@ class ExchangeRateService
 
         try {
             $response = (new Client([
+                'handler' => new StreamHandler(),
                 'base_uri' => 'https://api.currencyapi.com', 'connect_timeout' => 5, 'timeout' => 30, 'force_ip_resolve' => 'v4',
             ]))->get('/v3/latest', ['query' => ['apikey' => env('CURRENCY_API_KEY'), 'base_currency' => 'USD']]);
             $body = json_decode((string) $response->getBody(), true);

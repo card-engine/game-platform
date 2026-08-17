@@ -6,6 +6,7 @@ use app\model\Merchant;
 use app\service\game\SecretService;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Handler\StreamHandler;
 
 class MerchantCallbackClient
 {
@@ -21,6 +22,7 @@ class MerchantCallbackClient
         $data['sign'] = game_platform_sign($data, $secret);
         try {
             $response = (new Client([
+                'handler' => new StreamHandler(),
                 'base_uri' => rtrim((string) $merchant->callback_url, '/') . '/',
                 'timeout' => max(1, (int) $merchant->timeout_ms / 1000),
                 'connect_timeout' => 3,

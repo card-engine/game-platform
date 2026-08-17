@@ -5,6 +5,7 @@ namespace app\service\game\adapter;
 use DateTimeImmutable;
 use DateTimeZone;
 use GuzzleHttp\Client;
+use GuzzleHttp\Handler\StreamHandler;
 use RuntimeException;
 
 abstract class AgentAdapter extends AbstractAdapter
@@ -40,7 +41,7 @@ abstract class AgentAdapter extends AbstractAdapter
         if (($config['basic_auth_username'] ?? '') !== '' || ($config['basic_auth_password'] ?? '') !== '') {
             $options['auth'] = [$config['basic_auth_username'], $config['basic_auth_password']];
         }
-        $response = (new Client(['base_uri' => rtrim($config['url'], '/') . '/', 'timeout' => 30]))->request($method, ltrim($path, '/'), $options);
+        $response = (new Client(['handler' => new StreamHandler(), 'base_uri' => rtrim($config['url'], '/') . '/', 'timeout' => 30]))->request($method, ltrim($path, '/'), $options);
         $body = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
         if ((int) ($body['ErrorCode'] ?? -1) !== 0) throw new RuntimeException((string) ($body['Message'] ?? '游戏平台请求失败'));
         $data = $body['Data'] ?? null;

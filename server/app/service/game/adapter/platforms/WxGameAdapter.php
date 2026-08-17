@@ -5,6 +5,7 @@ namespace app\service\game\adapter\platforms;
 use app\model\Game;
 use app\service\game\adapter\AbstractAdapter;
 use GuzzleHttp\Client;
+use GuzzleHttp\Handler\StreamHandler;
 use RuntimeException;
 
 class WxGameAdapter extends AbstractAdapter
@@ -116,7 +117,7 @@ class WxGameAdapter extends AbstractAdapter
             'http_errors' => false,
         ];
         $options[$params === [] ? 'body' : 'json'] = $params === [] ? '{}' : $params;
-        $response = (new Client(['base_uri' => rtrim($account['url'], '/'), 'connect_timeout' => 5, 'timeout' => $timeout]))->post($path, $options);
+        $response = (new Client(['handler' => new StreamHandler(), 'base_uri' => rtrim($account['url'], '/'), 'connect_timeout' => 5, 'timeout' => $timeout]))->post($path, $options);
         $body = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
         if ((int) ($body['code'] ?? -1) !== 0) throw new RuntimeException((string) ($body['msg'] ?? 'WXGAME 请求失败'));
         return $body['data'] ?? null;

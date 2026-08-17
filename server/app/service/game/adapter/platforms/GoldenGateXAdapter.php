@@ -6,6 +6,7 @@ use app\enum\RedisKey;
 use app\model\Game;
 use app\service\game\adapter\AbstractAdapter;
 use GuzzleHttp\Client;
+use GuzzleHttp\Handler\StreamHandler;
 use RuntimeException;
 use support\Redis;
 
@@ -120,7 +121,7 @@ class GoldenGateXAdapter extends AbstractAdapter
 
     private function request(array $config, string $method, string $path, array $params = []): mixed
     {
-        $client = new Client(['base_uri' => rtrim($config['url'], '/') . '/', 'timeout' => 30]);
+        $client = new Client(['handler' => new StreamHandler(), 'base_uri' => rtrim($config['url'], '/') . '/', 'timeout' => 30]);
         $response = $client->request($method, ltrim($path, '/'), [
             'headers' => ['Authorization' => 'Bearer ' . $this->token($config), 'Accept' => 'application/json'],
             $method === 'GET' ? 'query' : 'json' => $params,
@@ -136,7 +137,7 @@ class GoldenGateXAdapter extends AbstractAdapter
     {
         $key = RedisKey::TempGoldenGateXToken->value;
         if ($token = Redis::get($key)) return $token;
-        $response = (new Client(['base_uri' => rtrim($config['url'], '/') . '/', 'timeout' => 30]))->post('auth/createtoken', [
+        $response = (new Client(['handler' => new StreamHandler(), 'base_uri' => rtrim($config['url'], '/') . '/', 'timeout' => 30]))->post('auth/createtoken', [
             'json' => ['clientId' => $config['client_id'], 'clientSecret' => $config['client_secret']],
         ]);
         $data = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
