@@ -32,28 +32,34 @@ class DbUpgradeCommand extends Command
         $this->output = $output;
         $this->dryRun = (bool) $input->getOption('dry-run');
         $target = (string) config('database.connections.mysql.database');
-        $reference = '__mg_schema_' . getmypid();
-        if (!preg_match('/^[A-Za-z0-9_-]+$/', $target) || !preg_match('/^__mg_schema_\d+$/', $reference)) throw new RuntimeException('数据库配置无效');
+        $prefix = '__mg_schema_' . getmypid() . '_';
+        if (!preg_match('/^[A-Za-z0-9_-]+$/', $target) || !preg_match('/^__mg_schema_\d+_$/', $prefix)) throw new RuntimeException('数据库配置无效');
 
         $locked = (int) $this->value('SELECT GET_LOCK(?, 30)', ['mg:db:upgrade']);
         if ($locked !== 1) throw new RuntimeException('数据库升级锁获取失败');
 
         $result = self::FAILURE;
+        $references = [];
         try {
-            $this->pdo->exec("DROP DATABASE IF EXISTS `{$reference}`");
-            $this->pdo->exec("CREATE DATABASE `{$reference}` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
-            $this->pdo->exec("USE `{$reference}`");
+            $this->pdo->exec("USE `{$target}`");
             $schema = (string) file_get_contents(base_path('database/schema.sql'));
-            foreach (explode(";\n\n", trim($schema)) as $sql) $this->pdo->exec($sql . ';');
+            foreach (explode(";\n\n", trim($schema)) as $sql) {
+                if (!preg_match('/^CREATE TABLE `([^`]+)`/', $sql, $match)) {
+                    $this->pdo->exec($sql . ';');
+                    continue;
+                }
+                $references[$match[1]] = $prefix . $match[1];
+                $create = preg_replace('/^CREATE TABLE `[^`]+`/', "CREATE TABLE `{$target}`.`{$references[$match[1]]}`", $sql, 1);
+                $this->pdo->exec($create . ';');
+            }
 
-            foreach ($this->tables($reference) as $table) $this->syncTable($reference, $table, $target, $table);
+            foreach ($references as $table => $reference) $this->syncTable($target, $reference, $target, $table);
             foreach ($this->tables($target) as $table) {
                 if (preg_match('/^mg_(bets|bills)_\d{4}$/', $table, $match)) {
-                    $this->syncTable($reference, "mg_{$match[1]}_template", $target, $table);
+                    $this->syncTable($target, $references["mg_{$match[1]}_template"], $target, $table);
                 }
             }
 
-            $this->pdo->exec("USE `{$target}`");
             if (!$this->dryRun) (new SystemDataService())->sync();
             $output->writeln(($this->dryRun ? '预计变更：' : '完成变更：') . $this->changes);
             $result = self::SUCCESS;
@@ -61,10 +67,9 @@ class DbUpgradeCommand extends Command
             $output->writeln('<error>' . $e->getMessage() . '</error>');
         } finally {
             try {
-                $this->pdo->exec("USE `{$target}`");
-                $this->pdo->exec("DROP DATABASE IF EXISTS `{$reference}`");
+                foreach (array_reverse($references) as $table) $this->pdo->exec("DROP TABLE IF EXISTS `{$target}`.`{$table}`");
             } catch (Throwable $e) {
-                $output->writeln('<error>临时数据库清理失败：' . $e->getMessage() . '</error>');
+                $output->writeln('<error>临时对比表清理失败：' . $e->getMessage() . '</error>');
                 $result = self::FAILURE;
             }
             try {

@@ -83,6 +83,7 @@ try {
     $final = new CommandTester(new DbUpgradeCommand());
     checkUpgrade($final->execute(['--dry-run' => true]) === 0, $final->getDisplay());
     checkUpgrade(str_contains($final->getDisplay(), '预计变更：0'), '重复执行仍存在结构差异');
+    checkUpgrade(!support\Db::table('information_schema.tables')->where('table_schema', $database)->where('table_name', 'like', '\\_\\_mg\\_schema\\_%')->exists(), '临时对比表未清理');
     echo "DB upgrade smoke test passed\n";
 } finally {
     support\Db::statement("USE `{$original['database']}`");

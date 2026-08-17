@@ -7,6 +7,8 @@
 - `php webman db:upgrade --dry-run` 预览结构差异。
 - `php webman db:upgrade` 同步结构和内置数据，可重复执行。
 
+升级命令在当前业务库内创建 `__mg_schema_<进程号>_*` 临时对比表并在结束时清理，不创建临时数据库，也不要求应用账号拥有全局建库权限。
+
 首次安装前必须在 `.env` 配置 `INITIAL_ADMIN_PASSWORD` 和 `INITIAL_GAME_ADMIN_PASSWORD`。已有账号的密码不会被升级覆盖。
 
 表结构变更直接修改 `schema.sql`。升级只新增或修正基准中存在的表、字段和索引，不自动删除目标库的额外结构；确需删除时单独评审执行。`mg_bets_template` 和 `mg_bills_template` 的结构会同步到已有月份表。
