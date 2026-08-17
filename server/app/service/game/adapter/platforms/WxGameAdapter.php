@@ -13,7 +13,7 @@ class WxGameAdapter extends AbstractAdapter
 
     public function sync(array $config): array
     {
-        $list = $this->request($config, (string) array_key_first($config['accounts']), '/v1/api/get_game_list', []);
+        $list = $this->request($config, (string) array_key_first($config['accounts']), '/v1/api/get_game_list', [], 120);
         $list = $list['gameList'] ?? $list;
         $brands = [];
         $games = [];
@@ -100,7 +100,7 @@ class WxGameAdapter extends AbstractAdapter
         return ['code' => $code, 'data' => null, 'msg' => (string) ($result['message'] ?? 'Internal error')];
     }
 
-    private function request(array $config, string $currency, string $path, array $params): mixed
+    private function request(array $config, string $currency, string $path, array $params, int $timeout = 30): mixed
     {
         $account = $config['accounts'][strtolower($currency) === 'gc' ? 'gc' : 'sc'];
         $nonce = bin2hex(random_bytes(8));
@@ -116,7 +116,7 @@ class WxGameAdapter extends AbstractAdapter
             'http_errors' => false,
         ];
         $options[$params === [] ? 'body' : 'json'] = $params === [] ? '{}' : $params;
-        $response = (new Client(['base_uri' => rtrim($account['url'], '/'), 'timeout' => 30]))->post($path, $options);
+        $response = (new Client(['base_uri' => rtrim($account['url'], '/'), 'connect_timeout' => 5, 'timeout' => $timeout]))->post($path, $options);
         $body = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
         if ((int) ($body['code'] ?? -1) !== 0) throw new RuntimeException((string) ($body['msg'] ?? 'WXGAME 请求失败'));
         return $body['data'] ?? null;
