@@ -14,5 +14,6 @@
 
 return [
     support\bootstrap\Session::class,
+    app\bootstrap\Database::class,
     Webman\ThinkOrm\ThinkOrm::class,
 ];

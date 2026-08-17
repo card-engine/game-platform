@@ -70,10 +70,31 @@ ThinkORM 依赖仍可能存在，但不要在新业务中混用，也不要自�
 - 自定义 `casts()` 时使用 `array_merge(parent::casts(), [...])`，不要丢失基类转换。
 - 基类允许批量赋值；写入数据库前必须显式筛选允许字段，禁止把未经处理的 `$request->post()` 直接持久化。
 - 查询条件放入 `searchXxxAttr($query, $value)`；关联查询使用 Eloquent 关联并按需预加载，避免 N+1。
-- 表结构变更使用独立 SQL 或迁移文件；数据修复与结构变更分开，禁止在请求代码中自动改表。
+- 数据修复与结构变更分开，禁止在请求代码中自动改表。
+- 自有业务表统一使用 `mg_` 前缀，Model 类名不加 `Mg`。关联字段使用 `*_id`，编码使用 `*_code`，具体时刻使用 `*_time`，自然日使用 `*_date`，月份使用 `*_month`，布尔能力使用 `is_*`，统计表使用 `*_stats`；禁止混用 `*_at`、`*_updated_time`、`*_reports` 等旧命名。
+- 除 `id`、`create_time`、`update_time`、`delete_time`、`created_by`、`updated_by` 等含义明确的框架字段外，所有自有表字段都必须写清晰的数据库 `COMMENT`。时间字段注释必须说明 UTC、平台时区或商户时区口径。
+- 所有具体时刻统一使用 UTC `DATETIME(3)` 入库；平台和商户的自然日、小时、月份另存明确的日期字段和 IANA 时区快照。金额使用 `DECIMAL`，资金计算使用 BCMath，禁止使用 `float`。
 - 未经明确授权，不执行删表、清库、批量删除等不可逆操作。
 
-## 6. 前端规范
+### 数据库版本与内置数据
+
+- `server/database/schema.sql` 是完整表结构的唯一基线，系统表和 `mg_` 业务表的新建或变更都必须同步维护字段、索引、表选项和注释；禁止再新增按版本累积的全量 SQL、请求时 DDL 或重复结构定义。
+- 动态月份表不写入 `schema.sql`。修改注单或流水结构时只更新 `mg_bets_template`、`mg_bills_template`，`db:upgrade` 负责同步已经存在的月份表。
+- `server/database/system.php` 统一定义菜单、按钮及层级、内置角色及精确权限、系统配置定义、字典、初始账号和 MG 定时任务；新增或调整菜单、按钮时必须同时更新相关内置角色的权限列表。
+- 菜单使用稳定 `code`，按钮使用稳定 `slug`，父子关系使用配置 `key`；禁止在定义或业务代码中硬编码菜单、角色数据库 ID。
+- 升级只补充和更新代码定义，不覆盖已有配置值、账号密码和定时任务启停状态。初始账号只在不存在时创建，废弃 MG 定时任务只禁用不删除。
+- 常规升级不得删除目标库额外的表、字段、索引或业务数据。确需删除或转换时，必须作为单独变更明确评审，并提供可验证的数据处理方案。
+- 数据库相关改动必须依次执行 `php webman db:upgrade --dry-run`、`php webman db:upgrade` 和 `php tests/DbUpgradeSmoke.php`；变更基线或内置数据时，同时验证空库首次安装和重复执行无差异。
+
+## 6. Redis 规范
+
+- 自有 Redis Key 统一维护在 `server/app/enum/RedisKey.php`，业务代码禁止散落硬编码 Key；框架和第三方队列内部 Key 不纳入、不修改。
+- `Lock*` 使用 `lock:` 前缀并集中放在锁分组；`Forever*` 使用 `forever:` 前缀并集中放在永久缓存分组；`Temp*` 使用 `temp:` 前缀并集中放在临时缓存分组。每个枚举项必须注释数据类型、用途和完整格式。
+- 临时缓存必须显式设置过期时间并复用 Enum 中的过期时间常量；永久缓存不得依赖 TTL 自动刷新。
+- `mg_configs` 所有读取必须经过 `ForeverConfigs` 缓存。缓存缺失时在 `LockConfigsRebuild` 锁内从数据库完整重建；后台修改配置提交后必须立即原子重建缓存。
+- 分布式锁使用随机 Token，释放时通过 Lua 比较 Token 后删除；Redis 锁只降低并发冲突，最终幂等仍由数据库唯一索引保证。
+
+## 7. 前端规范
 
 - 使用 Vue 3 `<script setup lang="ts">`，遵循现有 ESLint、Prettier 和 Stylelint 配置。
 - `src/components/sai`、`src/hooks/core`、`src/router/core` 及内置页面只复用不修改；需要扩展时在业务目录封装一层。
@@ -87,7 +108,7 @@ ThinkORM 依赖仍可能存在，但不要在新业务中混用，也不要自�
 - 后台菜单的组件路径直接对应 `src/views`，例如 `/order/refund` 对应 `src/views/order/refund/index.vue`。
 - 页面需兼顾窄屏，不写只在固定桌面宽度下成立的布局。
 
-## 7. 验证与交付
+## 8. 验证与交付
 
 - PHP 文件至少执行 `php -l <改动文件>`；路由、配置或常驻进程代码变化后重启或 reload Webman。
 - 前端改动在 `saiadmin-artd/` 下执行 `pnpm lint`；功能完成后执行 `pnpm build`。
