@@ -19,14 +19,21 @@ enum RedisKey: string
     case LockExchangeRateSync = 'lock:mg:exchange_rate:sync:%s'; // string 汇率同步锁，格式：rate_date
     case LockStatsRefresh = 'lock:mg:stats:refresh:%s'; // string 统计时间桶刷新锁，格式：bucket_hash
     case LockGameBrandCode = 'lock:mg:game_brand_code:%d'; // string 品牌游戏编码生成锁，格式：brand_id
+    case LockMgsConfigsRebuild = 'lock:mgs:configs:rebuild'; // string MGS 配置缓存重建锁
+    case LockMgsSync = 'lock:mgs:sync'; // string MGS 游戏同步锁
+    case LockMgsUserWallet = 'lock:mgs:user_wallet:%d:%s'; // string MGS 用户资金锁，格式：user_id:currency_code
+    case LockMgsStatsRefresh = 'lock:mgs:stats:refresh:%s'; // string MGS 统计时间桶锁，格式：日期或日期小时
 
     /** Permanent caches. */
     case ForeverConfigs = 'forever:mg:configs'; // string 启用中的全局配置 JSON
+    case ForeverMgsConfigs = 'forever:mgs:configs'; // string 启用中的 MGS 配置 JSON
 
     /** Temporary caches. */
     case TempGoldenGateXToken = 'temp:mg:goldengatex:token'; // string GoldenGateX Bearer Token
     case TempStatsRefresh = 'temp:mg:stats:refresh:%s'; // string 统计时间桶待刷新标记，格式：bucket_hash
     case TempPlatformStatsRebuild = 'temp:mg:platform_stats:rebuild'; // JSON 平台统计重建状态
+    case TempMgsLaunch = 'temp:mgs:launch:%s'; // string MGS 进游短期幂等标记，格式：request_id
+    case TempMgsStatsRefresh = 'temp:mgs:stats:refresh:%s'; // string MGS 统计待刷新标记，格式：日期或日期小时
 
     public function format(mixed ...$args): string
     {

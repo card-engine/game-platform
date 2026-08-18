@@ -77,3 +77,25 @@ Route::group('/open_api', function () {
 
 Route::post('/provider/{platform:wxgame|acewin|tada|goldengatex}/{action:[A-Za-z-]+}', [app\controller\provider\ProviderController::class, 'callback']);
 Route::post('/self-wallet/{action:balance|bet|win|cancel}', [app\controller\openapi\SelfWalletController::class, 'callback']);
+
+Route::group('/mgs', function () {
+    Route::get('/overview', [app\controller\mgs\AdminController::class, 'overview']);
+    Route::get('/games', [app\controller\mgs\AdminController::class, 'games']);
+    Route::post('/games/sync', [app\controller\mgs\AdminController::class, 'sync']);
+    Route::put('/games/status', [app\controller\mgs\AdminController::class, 'status']);
+    Route::put('/games/config', [app\controller\mgs\AdminController::class, 'config']);
+    Route::get('/users', [app\controller\mgs\AdminController::class, 'users']);
+    Route::get('/bets', [app\controller\mgs\AdminController::class, 'bets']);
+    Route::get('/bills', [app\controller\mgs\AdminController::class, 'bills']);
+    Route::get('/reports', [app\controller\mgs\AdminController::class, 'reports']);
+    Route::get('/settlements', [app\controller\mgs\AdminController::class, 'settlements']);
+    Route::post('/settlements/generate', [app\controller\mgs\AdminController::class, 'generateSettlement']);
+});
+
+Route::group('/api', function () {
+    Route::get('/games', [app\controller\mgs\ApiController::class, 'games']);
+    Route::post('/games/launch', [app\controller\mgs\ApiController::class, 'launch']);
+    Route::get('/user', [app\controller\mgs\ApiController::class, 'user']);
+    Route::get('/wallet', [app\controller\mgs\ApiController::class, 'wallet']);
+    Route::post('/mgames/{action:balance|bet|win|cancel}', [app\controller\mgs\CallbackController::class, 'callback']);
+});

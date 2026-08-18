@@ -48,14 +48,19 @@ try {
     $upgrade = new CommandTester(new DbUpgradeCommand());
     checkUpgrade($upgrade->execute([]) === 0, $upgrade->getDisplay());
     $tableCount = support\Db::table('information_schema.tables')->where('table_schema', $database)->count();
-    checkUpgrade($tableCount === 44, "空库结构未完整创建：{$tableCount}");
+    preg_match_all('/^CREATE TABLE `/m', file_get_contents(dirname(__DIR__) . '/database/schema.sql'), $schemaTables);
+    checkUpgrade($tableCount === count($schemaTables[0]), "空库结构未完整创建：{$tableCount}");
     checkUpgrade(support\Db::table('sa_system_menu')->whereNull('delete_time')->count() === count($system['menus']), '菜单未完整创建');
-    checkUpgrade(support\Db::table('sa_system_role')->whereNull('delete_time')->count() === 4, '内置角色未完整创建');
+    checkUpgrade(support\Db::table('sa_system_role')->whereNull('delete_time')->count() === count($system['roles']), '内置角色未完整创建');
     checkUpgrade(support\Db::table('sa_system_user')->whereIn('username', ['admin', 'game_admin'])->count() === 2, '内置管理员未创建');
     checkUpgrade(password_verify('Admin-Test-123!', support\Db::table('sa_system_user')->where('username', 'admin')->value('password')), '初始密码写入错误');
     $gameUser = (array) support\Db::table('mg_users')->where('id', 1)->first();
     checkUpgrade((int) $gameUser['merchant_id'] === 0 && $gameUser['merchant_user_id'] === config('game_platforms.self_merchant.user_id')
         && $gameUser['nickname'] === '系统玩家' && (int) $gameUser['status'] === 1, '系统试玩玩家未创建');
+    checkUpgrade(support\Db::table('mgs_users')->where(['id' => 1, 'user_no' => 'system'])->exists(), 'MGS 系统用户未创建');
+    $mgsMchId = json_decode(support\Db::table('mgs_configs')->where('code', 'game_platform_mch_id')->value('value'), true);
+    checkUpgrade($mgsMchId !== '' && support\Db::table('mg_merchants')->where(['mch_id' => $mgsMchId, 'name' => 'MGS 自营平台'])->exists(), 'MGS 正常商户参数未创建');
+    checkUpgrade(support\Db::table('mg_merchants')->where('mch_id', $mgsMchId)->value('callback_url') === 'http://127.0.0.1:8787/api/mgames', 'MGS 商户回调地址未初始化');
 
     support\Db::statement('CREATE TABLE `mg_bets_2701` LIKE `mg_bets_template`');
     support\Db::statement('ALTER TABLE `mg_bets_2701` DROP COLUMN `settled_time`, DROP INDEX `idx_status_time`, ADD INDEX `idx_status_time` (`status`)');

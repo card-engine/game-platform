@@ -55,8 +55,8 @@ class DbUpgradeCommand extends Command
 
             foreach ($references as $table => $reference) $this->syncTable($target, $reference, $target, $table);
             foreach ($this->tables($target) as $table) {
-                if (preg_match('/^mg_(bets|bills)_\d{4}$/', $table, $match)) {
-                    $this->syncTable($target, $references["mg_{$match[1]}_template"], $target, $table);
+                if (preg_match('/^(mg|mgs)_(bets|bills)_\d{4}$/', $table, $match)) {
+                    $this->syncTable($target, $references["{$match[1]}_{$match[2]}_template"], $target, $table);
                 }
             }
 
