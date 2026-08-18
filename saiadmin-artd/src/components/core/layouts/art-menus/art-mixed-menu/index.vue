@@ -53,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+  import { ref, computed, onMounted, nextTick, watch } from 'vue'
   import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
   import { useThrottleFn } from '@vueuse/core'
   import { formatMenuTitle } from '@/utils/router'
@@ -260,15 +260,12 @@
     })
   }
 
-  let resizeObserver: ResizeObserver
+  // 顶部时间会引起容器尺寸变化，不能因此重置用户正在浏览的滚动位置。
   watch(currentActivePath, () => !menuClickScrolling && initScrollState())
   watch(() => processedMenuList.value.length, initScrollState)
   onMounted(() => {
     initScrollState()
-    resizeObserver = new ResizeObserver(initScrollState)
-    resizeObserver.observe(scrollbarRef.value.wrapRef)
   })
-  onBeforeUnmount(() => resizeObserver.disconnect())
 </script>
 
 <style scoped>
