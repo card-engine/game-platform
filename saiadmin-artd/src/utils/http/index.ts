@@ -5,7 +5,7 @@
  * ## 主要功能
  *
  * - 请求/响应拦截器（自动添加 Token、统一错误处理）
- * - 401 未授权自动登出（带防抖机制）
+ * - 401 未授权自动刷新令牌，刷新失败才登出
  * - 请求失败自动重试（可配置）
  * - 统一的成功/错误消息提示
  * - 支持 GET/POST/PUT/DELETE 等常用方法
@@ -37,6 +37,9 @@ let unauthorizedTimer: NodeJS.Timeout | null = null
 interface ExtendedAxiosRequestConfig extends AxiosRequestConfig {
   showErrorMessage?: boolean
   showSuccessMessage?: boolean
+  skipAuthHeader?: boolean
+  skipTokenRefresh?: boolean
+  tokenRefreshed?: boolean
 }
 
 const { VITE_API_URL, VITE_WITH_CREDENTIALS } = import.meta.env
@@ -62,11 +65,39 @@ const axiosInstance = axios.create({
   ]
 })
 
+let refreshPromise: Promise<boolean> | null = null
+
+/** 使用刷新令牌换取新的访问令牌；并发请求共用一次刷新。 */
+async function refreshAccessToken() {
+  const userStore = useUserStore()
+  if (!userStore.refreshToken) return false
+  if (!refreshPromise) {
+    refreshPromise = axiosInstance
+      .post<BaseResponse<Api.Auth.LoginResponse>>('/auth/refresh', {}, {
+        skipAuthHeader: true,
+        skipTokenRefresh: true,
+        headers: { Authorization: `Bearer ${userStore.refreshToken}` }
+      } as ExtendedAxiosRequestConfig)
+      .then((response) => {
+        const token = response.data.data
+        userStore.setToken(token.access_token, token.refresh_token)
+        return true
+      })
+      .catch(() => false)
+      .finally(() => {
+        refreshPromise = null
+      })
+  }
+  return refreshPromise
+}
+
 /** 请求拦截器 */
 axiosInstance.interceptors.request.use(
   (request: InternalAxiosRequestConfig) => {
+    const config = request as ExtendedAxiosRequestConfig
     const { accessToken } = useUserStore()
-    if (accessToken) request.headers.set('Authorization', `Bearer ` + accessToken)
+    if (!config.skipAuthHeader && accessToken)
+      request.headers.set('Authorization', `Bearer ` + accessToken)
     const merchantId = useGameStore().merchantId
     if (merchantId) request.headers.set('X-Merchant-Id', String(merchantId))
 
@@ -85,15 +116,38 @@ axiosInstance.interceptors.request.use(
 
 /** 响应拦截器 */
 axiosInstance.interceptors.response.use(
-  (response: AxiosResponse<BaseResponse>) => {
+  async (response: AxiosResponse<BaseResponse>) => {
     if (response.config.responseType === 'blob') return response
     const { code, message } = response.data
     if (code === ApiStatus.success) return response
-    if (code === ApiStatus.unauthorized) handleUnauthorizedError(message)
+    const config = response.config as ExtendedAxiosRequestConfig
+    if (code === ApiStatus.unauthorized && !config.skipTokenRefresh && !config.tokenRefreshed) {
+      if (await refreshAccessToken()) {
+        return axiosInstance.request({
+          ...config,
+          tokenRefreshed: true
+        } as ExtendedAxiosRequestConfig)
+      }
+      handleUnauthorizedError(message)
+    }
     throw createHttpError(message || $t('httpMsg.requestFailed'), code)
   },
-  (error) => {
-    if (error.response?.status === ApiStatus.unauthorized) handleUnauthorizedError()
+  async (error) => {
+    const config = error.config as ExtendedAxiosRequestConfig | undefined
+    if (
+      error.response?.status === ApiStatus.unauthorized &&
+      config &&
+      !config.skipTokenRefresh &&
+      !config.tokenRefreshed
+    ) {
+      if (await refreshAccessToken()) {
+        return axiosInstance.request({
+          ...config,
+          tokenRefreshed: true
+        } as ExtendedAxiosRequestConfig)
+      }
+      handleUnauthorizedError()
+    }
     return Promise.reject(handleError(error))
   }
 )

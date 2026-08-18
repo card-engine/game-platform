@@ -16,6 +16,8 @@ use Webman\Route;
 
 Route::disableDefaultRoute();
 
+Route::post('/auth/refresh', [app\controller\AuthController::class, 'refresh']);
+
 Route::group('/game', function () {
     Route::get('/context', [app\controller\game\ContextController::class, 'index']);
     fastRoute('enterprise', app\controller\game\EnterpriseController::class);

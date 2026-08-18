@@ -9,14 +9,14 @@ return [
         /** access令牌秘钥（安装时自动生成64位随机值） */
         'access_secret_key' => 'f587311161e7407a6f7d2457f29bd03b50059b84743203937ad06027574855eb',
 
-        /** access令牌过期时间，单位：秒。默认 2 小时 */
-        'access_exp' => 7200,
+        /** access令牌过期时间，单位：秒。刷新后的后台访问令牌有效 24 小时 */
+        'access_exp' => 86400,
 
         /** refresh令牌秘钥（安装时自动生成64位随机值） */
         'refresh_secret_key' => '4a7b1f9649bd1bdcb43095d82081328863f06cffc8be0e1d5dad3b6c1d83f5c2',
 
-        /** refresh令牌过期时间，单位：秒。默认 7 天 */
-        'refresh_exp' => 604800,
+        /** refresh令牌过期时间，单位：秒。后台登录状态最长保持 30 天 */
+        'refresh_exp' => 2592000,
 
         /** refresh 令牌是否禁用，默认不禁用 false */
         'refresh_disable' => false,
@@ -33,8 +33,8 @@ return [
         /** 是否允许单设备登录，默认不允许 false */
         'is_single_device' => false,
 
-        /** 缓存令牌时间，单位：秒。默认 7 天 */
-        'cache_token_ttl' => 604800,
+        /** 缓存令牌时间，单位：秒 */
+        'cache_token_ttl' => 2592000,
 
         /** 缓存令牌前缀，默认 JWT:TOKEN: */
         'cache_token_pre' => 'JWT:TOKEN:',
