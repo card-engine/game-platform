@@ -40,7 +40,7 @@ export class RouteRegistry {
     // 验证路由配置
     const validationResult = this.validator.validate(menuList)
     if (!validationResult.valid) {
-      throw new Error(`路由配置验证失败: ${validationResult.errors.join(', ')}`)
+      console.error(`路由配置验证失败: ${validationResult.errors.join(', ')}`)
     }
 
     // 转换并注册路由
