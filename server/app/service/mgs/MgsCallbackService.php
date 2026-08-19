@@ -66,14 +66,15 @@ class MgsCallbackService
                     if (!$game) throw new RuntimeException('MGS 游戏不存在或已停用');
                     if (!in_array($currency, (array) $game->currency_codes, true)) throw new RuntimeException('MGS 游戏不支持该币种');
                     $betTable = (new MgsTableService())->table('bets');
-                    $roundKey = hash('sha256', "{$user->id}|{$currency}|{$game->id}|" . ($params['parent_round_id'] ?? $params['round_id'] ?? ''));
+                    $roundId = trim((string) ($params['parent_round_id'] ?? $params['round_id'] ?? ''));
+                    $roundKey = hash('sha256', "{$user->id}|{$currency}|{$game->id}|" . ($roundId ?: "transaction:{$transactionId}"));
                     $bet = $this->findBet($roundKey);
                     if (!$bet) {
                         $betNo = mg_no('MB');
                         $betTable = (new MgsTableService())->table('bets', substr($betNo, 2, 4));
                         Db::table($betTable)->insert([
                             'bet_no' => $betNo, 'user_id' => $user->id, 'game_id' => $game->id, 'currency_code' => $currency,
-                            'round_key' => $roundKey, 'platform_round_id' => (string) ($params['round_id'] ?? ''), 'rate_value' => $game->rate_value,
+                            'round_key' => $roundKey, 'platform_round_id' => (string) (($params['round_id'] ?? '') ?: ($roundId ?: $transactionId)), 'rate_value' => $game->rate_value,
                             'business_date' => $this->date(), 'platform_date' => $this->date(), 'create_time' => $this->now(), 'update_time' => $this->now(),
                         ]);
                     $bet = (array) Db::table($betTable)->where('bet_no', $betNo)->first();
@@ -81,15 +82,31 @@ class MgsCallbackService
                         $betTable = $this->betTable((string) $bet['bet_no']);
                     }
                 } else {
-                    $original = $this->findBill((string) ($params['original_transaction_id'] ?? ''), 'bet', $user->id, $currency) ?: $this->findBill((string) ($params['original_transaction_id'] ?? ''), 'win', $user->id, $currency);
+                    $originalTransactionId = trim((string) ($params['original_transaction_id'] ?? ''));
+                    $originalType = (string) ($params['original_type'] ?? '');
+                    $original = in_array($originalType, ['bet', 'win'], true)
+                        ? $this->findBill($originalTransactionId, $originalType, $user->id, $currency)
+                        : ($this->findBill($originalTransactionId, 'bet', $user->id, $currency) ?: $this->findBill($originalTransactionId, 'win', $user->id, $currency));
                     if (!$original) throw new RuntimeException('原交易不存在');
                     $betNo = (string) ($original->bet_no ?? '');
                     $betTable = $this->betTable($betNo);
                     $bet = (array) Db::table($betTable)->where('bet_no', $betNo)->lockForUpdate()->first();
                     if (!$bet) throw new RuntimeException('原注单不存在');
                     $game = Game::find($bet['game_id']);
-                    $params['amount'] = (string) $original->amount;
                     $params['original_type'] = (string) $original->type;
+                    $cancelled = '0';
+                    foreach ($this->months() as $month) {
+                        $cancelled = bcadd($cancelled, (string) Db::table((new MgsTableService())->table('bills', $month))
+                            ->where(['user_id' => $user->id, 'currency_code' => $currency, 'type' => 'cancel', 'status' => 2,
+                                'original_transaction_id' => $originalTransactionId, 'direction' => $original->type === 'bet' ? 1 : 2])
+                            ->sum('amount'), 8);
+                    }
+                    $remaining = bcsub((string) $original->amount, $cancelled, 8);
+                    if (bccomp($remaining, '0', 8) <= 0) throw new RuntimeException('原交易已全部取消');
+                    $cancelAmount = trim((string) ($params['cancel_amount'] ?? ''));
+                    if ($cancelAmount !== '' && preg_match('/^\d+(?:\.\d{1,8})?$/', $cancelAmount) !== 1) throw new RuntimeException('金额格式无效');
+                    $params['amount'] = $cancelAmount === '' || bccomp($cancelAmount, '0', 8) === 0 ? $remaining : $cancelAmount;
+                    if (bccomp($params['amount'], $remaining, 8) > 0) throw new RuntimeException('取消金额超过原交易剩余金额');
                 }
                 $amount = $action === 'bet' ? (string) ($params['bet_amount'] ?? '0') : ($action === 'win' ? (string) ($params['win_amount'] ?? '0') : (string) ($params['amount'] ?? '0'));
                 if (preg_match('/^\d+(?:\.\d{1,8})?$/', $amount) !== 1 || bccomp($amount, '0', 8) < 0) throw new RuntimeException('金额格式无效');
@@ -133,10 +150,20 @@ class MgsCallbackService
         $billableGgr = bccomp((string) $bet['ggr_amount'], '0', 8) > 0 ? (string) $bet['ggr_amount'] : '0';
         $bet['platform_fee'] = bcmul($billableGgr, (string) $bet['rate_value'], 8);
         $bet['rtp_value'] = bccomp((string) $bet['bet_amount'], '0', 8) > 0 ? bcdiv((string) $bet['win_amount'], (string) $bet['bet_amount'], 10) : null;
-        $status = $action === 'win' && (int) ($params['is_end'] ?? 0) === 1 ? 2 : 1;
+        $settledTime = $bet['settled_time'] ?: ($action === 'win' && (int) ($params['is_end'] ?? 0) === 1 ? $this->now() : null);
+        $status = bccomp(bcsub((string) $bet['bet_amount'], (string) $bet['bet_rollback_amount'], 8), '0', 8) === 0
+            && bccomp(bcsub((string) $bet['win_amount'], (string) $bet['win_rollback_amount'], 8), '0', 8) === 0
+            ? 3 : ($settledTime ? 2 : 1);
+        $actions = json_decode($bet['actions'] ?: '[]', true) ?: [];
+        $actions[] = array_filter([
+            'type' => $action, 'transaction_id' => $params['transaction_id'] ?? null,
+            'original_transaction_id' => $params['original_transaction_id'] ?? null,
+            'amount' => $amount, 'is_end' => $action === 'win' ? (int) ($params['is_end'] ?? 0) : null, 'time' => $this->now(),
+        ], fn ($value) => $value !== null);
         Db::table($table)->where('bet_no', $bet['bet_no'])->update([
             $field => $bet[$field], 'ggr_amount' => $bet['ggr_amount'], 'platform_fee' => $bet['platform_fee'], 'rtp_value' => $bet['rtp_value'],
-            'status' => $status, 'settled_time' => $status === 2 ? $this->now() : null, 'update_time' => $this->now(),
+            'actions' => json_encode($actions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'status' => $status, 'settled_time' => $settledTime, 'update_time' => $this->now(),
         ]);
     }
 

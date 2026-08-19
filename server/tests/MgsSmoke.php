@@ -13,6 +13,7 @@ use Webman\Config;
 use Webman\Database\Initializer;
 use support\Db;
 
+putenv('MGS_GAME_PLATFORM_SECRET=Mgs-Smoke-Secret');
 require dirname(__DIR__) . '/vendor/autoload.php';
 require dirname(__DIR__) . '/support/bootstrap.php';
 
@@ -48,7 +49,8 @@ try {
         'brand_id' => 1, 'name' => 'Smoke Game', 'currency_codes' => ['USD'], 'status' => 1, 'rate_value' => '0.0300000000',
     ]);
     $user = User::findOrFail(1);
-    $wallet = Wallet::create(['user_id' => $user->id, 'currency_code' => 'USD', 'balance' => '100.00000000']);
+    $wallet = Wallet::where(['user_id' => $user->id, 'currency_code' => 'USD'])->firstOrFail();
+    $wallet->update(['balance' => '100.00000000']);
     $service = new MgsCallbackService();
     $base = ['user_id' => $user->user_no, 'currency' => 'USD', 'game_id' => 'smoke-game', 'parent_round_id' => 'round-1', 'round_id' => 'round-1'];
     $service->handle('bet', $base + ['transaction_id' => 'tx-bet-1', 'bet_amount' => '10']);
@@ -60,6 +62,7 @@ try {
         if ($e->getMessage() !== '重复交易参数不一致') throw $e;
     }
     $service->handle('win', $base + ['transaction_id' => 'tx-win-1', 'win_amount' => '4', 'is_end' => 1]);
+    $service->handle('win', $base + ['transaction_id' => 'tx-win-1', 'win_amount' => '4', 'is_end' => 1]);
     $wallet->refresh();
     if ((string) $wallet->balance !== '94.00000000') throw new RuntimeException('下注派奖余额不正确');
     (new MgsStatsService())->rebuildDate((new DateTimeImmutable('now', new DateTimeZone('UTC')))->format('Y-m-d'));
@@ -69,14 +72,38 @@ try {
     (new MgsSettlementService())->generate($month);
     $settlement = Db::table('mgs_settlements')->where(['settlement_month' => $month, 'currency_code' => 'USD'])->first();
     if (!$settlement || (string) $settlement->platform_fee !== '0.18000000' || (string) $settlement->mgs_net_amount !== '5.82000000') throw new RuntimeException('部门结算金额不正确');
-    $service->handle('cancel', $base + ['transaction_id' => 'tx-cancel-bet', 'original_transaction_id' => 'tx-bet-1']);
-    $service->handle('cancel', $base + ['transaction_id' => 'tx-cancel-win', 'original_transaction_id' => 'tx-win-1']);
+    $service->handle('cancel', $base + ['transaction_id' => 'tx-cancel-bet-1', 'original_transaction_id' => 'tx-bet-1', 'original_type' => 'bet', 'cancel_amount' => '4']);
+    $service->handle('cancel', $base + ['transaction_id' => 'tx-cancel-bet-1', 'original_transaction_id' => 'tx-bet-1', 'original_type' => 'bet', 'cancel_amount' => '4']);
+    $bet = (array) Db::table('mgs_bets_' . gmdate('ym'))->first();
+    if ((int) $bet['status'] !== 2 || !$bet['settled_time'] || (string) $wallet->fresh()->balance !== '98.00000000') throw new RuntimeException('部分取消破坏了结单状态');
+    try {
+        $service->handle('cancel', $base + ['transaction_id' => 'tx-cancel-bet-too-much', 'original_transaction_id' => 'tx-bet-1', 'original_type' => 'bet', 'cancel_amount' => '7']);
+        throw new RuntimeException('超额取消未拒绝');
+    } catch (RuntimeException $e) {
+        if ($e->getMessage() !== '取消金额超过原交易剩余金额') throw $e;
+    }
+    $service->handle('cancel', $base + ['transaction_id' => 'tx-cancel-bet-2', 'original_transaction_id' => 'tx-bet-1', 'original_type' => 'bet', 'cancel_amount' => '6']);
+    $service->handle('cancel', $base + ['transaction_id' => 'tx-cancel-win', 'original_transaction_id' => 'tx-win-1', 'original_type' => 'win']);
     $wallet->refresh();
     if ((string) $wallet->balance !== '100.00000000') throw new RuntimeException('取消回滚后余额不正确');
+    $cancelled = (array) Db::table('mgs_bets_' . gmdate('ym'))->first();
+    if ((int) $cancelled['status'] !== 3 || $cancelled['settled_time'] !== $bet['settled_time']) throw new RuntimeException('完全取消状态或结单时间错误');
+    try {
+        $service->handle('cancel', $base + ['transaction_id' => 'tx-cancel-bet-3', 'original_transaction_id' => 'tx-bet-1', 'original_type' => 'bet']);
+        throw new RuntimeException('换交易号重复取消未拒绝');
+    } catch (RuntimeException $e) {
+        if ($e->getMessage() !== '原交易已全部取消') throw $e;
+    }
+    $service->handle('win', $base + ['transaction_id' => 'tx-win-late', 'win_amount' => '1', 'is_end' => 0]);
+    $late = (array) Db::table('mgs_bets_' . gmdate('ym'))->first();
+    if ((int) $late['status'] !== 2 || $late['settled_time'] !== $bet['settled_time']) throw new RuntimeException('结单后补发派奖重新打开了注单');
+    $service->handle('cancel', $base + ['transaction_id' => 'tx-cancel-win-late', 'original_transaction_id' => 'tx-win-late', 'original_type' => 'win']);
+    if ((string) $wallet->fresh()->balance !== '100.00000000') throw new RuntimeException('补发派奖回滚余额不正确');
     $user2 = User::create(['user_no' => 'system-2', 'language' => 'en', 'status' => 1]);
     $wallet2 = Wallet::create(['user_id' => $user2->id, 'currency_code' => 'USD', 'balance' => '100.00000000']);
-    $service->handle('bet', ['user_id' => $user2->user_no, 'currency' => 'USD', 'game_id' => 'smoke-game', 'parent_round_id' => 'round-2', 'round_id' => 'round-2', 'transaction_id' => 'tx-bet-1', 'bet_amount' => '2']);
-    if ((string) $wallet2->fresh()->balance !== '98.00000000') throw new RuntimeException('不同用户相同交易号被错误判为重复');
+    $service->handle('bet', ['user_id' => $user2->user_no, 'currency' => 'USD', 'game_id' => 'smoke-game', 'transaction_id' => 'tx-bet-1', 'bet_amount' => '2']);
+    $service->handle('bet', ['user_id' => $user2->user_no, 'currency' => 'USD', 'game_id' => 'smoke-game', 'transaction_id' => 'tx-bet-2', 'bet_amount' => '3']);
+    if ((string) $wallet2->fresh()->balance !== '95.00000000' || Db::table('mgs_bets_' . gmdate('ym'))->where('user_id', $user2->id)->count() !== 2) throw new RuntimeException('无局号交易被丢弃或错误合并');
     echo "MGS smoke test passed\n";
 } finally {
     Db::statement("USE `{$original['database']}`");

@@ -16,3 +16,23 @@ export const formatMoney = (
 
 export const money = (value?: string | number | null) => formatMoney(value)
 export const merchantMoney = (value?: string | number | null) => formatMoney(value, 'truncate')
+
+const formatScaled = (value: bigint, scale: number) => {
+  const negative = value < 0n
+  const digits = (negative ? -value : value).toString().padStart(scale + 1, '0')
+  const integer = digits.slice(0, -scale) || '0'
+  const fraction = digits.slice(-scale).replace(/0+$/, '')
+  return `${negative ? '-' : ''}${integer}${fraction ? `.${fraction}` : ''}`
+}
+
+export const rateToPercent = (value?: string | number | null) => {
+  const [integer, fraction = ''] = String(value ?? 0).split('.')
+  const scaled = BigInt(`${integer || 0}${fraction.padEnd(10, '0').slice(0, 10)}`) * 100n
+  return formatScaled(scaled, 10)
+}
+
+export const percentToRate = (value?: string | number | null) => {
+  const [integer, fraction = ''] = String(value ?? 0).split('.')
+  const scaled = BigInt(`${integer || 0}${fraction.padEnd(10, '0').slice(0, 10)}`) / 100n
+  return formatScaled(scaled, 10)
+}

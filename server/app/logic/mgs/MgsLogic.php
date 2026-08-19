@@ -44,7 +44,7 @@ class MgsLogic extends BaseLogic
     public function gameConfig(int $id, array $data): void
     {
         $game = Game::findOrFail($id);
-        if (isset($data['rate_value']) && preg_match('/^\d+(?:\.\d{1,10})?$/', (string) $data['rate_value']) !== 1) throw new ApiException('费率格式无效');
+        if (isset($data['rate_value']) && (preg_match('/^\d+(?:\.\d{1,10})?$/', (string) $data['rate_value']) !== 1 || bccomp((string) $data['rate_value'], '1', 10) > 0)) throw new ApiException('费率格式无效');
         if (isset($data['default_rtp']) && $data['default_rtp'] !== '' && $game->rtp_options && !in_array((string) $data['default_rtp'], $game->rtp_options, true)) throw new ApiException('RTP 档位无效');
         Game::whereKey($id)->update(array_filter([
             'sort' => isset($data['sort']) ? (int) $data['sort'] : null,
@@ -58,7 +58,7 @@ class MgsLogic extends BaseLogic
 
     public function users(array $where): array
     {
-        $query = User::query()->when($where['status'] !== '', fn ($q) => $q->where('status', (int) $where['status']))
+        $query = User::with('wallets:id,user_id,currency_code,balance')->when($where['status'] !== '', fn ($q) => $q->where('status', (int) $where['status']))
             ->when($where['keyword'], fn ($q, $value) => $q->where(fn ($item) => $item->where('user_no', 'like', "%{$value}%")->orWhere('nickname', 'like', "%{$value}%")));
         return $this->page($query);
     }
@@ -77,21 +77,35 @@ class MgsLogic extends BaseLogic
         $number = $type === 'bets' ? 'bet_no' : 'bill_no';
         $query = Db::query()->fromSub($union, 't')->join('mgs_users as u', 'u.id', '=', 't.user_id')->leftJoin('mgs_games as g', 'g.id', '=', 't.game_id')
             ->select('t.*', 'u.user_no', 'u.nickname', 'g.name as game_name')
-            ->when($where['keyword'], fn ($q, $value) => $q->where(fn ($item) => $item->where("t.{$number}", 'like', "%{$value}%")->orWhere('u.user_no', 'like', "%{$value}%")->orWhere('g.name', 'like', "%{$value}%")));
-        return $this->page($query, "t.{$number}");
+            ->when($where['status'] !== '', fn ($q) => $q->where('t.status', (int) $where['status']))
+            ->when($type === 'bills' && $where['type'] !== '', fn ($q) => $q->where('t.type', $where['type']))
+            ->when($where['keyword'], fn ($q, $value) => $q->where(fn ($item) => $item->where("t.{$number}", 'like', "%{$value}%")->orWhere('u.user_no', 'like', "%{$value}%")->orWhere('g.name', 'like', "%{$value}%")->orWhere('t.' . ($type === 'bets' ? 'platform_round_id' : 'transaction_id'), 'like', "%{$value}%")));
+        $result = $this->page($query, "t.{$number}");
+        $field = $type === 'bets' ? 'actions' : 'data';
+        foreach ($result['data'] as $row) {
+            if (is_string($row->{$field} ?? null)) $row->{$field} = json_decode($row->{$field}, true) ?: [];
+            if ($type === 'bets') $row->rollback_amount = bcadd((string) $row->bet_rollback_amount, (string) $row->win_rollback_amount, 8);
+        }
+        return $result;
     }
 
     public function reports(array $where): array
     {
         $query = Db::table('mgs_daily_stats as s')->leftJoin('mgs_games as g', 'g.id', '=', 's.game_id')->select('s.*', 'g.name as game_name')
             ->when($where['date_start'], fn ($q, $value) => $q->where('s.stat_date', '>=', $value))
-            ->when($where['date_end'], fn ($q, $value) => $q->where('s.stat_date', '<=', $value));
+            ->when($where['date_end'], fn ($q, $value) => $q->where('s.stat_date', '<=', $value))
+            ->when($where['currency_code'], fn ($q, $value) => $q->where('s.currency_code', $value))
+            ->when($where['keyword'], fn ($q, $value) => $q->where('g.name', 'like', "%{$value}%"));
         return $this->page($query, 's.stat_date');
     }
 
-    public function settlements(): array
+    public function settlements(array $where): array
     {
-        return $this->page(Db::table('mgs_settlements'));
+        $query = Db::table('mgs_settlements')
+            ->when($where['settlement_month'], fn ($q, $value) => $q->where('settlement_month', $value))
+            ->when($where['currency_code'], fn ($q, $value) => $q->where('currency_code', $value))
+            ->when($where['status'] !== '', fn ($q) => $q->where('status', (int) $where['status']));
+        return $this->page($query);
     }
 
     private function months(DateTimeImmutable $start, DateTimeImmutable $end, string $type): array

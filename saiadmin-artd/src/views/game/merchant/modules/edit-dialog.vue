@@ -89,14 +89,9 @@
         class="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2"
       >
         <ElInput v-model="item.currency_code" :placeholder="$t('game.currencyExample')" />
-        <ElInputNumber
-          v-model="item.rate_percent"
-          :min="0"
-          :max="100"
-          :precision="4"
-          class="!w-full"
-          :placeholder="$t('game.ratePercent')"
-        />
+        <ElInput v-model="item.rate_percent" class="!w-full" :placeholder="$t('game.ratePercent')"
+          ><template #suffix>%</template></ElInput
+        >
       </div>
       <ElButton size="small" @click="form.credits.push(newCredit())">{{
         $t('game.addCurrency')
@@ -150,6 +145,7 @@
   import type { FormInstance, FormRules } from 'element-plus'
   import { useI18n } from 'vue-i18n'
   import api from '@/api/game/merchant'
+  import { percentToRate, rateToPercent } from '@/utils/game/amount'
   import { gameLanguages } from '@/utils/game/options'
 
   const { t } = useI18n()
@@ -162,7 +158,7 @@
   })
   const newCredit = (currency_code = '') => ({
     currency_code,
-    rate_percent: 3,
+    rate_percent: '3',
     available_amount: '0',
     settlement_enabled: currency_code !== 'GC' ? 1 : 0,
     status: 1
@@ -208,7 +204,7 @@
       credits: props.data?.credits?.length
         ? props.data.credits.map((item: any) => ({
             ...item,
-            rate_percent: Number(item.rate_value || 0) * 100
+            rate_percent: rateToPercent(item.rate_value)
           }))
         : [newCredit()]
     })
@@ -232,7 +228,7 @@
           .map((item: any) => ({
             ...item,
             currency_code: item.currency_code.toUpperCase(),
-            rate_value: String(Number(item.rate_percent || 0) / 100)
+            rate_value: percentToRate(item.rate_percent)
           }))
       }
       if (props.dialogType === 'add') await api.save(data)

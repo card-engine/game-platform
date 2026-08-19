@@ -5,6 +5,7 @@ namespace app\logic\game;
 use app\model\Enterprise;
 use app\model\EnterpriseUser;
 use app\model\Merchant;
+use app\service\game\EnterpriseScope;
 use Illuminate\Support\Arr;
 use plugin\saiadmin\app\cache\UserAuthCache;
 use plugin\saiadmin\app\cache\UserInfoCache;
@@ -175,8 +176,7 @@ class PlatformAdminLogic extends BaseLogic
 
     private function assertSuper(): void
     {
-        if ((int) $this->adminInfo['id'] === 1) return;
-        if (!collect($this->adminInfo['roleList'] ?? [])->contains(fn ($role) => $role['code'] === 'game_super_admin' && (int) $role['status'] === 1)) throw new ApiException('仅平台超管可操作');
+        if (!EnterpriseScope::isGameSuperAdmin((int) $this->adminInfo['id'])) throw new ApiException('仅平台超管可操作');
     }
 
     private function clearCache(int $id): void

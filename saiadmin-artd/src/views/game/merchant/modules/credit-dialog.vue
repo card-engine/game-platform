@@ -56,17 +56,9 @@
                 class="text-g-500"
                 >{{ $t('game.freeUse') }}</span
               >
-              <ElInputNumber
-                v-else
-                v-model="row.rate_percent"
-                :min="0"
-                :max="100"
-                :precision="4"
-                :disabled="!canEdit"
-                class="!w-32"
-              >
+              <ElInput v-else v-model="row.rate_percent" :disabled="!canEdit" class="!w-32">
                 <template #suffix>%</template>
-              </ElInputNumber>
+              </ElInput>
             </template>
           </ElTableColumn>
           <ElTableColumn :label="$t('game.availableCredit')" min-width="120">
@@ -297,7 +289,7 @@
   import { Delete, Plus, QuestionFilled } from '@element-plus/icons-vue'
   import { ElMessage } from 'element-plus'
   import api from '@/api/game/merchant'
-  import { merchantMoney } from '@/utils/game/amount'
+  import { merchantMoney, percentToRate, rateToPercent } from '@/utils/game/amount'
   import SuperBadge from '@/components/business/super-badge.vue'
   import { useI18n } from 'vue-i18n'
 
@@ -347,7 +339,7 @@
       ).map((item: any) => ({ min: Number(item.min), fee: Number(item.fee) }))
       credits.value = data.credits.map((item: any) => ({
         ...item,
-        rate_percent: Number(item.rate_value || 0) * 100
+        rate_percent: rateToPercent(item.rate_value)
       }))
       stats.value = data.stats
       nextFee.value = data.next_fee || monthlyMinFee.value
@@ -372,7 +364,7 @@
         monthly_tiers: tiers.value,
         credits: credits.value.map((item) => ({
           currency_code: item.currency_code,
-          rate_value: String(Number(item.rate_percent || 0) / 100),
+          rate_value: percentToRate(item.rate_percent),
           status: item.status
         }))
       })

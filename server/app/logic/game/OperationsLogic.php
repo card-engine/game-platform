@@ -24,7 +24,7 @@ class OperationsLogic extends BaseLogic
     {
         $merchantIds = $this->merchantIds($adminId, $selectedMerchantIds);
         $dateMerchants = [];
-        $isSuperAdmin = EnterpriseScope::current($adminId) === null;
+        $isSuperAdmin = EnterpriseScope::isGameSuperAdmin($adminId);
         $dateColumn = $isSuperAdmin ? 'platform_date' : 'business_date';
         if ($isSuperAdmin) {
             $date = (new \DateTimeImmutable('now', new \DateTimeZone((new ConfigService())->get('platform_timezone', 'UTC'))))->format('Y-m-d');
@@ -63,6 +63,11 @@ class OperationsLogic extends BaseLogic
         $trendMerchantId = $isSuperAdmin
             ? (count($selectedMerchantIds) === 1 && count($merchantIds) === 1 ? $merchantIds[0] : 0)
             : (count($merchantIds) === 1 ? $merchantIds[0] : -1);
+        $games = Game::query();
+        if (!$isSuperAdmin) {
+            $games->whereIn('id', Db::table('mg_merchant_games')->whereIn('merchant_id', $merchantIds)
+                ->where(['status' => 1, 'merchant_status' => 1])->whereNull('delete_time')->select('game_id'));
+        }
         return [
             'business_date' => count($businessDates) === 1 ? $businessDates[0] : null,
             'business_date_label' => count($businessDates) === 1 ? $businessDates[0] : '各商户当地今日',
@@ -73,14 +78,14 @@ class OperationsLogic extends BaseLogic
             'active_merchant_count' => Merchant::whereIn('id', $merchantIds)->where('status', 1)->count(),
             'user_count' => User::whereIn('merchant_id', $merchantIds)->count(),
             'today_user_count' => $todayUserCount,
-            'platform_count' => Game::distinct()->count('platform_code'),
-            'game_count' => Game::where('status', 1)->count(),
-            'total_game_count' => Game::count(),
+            'platform_count' => (clone $games)->distinct()->count('platform_code'),
+            'game_count' => (clone $games)->where('status', 1)->count(),
+            'total_game_count' => (clone $games)->count(),
             'unknown_bill_count' => $unknown,
             'today_exception_count' => $today->sum('exception_count'),
             'today' => $today,
             'credits' => MerchantCredit::with('merchant:id,mch_id,name')->whereIn('merchant_id', $merchantIds)->where('status', 1)->orderBy('available_amount')->limit(12)->get(),
-            'platforms' => Game::selectRaw('platform_code, COUNT(*) game_count, SUM(status = 1) enabled_count, MAX(last_sync_time) last_sync_time')->groupBy('platform_code')->get(),
+            'platforms' => (clone $games)->selectRaw('platform_code, COUNT(*) game_count, SUM(status = 1) enabled_count, MAX(last_sync_time) last_sync_time')->groupBy('platform_code')->get(),
             'hourly' => HourlyStat::where('merchant_id', $trendMerchantId)->latest('stat_date')->orderBy('stat_hour')->get(),
             'monthly' => MonthlyStat::where('merchant_id', $trendMerchantId)->orderByDesc('stat_month')->limit(12)->get()->reverse()->values(),
             'is_super_admin' => $isSuperAdmin,

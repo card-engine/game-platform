@@ -2,7 +2,11 @@
 
 use app\model\Enterprise;
 use app\model\EnterpriseUser;
+use app\model\Game;
+use app\model\GameBrand;
 use app\model\Merchant;
+use app\model\MerchantGame;
+use app\model\UniqueBrand;
 use app\service\game\SecretService;
 use plugin\saiadmin\app\cache\UserAuthCache;
 use plugin\saiadmin\app\model\system\SystemRole;
@@ -74,6 +78,21 @@ $otherMerchant = Merchant::create([
     'secret' => SecretService::encrypt($suffix), 'language_codes' => ['en'], 'default_language' => 'en', 'timezone' => 'UTC', 'timeout_ms' => 1000, 'status' => 1,
 ]);
 $otherMerchant->update(['mch_id' => (string) id2big((int) $otherMerchant->id)]);
+$uniqueBrand = UniqueBrand::create(['code' => "scope_{$suffix}", 'name' => 'Scope Smoke', 'status' => 1]);
+$gameBrand = GameBrand::create([
+    'platform_code' => "scope_{$suffix}", 'provider_brand_code' => "scope_{$suffix}", 'unique_brand_id' => $uniqueBrand->id,
+    'mapping_status' => 2, 'name' => 'Scope Smoke', 'status' => 1,
+]);
+$game = Game::create([
+    'game_code' => "scope_{$suffix}_1", 'brand_id' => $gameBrand->id, 'platform_code' => $gameBrand->platform_code,
+    'provider_game_code' => '1', 'name' => 'Visible Game', 'currency_codes' => ['USD'], 'status' => 1,
+]);
+$hiddenGame = Game::create([
+    'game_code' => "scope_{$suffix}_2", 'brand_id' => $gameBrand->id, 'platform_code' => $gameBrand->platform_code,
+    'provider_game_code' => '2', 'name' => 'Hidden Game', 'currency_codes' => ['USD'], 'status' => 1,
+]);
+MerchantGame::create(['merchant_id' => $merchant->id, 'game_id' => $game->id, 'status' => 1, 'merchant_status' => 1]);
+MerchantGame::create(['merchant_id' => $otherMerchant->id, 'game_id' => $hiddenGame->id, 'status' => 1, 'merchant_status' => 1]);
 $staff = null;
 
 try {
@@ -90,6 +109,9 @@ try {
     checkAccount(($ownerContext['body']['data']['role'] ?? '') === 'enterprise_owner' && count($ownerContext['body']['data']['merchants'] ?? []) === 1, '负责人顶部商户范围错误');
     $overview = requestAccount($token, 'GET', '/game/operations/overview');
     checkAccount(collect($overview['body']['data']['hourly'] ?? [])->contains(fn ($row) => (int) $row['merchant_id'] === (int) $merchant->id), '负责人趋势错误使用平台口径');
+    checkAccount(($overview['body']['data']['platform_count'] ?? 0) === 1 && ($overview['body']['data']['game_count'] ?? 0) === 1
+        && ($overview['body']['data']['total_game_count'] ?? 0) === 1, '负责人看到了权限外游戏平台或游戏');
+    checkAccount(collect($overview['body']['data']['platforms'] ?? [])->every(fn ($row) => $row['platform_code'] === $gameBrand->platform_code), '负责人平台摘要越权');
     $ownerTrial = requestAccount($token, 'POST', '/game/trial', ['game_id' => 0, 'currency' => 'USD']);
     checkAccount(($ownerTrial['body']['code'] ?? 200) !== 200, '企业负责人获得了自营试玩权限');
 
@@ -110,6 +132,9 @@ try {
     checkAccount(($staffMerchants['body']['data']['total'] ?? 0) === 1 && (int) $staffMerchants['body']['data']['data'][0]['id'] === (int) $merchant->id, '子账号商户范围错误');
     $staffContext = requestAccount($staffToken, 'GET', '/game/context');
     checkAccount(($staffContext['body']['data']['role'] ?? '') === 'enterprise_staff' && count($staffContext['body']['data']['merchants'] ?? []) === 1, '子账号顶部商户范围错误');
+    $staffOverview = requestAccount($staffToken, 'GET', '/game/operations/overview');
+    checkAccount(($staffOverview['body']['data']['game_count'] ?? 0) === 1
+        && collect($staffOverview['body']['data']['platforms'] ?? [])->every(fn ($row) => $row['platform_code'] === $gameBrand->platform_code), '子账号看到了权限外游戏数据');
     $billing = requestAccount($staffToken, 'GET', '/game/merchant/billing', ['id' => $merchant->id]);
     checkAccount(($billing['body']['code'] ?? 0) === 200, '子账号不能查看计费方案');
     $billingWrite = requestAccount($staffToken, 'PUT', '/game/merchant/billing', ['id' => $merchant->id, 'billing_mode' => 1]);
@@ -137,5 +162,10 @@ try {
     }
     Db::table('mg_merchants')->whereIn('id', [$merchant->id, $otherMerchant->id])->delete();
     Db::table('mg_hourly_stats')->where('id', $trendId)->delete();
+    Db::table('mg_merchant_games')->whereIn('game_id', [$game->id, $hiddenGame->id])->delete();
+    $game->forceDelete();
+    $hiddenGame->forceDelete();
+    $gameBrand->forceDelete();
+    $uniqueBrand->forceDelete();
     Db::table('mg_enterprises')->whereIn('id', [$enterprise->id, $otherEnterprise->id])->delete();
 }

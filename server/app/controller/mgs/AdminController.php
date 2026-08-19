@@ -60,25 +60,25 @@ class AdminController extends BaseController
     #[Permission('自营注单列表', 'app:mgs:bet:index')]
     public function bets(Request $request): Response
     {
-        return $this->success($this->logic->monthly('bets', $request->more([['date_start', ''], ['date_end', ''], ['keyword', '']])));
+        return $this->success($this->logic->monthly('bets', $request->more([['date_start', ''], ['date_end', ''], ['status', ''], ['keyword', '']])));
     }
 
     #[Permission('自营流水列表', 'app:mgs:bill:index')]
     public function bills(Request $request): Response
     {
-        return $this->success($this->logic->monthly('bills', $request->more([['date_start', ''], ['date_end', ''], ['keyword', '']])));
+        return $this->success($this->logic->monthly('bills', $request->more([['date_start', ''], ['date_end', ''], ['type', ''], ['status', ''], ['keyword', '']])));
     }
 
     #[Permission('自营日报', 'app:mgs:report:index')]
     public function reports(Request $request): Response
     {
-        return $this->success($this->logic->reports($request->more([['date_start', ''], ['date_end', '']])));
+        return $this->success($this->logic->reports($request->more([['date_start', ''], ['date_end', ''], ['currency_code', ''], ['keyword', '']])));
     }
 
     #[Permission('自营结算列表', 'app:mgs:settlement:index')]
-    public function settlements(): Response
+    public function settlements(Request $request): Response
     {
-        return $this->success($this->logic->settlements());
+        return $this->success($this->logic->settlements($request->more([['settlement_month', ''], ['currency_code', ''], ['status', '']])));
     }
 
     #[Permission('生成自营结算', 'app:mgs:settlement:update')]

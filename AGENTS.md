@@ -107,6 +107,7 @@ ThinkORM 依赖仍可能存在，但不要在新业务中混用，也不要自�
 - 表单定义 TypeScript 类型和 Element Plus 校验规则；弹窗打开时重置初始值，成功后关闭并刷新列表。
 - 列表返回使用 `Api.Common.ApiPage`，树形/普通数据使用匹配的 `Api.Common.ApiData` 类型；不要随意使用 `any` 扩散未知结构。
 - 后台菜单的组件路径直接对应 `src/views`，例如 `/order/refund` 对应 `src/views/order/refund/index.vue`。
+- 新增后台列表或表单页面必须先以 `saiadmin-artd/src/views/system/post/` 为实现基准，沿用 `TableSearch`、`ArtTableHeader`、`ArtTable`、`useTable`、`useSaiAdmin` 和独立编辑弹窗的结构；禁止把多个菜单功能塞入一个根据路由切换的自定义 Tab 页面，也禁止用原生 `ElTable`、`ElPagination` 重造现有后台组件已经具备的能力。
 - 页面需兼顾窄屏，不写只在固定桌面宽度下成立的布局。
 
 ## 8. 验证与交付

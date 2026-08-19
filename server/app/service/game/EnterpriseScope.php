@@ -9,14 +9,20 @@ use plugin\saiadmin\exception\ApiException;
 
 class EnterpriseScope
 {
+    public static function isGameSuperAdmin(int $systemUserId): bool
+    {
+        $user = SystemUser::with('roles:id,code,status')->find($systemUserId);
+        return $user && (int) $user->status === 1 && (
+            ($systemUserId === 1 && (int) $user->is_super === 1)
+            || $user->roles->contains(fn ($role) => $role->code === 'game_super_admin' && (int) $role->status === 1)
+        );
+    }
+
     public static function current(int $systemUserId): ?EnterpriseUser
     {
         $scope = EnterpriseUser::with('enterprise', 'user.roles:id,code,status')->where('system_user_id', $systemUserId)->first();
         if (!$scope) {
-            $user = SystemUser::with('roles:id,code,status')->find($systemUserId);
-            if (!$user || (int) $user->status !== 1 || ((int) $user->is_super !== 1 && !$user->roles->contains(fn ($role) => $role->code === 'game_super_admin' && (int) $role->status === 1))) {
-                throw new ApiException('无游戏平台访问权限');
-            }
+            if (!self::isGameSuperAdmin($systemUserId)) throw new ApiException('无游戏平台访问权限');
             return null;
         }
         $role = $scope->is_owner ? 'enterprise_owner' : 'enterprise_staff';

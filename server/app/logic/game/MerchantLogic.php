@@ -127,6 +127,12 @@ class MerchantLogic extends BaseLogic
     {
         $merchant = $this->findScoped($id);
         $isAdmin = !EnterpriseScope::current((int) $this->adminInfo['id']);
+        foreach ($games as $game) {
+            if (isset($game['rate_value']) && $game['rate_value'] !== null && $game['rate_value'] !== '') {
+                $rate = (string) $game['rate_value'];
+                if (preg_match('/^\d+(?:\.\d{1,10})?$/', $rate) !== 1 || bccomp($rate, '1', 10) > 0) throw new ApiException('游戏费率无效');
+            }
+        }
         return $this->transaction(function () use ($merchant, $brandIds, $games, $isAdmin) {
             MerchantBrand::where('merchant_id', $merchant->id)->update([$isAdmin ? 'status' : 'merchant_status' => 0]);
             foreach ($brandIds as $brandId) MerchantBrand::withTrashed()->updateOrCreate(
@@ -231,6 +237,8 @@ class MerchantLogic extends BaseLogic
             $item['currency_code'] = strtoupper(trim((string) ($item['currency_code'] ?? '')));
             if ($item['currency_code'] === '') throw new ApiException('币种无效');
             $item['rate_value'] = (string) ($item['rate_value'] ?? '0.03');
+            if (preg_match('/^\d+(?:\.\d{1,10})?$/', $item['rate_value']) !== 1 || bccomp($item['rate_value'], '1', 10) > 0) throw new ApiException('费率无效');
+            $item['rate_value'] = bcadd($item['rate_value'], '0', 10);
             $item['settlement_enabled'] = $settlement && $item['currency_code'] !== 'GC' ? 1 : 0;
             return $item;
         }, $items));

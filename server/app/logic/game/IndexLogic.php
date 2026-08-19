@@ -9,7 +9,8 @@ use app\model\MerchantBrand;
 use app\model\UniqueBrand;
 use app\model\User;
 use app\enum\RedisKey;
-use app\service\game\adapter\AdapterRegistry;
+use app\service\game\OpenApiService;
+use app\service\mgs\MgsConfigService;
 use plugin\saiadmin\basic\eloquent\BaseLogic;
 use plugin\saiadmin\exception\ApiException;
 use support\Redis as Cache;
@@ -66,18 +67,15 @@ class IndexLogic extends BaseLogic
 
     public function trial(int $gameId, string $currency, string $ip): array
     {
-        $config = config('game_platforms.self_merchant');
-        if (!$config['callback_url'] || !$config['secret'] || !$config['user_id'] || !$config['currencies']) throw new ApiException('自营试玩参数未配置完整');
-        $game = Game::with('brand')->where('status', 1)->find($gameId) ?: throw new ApiException('游戏不存在或已停用');
-        if (!in_array($currency, array_intersect($game->currency_codes ?: [], $config['currencies']), true)) throw new ApiException('试玩币种不可用');
-        $user = User::where(['id' => 1, 'merchant_id' => 0, 'merchant_user_id' => $config['user_id'], 'status' => 1])->first()
+        $mchId = (new MgsConfigService())->get('game_platform_mch_id', config('mgs.mch_id'));
+        $merchant = Merchant::where(['mch_id' => $mchId, 'status' => 1])->first()
+            ?: throw new ApiException('自营商户未初始化，请执行数据库升级');
+        $user = User::where(['id' => 1, 'merchant_id' => $merchant->id, 'status' => 1])->first()
             ?: throw new ApiException('系统玩家未初始化，请执行数据库升级');
-        $playerId = 'mg_' . id2big((int) $user->id) . '_' . strtolower($currency);
-        $result = AdapterRegistry::get($game->platform_code)->launch(AdapterRegistry::config($game->platform_code), $playerId, $game, [
-            'currency_code' => $currency, 'lang' => $config['language'], 'back_url' => $config['back_url'], 'rtp' => null,
-        ]);
-        $user->update(['last_launch_time' => date('Y-m-d H:i:s'), 'last_ip' => $ip]);
-        return ['game_url' => $result['game_url'], 'currency' => $currency];
+        return (new OpenApiService())->launch($merchant, [
+            'user_id' => $user->merchant_user_id, 'game_id' => (string) id2big($gameId),
+            'currency' => $currency, 'language' => $merchant->default_language,
+        ], $ip);
     }
 
     public function mappingImpact(int $brandId, int $uniqueBrandId): array

@@ -66,6 +66,6 @@ class SettingsLogic extends BaseLogic
 
     private function superAdmin(): void
     {
-        if (EnterpriseScope::current((int) $this->adminInfo['id'])) throw new ApiException('仅游戏超管可操作');
+        if (!EnterpriseScope::isGameSuperAdmin((int) $this->adminInfo['id'])) throw new ApiException('仅游戏超管可操作');
     }
 }

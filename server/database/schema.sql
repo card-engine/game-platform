@@ -33,7 +33,7 @@ CREATE TABLE `mg_bets_template` (
   `status` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '状态：0待下注，1进行中，2已结单，3已取消，4异常',
   `business_date` date NOT NULL COMMENT '按商户业务时区计算的营业日期',
   `platform_date` date NOT NULL COMMENT '按 mg_configs.platform_timezone 计算的平台统计日期',
-  `settled_time` datetime(3) DEFAULT NULL COMMENT 'UTC 最终结单时间',
+  `settled_time` datetime(3) DEFAULT NULL COMMENT 'UTC 首次收到 is_end=1 的时间；后续补发和取消不清空',
   `create_time` datetime(3) NOT NULL,
   `update_time` datetime(3) NOT NULL,
   `delete_time` datetime(3) DEFAULT NULL,
@@ -1024,7 +1024,7 @@ CREATE TABLE `mgs_bets_template` (
   `status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '状态：1进行中，2已结单，3已取消，4异常',
   `business_date` date NOT NULL COMMENT 'MGS 时区营业日期',
   `platform_date` date NOT NULL COMMENT 'MGS 平台统计日期',
-  `settled_time` datetime(3) DEFAULT NULL COMMENT 'UTC 最终结单时间',
+  `settled_time` datetime(3) DEFAULT NULL COMMENT 'UTC 首次收到 is_end=1 的时间；后续补发和取消不清空',
   `create_time` datetime(3) DEFAULT NULL,
   `update_time` datetime(3) DEFAULT NULL,
   `delete_time` datetime(3) DEFAULT NULL,
@@ -1061,6 +1061,7 @@ CREATE TABLE `mgs_bills_template` (
   UNIQUE KEY `uk_user_currency_transaction` (`user_id`,`currency_code`,`transaction_id`,`type`),
   KEY `idx_user_time` (`user_id`,`create_time`,`id`),
   KEY `idx_bet` (`bet_no`,`id`),
+  KEY `idx_original_transaction` (`user_id`,`currency_code`,`original_transaction_id`,`type`,`status`,`direction`),
   KEY `idx_status_time` (`status`,`update_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='MGS 用户流水月表模板';
 

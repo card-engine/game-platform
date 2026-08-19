@@ -27,10 +27,11 @@ class SystemDataService
             $this->categories($data['categories']);
             $this->department($data['department']);
             $this->gameConfigs($data['game_configs']);
-            $selfMchId = $this->selfMerchant();
-            $this->mgsConfigs($data['mgs_configs'] ?? [], $selfMchId);
-            $this->gameUsers($data['game_users']);
+            $selfMerchant = $this->selfMerchant();
+            $this->mgsConfigs($data['mgs_configs'] ?? [], (string) $selfMerchant->mch_id);
             $this->mgsUsers($data['mgs_users'] ?? []);
+            $this->gameUsers($data['game_users'], $selfMerchant, (string) $data['mgs_users'][0]['user_no']);
+            $this->mgsWallets($data['mgs_wallets'] ?? []);
             $this->crontabs($data['crontabs']);
             $this->users($data['users'], $roles);
         });
@@ -138,22 +139,20 @@ class SystemDataService
     private function mgsConfigs(array $configs, string $selfMchId): void
     {
         foreach ($configs as $config) {
-            if ($config['code'] === 'game_platform_mch_id' && $config['value'] === '') $config['value'] = $selfMchId;
+            if ($config['code'] === 'game_platform_mch_id') $config['value'] = $selfMchId;
             $value = json_encode($config['value'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             $status = $config['status'] ?? 1;
             unset($config['value'], $config['status']);
-            $this->upsert('mgs_configs', ['code' => $config['code']], $config, ['value' => $value, 'status' => $status]);
-            if ($config['code'] === 'game_platform_mch_id' && $selfMchId !== '') {
-                $stored = Db::table('mgs_configs')->where('code', $config['code'])->value('value');
-                if (json_decode((string) $stored, true) === '') Db::table('mgs_configs')->where('code', $config['code'])->update(['value' => json_encode($selfMchId)]);
-            }
+            $id = $this->upsert('mgs_configs', ['code' => $config['code']], $config, ['value' => $value, 'status' => $status]);
+            if ($config['code'] === 'game_platform_mch_id') Db::table('mgs_configs')->where('id', $id)->update(['value' => $value]);
         }
     }
 
-    private function gameUsers(array $users): void
+    private function gameUsers(array $users, Merchant $merchant, string $userNo): void
     {
         foreach ($users as $user) {
-            $user['merchant_user_id'] = (string) config('game_platforms.self_merchant.user_id');
+            $user['merchant_id'] = $merchant->id;
+            $user['merchant_user_id'] = $userNo;
             $this->upsert('mg_users', ['id' => $user['id']], $user);
         }
     }
@@ -163,7 +162,15 @@ class SystemDataService
         foreach ($users as $user) $this->upsert('mgs_users', ['id' => $user['id']], $user);
     }
 
-    private function selfMerchant(): string
+    private function mgsWallets(array $wallets): void
+    {
+        foreach ($wallets as $wallet) \app\model\mgs\Wallet::firstOrCreate(
+            ['user_id' => $wallet['user_id'], 'currency_code' => $wallet['currency_code']],
+            ['balance' => $wallet['balance']],
+        );
+    }
+
+    private function selfMerchant(): Merchant
     {
         $mchId = trim((string) env('MGS_GAME_PLATFORM_MCH_ID', ''));
         $secret = (string) config('mgs.secret');
@@ -186,7 +193,8 @@ class SystemDataService
             }
             MerchantCredit::create([
                 'merchant_id' => $merchant->id, 'currency_code' => strtoupper((string) env('MGS_DEFAULT_CURRENCY', 'USD')),
-                'rate_value' => '0.0300000000', 'settlement_enabled' => 1, 'status' => 1,
+                'rate_value' => '0.0300000000', 'settlement_enabled' => 1,
+                'available_amount' => (string) env('MGS_GAME_PLATFORM_CREDIT', '1000000'), 'status' => 1,
             ]);
         } else {
             $mchId = (string) $merchant->mch_id;
@@ -197,9 +205,10 @@ class SystemDataService
         }
         MerchantCredit::firstOrCreate(
             ['merchant_id' => $merchant->id, 'currency_code' => strtoupper((string) env('MGS_DEFAULT_CURRENCY', 'USD'))],
-            ['rate_value' => '0.0300000000', 'settlement_enabled' => 1, 'status' => 1],
+            ['rate_value' => '0.0300000000', 'settlement_enabled' => 1,
+                'available_amount' => (string) env('MGS_GAME_PLATFORM_CREDIT', '1000000'), 'status' => 1],
         );
-        return $mchId;
+        return $merchant;
     }
 
     private function crontabs(array $crontabs): void

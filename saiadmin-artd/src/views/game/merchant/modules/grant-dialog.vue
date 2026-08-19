@@ -158,14 +158,9 @@
           width="150"
         >
           <template #default="{ row }">
-            <ElInputNumber
-              v-if="overrides[row.id]"
-              v-model="overrides[row.id].rate_percent"
-              :min="0"
-              :max="100"
-              :precision="4"
-              class="!w-28"
-            />
+            <ElInput v-if="overrides[row.id]" v-model="overrides[row.id].rate_percent" class="!w-28"
+              ><template #suffix>%</template></ElInput
+            >
             <span v-else class="text-g-500">{{ $t('game.defaultValue') }}</span>
           </template>
         </ElTableColumn>
@@ -188,6 +183,7 @@
   import { useI18n } from 'vue-i18n'
   import merchantApi from '@/api/game/merchant'
   import listApi from '@/api/game/list'
+  import { percentToRate, rateToPercent } from '@/utils/game/amount'
   import SuperBadge from '@/components/business/super-badge.vue'
 
   const props = defineProps<{
@@ -254,7 +250,7 @@
         ...item,
         status: Number(item.status),
         merchant_status: Number(item.merchant_status),
-        rate_percent: item.rate_value == null ? undefined : Number(item.rate_value) * 100
+        rate_percent: item.rate_value == null ? undefined : rateToPercent(item.rate_value)
       }
     })
     await loadGames()
@@ -287,7 +283,7 @@
           game_id: item.game_id,
           status: item.status,
           merchant_status: item.merchant_status,
-          rate_value: item.rate_percent == null ? null : String(Number(item.rate_percent) / 100)
+          rate_value: item.rate_percent == null ? null : percentToRate(item.rate_percent)
         }))
       })
       ElMessage.success(t('game.saveSuccess'))
