@@ -577,7 +577,7 @@
     }
   },
   "mgs": {
-    "overview": "自营概览",
+    "overview": "平台概览",
     "overviewHint": "查看自营平台实时经营与结算数据",
     "currency": "币种",
     "users": "用户数",

@@ -22,7 +22,7 @@
       <template #header>
         <div class="flex items-center gap-2 font-medium">
           {{ $t('game.platformStatistics') }}
-          <SuperBadge class="!relative !right-auto !top-auto !inline-block !transform-none" />
+          <SuperBadge inline />
         </div>
       </template>
       <ElForm v-loading="loading" :model="form" label-width="140px" class="max-w-2xl">

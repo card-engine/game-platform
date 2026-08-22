@@ -11,9 +11,9 @@
       >
         <div>
           <div class="mb-1 flex items-center gap-2 font-medium">
-            <span class="relative pr-3">
+            <span class="inline-flex items-center">
               {{ $t('game.billingPlan') }}
-              <SuperBadge v-if="canEdit" />
+              <SuperBadge v-if="canEdit" inline />
             </span>
           </div>
           <div class="text-xs text-g-500">{{ $t('game.billingPlanHint') }}</div>

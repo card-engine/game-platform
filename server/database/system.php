@@ -1451,7 +1451,7 @@ return array (
     array (
       'key' => 'MgPlatformAdmin',
       'parent' => 'MgGame',
-      'name' => '平台管理',
+      'name' => '管理列表',
       'code' => 'MgPlatformAdmin',
       'type' => 2,
       'path' => 'platform-admin',
@@ -1515,7 +1515,7 @@ return array (
     array (
       'key' => 'MgsOverview',
       'parent' => 'MgsPlatform',
-      'name' => '自营概览',
+      'name' => '平台概览',
       'code' => 'MgsOverview',
       'type' => 2,
       'path' => 'overview',
@@ -1527,7 +1527,7 @@ return array (
     array (
       'key' => 'MgsGames',
       'parent' => 'MgsPlatform',
-      'name' => '自营游戏',
+      'name' => '游戏管理',
       'code' => 'MgsGames',
       'type' => 2,
       'path' => 'games',
@@ -1539,7 +1539,7 @@ return array (
     array (
       'key' => 'MgsUsers',
       'parent' => 'MgsPlatform',
-      'name' => '自营用户',
+      'name' => '用户管理',
       'code' => 'MgsUsers',
       'type' => 2,
       'path' => 'users',
@@ -1551,7 +1551,7 @@ return array (
     array (
       'key' => 'MgsBets',
       'parent' => 'MgsPlatform',
-      'name' => '自营注单',
+      'name' => '注单记录',
       'code' => 'MgsBets',
       'type' => 2,
       'path' => 'bets',
@@ -1563,7 +1563,7 @@ return array (
     array (
       'key' => 'MgsBills',
       'parent' => 'MgsPlatform',
-      'name' => '自营流水',
+      'name' => '流水记录',
       'code' => 'MgsBills',
       'type' => 2,
       'path' => 'bills',
@@ -1575,7 +1575,7 @@ return array (
     array (
       'key' => 'MgsReports',
       'parent' => 'MgsPlatform',
-      'name' => '自营统计',
+      'name' => '数据统计',
       'code' => 'MgsReports',
       'type' => 2,
       'path' => 'reports',

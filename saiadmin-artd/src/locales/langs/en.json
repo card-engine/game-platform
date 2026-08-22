@@ -577,7 +577,7 @@
     }
   },
   "mgs": {
-    "overview": "Self-operated Overview",
+    "overview": "Platform Overview",
     "overviewHint": "Monitor self-operated performance and settlement data",
     "currency": "Currency",
     "users": "Users",

@@ -38,7 +38,7 @@
       class="art-badge"
       :style="{ right: level === 0 ? '10px' : '20px' }"
     />
-    <div v-if="item.meta.showTextBadge && level !== 0" class="art-text-badge">
+    <div v-if="item.meta.showTextBadge" class="art-text-badge">
       {{ item.meta.showTextBadge }}
     </div>
   </ElMenuItem>

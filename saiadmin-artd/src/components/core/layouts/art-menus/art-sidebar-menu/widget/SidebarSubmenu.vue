@@ -12,6 +12,9 @@
         <span class="menu-name">
           {{ formatMenuTitle(item.meta.title) }}
         </span>
+        <div v-if="item.meta.showTextBadge" class="art-text-badge">
+          {{ item.meta.showTextBadge }}
+        </div>
         <div v-if="item.meta.showBadge" class="art-badge" style="right: 10px" />
       </template>
 

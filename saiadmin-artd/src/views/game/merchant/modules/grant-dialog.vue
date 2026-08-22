@@ -9,9 +9,9 @@
     <div class="grant-dialog__body">
       <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div class="flex items-center gap-2 font-medium">
-          <span class="relative pr-3">
+          <span class="inline-flex items-center">
             {{ $t('game.brandGrant') }}
-            <SuperBadge v-if="isSuper" />
+            <SuperBadge v-if="isSuper" inline />
           </span>
           <span class="text-xs font-normal text-g-500">{{ $t('game.grantEffectiveHint') }}</span>
         </div>
@@ -33,9 +33,9 @@
         </ElTableColumn>
         <ElTableColumn width="150" align="center">
           <template #header>
-            <span class="relative inline-flex pr-3">
+            <span class="inline-flex items-center">
               {{ $t('game.platformAllow') }}
-              <SuperBadge />
+              <SuperBadge inline />
             </span>
           </template>
           <template #default="{ row }">
@@ -124,9 +124,9 @@
         <ElTableColumn prop="platform_code" :label="$t('game.gamePlatform')" width="115" />
         <ElTableColumn width="145" align="center">
           <template #header>
-            <span class="relative inline-flex pr-3">
+            <span class="inline-flex items-center">
               {{ $t('game.platformAllow') }}
-              <SuperBadge />
+              <SuperBadge inline />
             </span>
           </template>
           <template #default="{ row }">

@@ -98,12 +98,15 @@
             @pagination:current-change="handleCurrentChange"
           >
             <template #currencies-header>
-              <span class="relative inline-flex items-center pr-8">
+              <span class="inline-flex items-center">
                 {{ $t('game.currency') }}
-                <SuperBadge
-                  v-if="canTrial"
-                  class="!right-0 !top-1/2 !-translate-y-1/2 !rotate-[12deg]"
-                />
+                <SuperBadge v-if="canTrial" inline />
+              </span>
+            </template>
+            <template #status-header>
+              <span class="inline-flex items-center">
+                {{ $t('game.status') }}
+                <SuperBadge v-if="canManage" inline />
               </span>
             </template>
             <template #icon="{ row }">
@@ -158,7 +161,6 @@
                     :inactive-value="0"
                     @change="(value) => setStatus(row, Number(value))"
                   />
-                  <SuperBadge />
                 </span>
                 <ElTag v-else type="danger">{{ $t('game.upstreamOffline') }}</ElTag>
               </template>
@@ -183,6 +185,7 @@
 
   const { t, locale } = useI18n()
   const canTrial = computed(() => checkAuth('app:game:list:trial'))
+  const canManage = computed(() => checkAuth('app:game:list:update'))
   const tab = ref('games')
   const platforms = [
     { label: 'WXGAME', value: 'wxgame' },
@@ -297,7 +300,14 @@
         },
         { prop: 'capabilities', label: t('game.capability'), width: 105, useSlot: true },
         { prop: 'last_sync_time', label: t('game.lastSync'), width: 170 },
-        { prop: 'status', label: t('game.status'), width: 105, fixed: 'right', useSlot: true }
+        {
+          prop: 'status',
+          label: t('game.status'),
+          width: 105,
+          fixed: 'right',
+          useSlot: true,
+          useHeaderSlot: true
+        }
       ]
     }
   })

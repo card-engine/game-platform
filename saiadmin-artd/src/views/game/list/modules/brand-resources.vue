@@ -65,6 +65,12 @@
           </div>
           <ElTag v-else type="warning">{{ $t('game.pendingMapping') }}</ElTag>
         </template>
+        <template #currency-header>
+          <span class="inline-flex items-center">
+            {{ $t('game.currencyMode') }}
+            <SuperBadge v-if="canManage" inline />
+          </span>
+        </template>
         <template #currency="{ row }">
           <span
             v-permission="'app:game:list:update'"
@@ -76,7 +82,6 @@
               :inactive-value="false"
               @change="(value) => setBrandMode(row, Boolean(value))"
             />
-            <SuperBadge />
           </span>
           <span class="ml-2 text-xs">{{ row.is_gc ? 'SC / GC' : $t('game.singleCurrency') }}</span>
         </template>
@@ -159,8 +164,10 @@
   import { useTable } from '@/hooks/core/useTable'
   import api from '@/api/game/list'
   import SuperBadge from '@/components/business/super-badge.vue'
+  import { checkAuth } from '@/utils/tool'
 
   const { t, locale } = useI18n()
+  const canManage = computed(() => checkAuth('app:game:list:update'))
 
   const platforms = [
     { label: 'WXGAME', value: 'wxgame' },
@@ -198,7 +205,13 @@
         { prop: 'platform_code', label: t('game.gamePlatform'), width: 130 },
         { prop: 'mapping', label: t('game.uniqueBrand'), minWidth: 190, useSlot: true },
         { prop: 'games_count', label: t('game.gameCount'), width: 90 },
-        { prop: 'currency', label: t('game.currencyMode'), width: 125, useSlot: true },
+        {
+          prop: 'currency',
+          label: t('game.currencyMode'),
+          width: 125,
+          useSlot: true,
+          useHeaderSlot: true
+        },
         { prop: 'last_sync_time', label: t('game.lastSync'), width: 170 },
         { prop: 'operation', label: t('game.operation'), width: 100, fixed: 'right', useSlot: true }
       ]

@@ -1,6 +1,12 @@
 <template>
-  <span class="super-badge">{{ $t('game.superAdmin') }}</span>
+  <span class="super-badge" :class="{ 'super-badge-inline': inline }">
+    {{ $t('game.superAdmin') }}
+  </span>
 </template>
+
+<script setup lang="ts">
+  withDefaults(defineProps<{ inline?: boolean }>(), { inline: false })
+</script>
 
 <style scoped>
   .super-badge {
@@ -20,5 +26,15 @@
     line-height: 14px;
     transform: translate(55%, -75%) rotate(12deg);
     transform-origin: center;
+  }
+
+  .super-badge-inline {
+    position: static;
+    display: inline-block;
+    margin-left: 6px;
+    padding: 0 4px;
+    line-height: 16px;
+    vertical-align: middle;
+    transform: none;
   }
 </style>

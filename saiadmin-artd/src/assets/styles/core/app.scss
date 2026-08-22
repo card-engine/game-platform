@@ -230,9 +230,10 @@
 
 // 文字徽章样式
 .art-text-badge {
-  position: absolute;
-  top: -1px;
-  right: 5px;
+  position: static;
+  display: inline-flex;
+  flex: none;
+  margin-left: 6px;
   min-width: 20px;
   height: 14px;
   line-height: 14px;
@@ -245,8 +246,7 @@
   background: #fd4e4e;
   border-radius: 3px;
   box-shadow: 0 2px 5px rgb(0 0 0 / 18%);
-  transform: rotate(12deg);
-  transform-origin: center;
+  transform: none;
 }
 
 @keyframes breathe {
