@@ -4,7 +4,6 @@ namespace app\logic\game;
 
 use app\model\Enterprise;
 use app\model\Merchant;
-use app\model\MerchantBrand;
 use app\model\MerchantCredit;
 use app\model\MerchantGame;
 use app\model\MerchantBill;
@@ -54,10 +53,7 @@ class MerchantLogic extends BaseLogic
             }
             if ($data['copy_from_merchant_id'] ?? null) {
                 $source = Merchant::where(['id' => $data['copy_from_merchant_id'], 'enterprise_id' => $merchant->enterprise_id])->firstOrFail();
-                foreach (MerchantBrand::where('merchant_id', $source->id)->get() as $brand) MerchantBrand::create(['merchant_id' => $merchant->id, 'unique_brand_id' => $brand->unique_brand_id, 'status' => $brand->status, 'merchant_status' => $brand->merchant_status]);
-                foreach (MerchantGame::where('merchant_id', $source->id)->get() as $game) MerchantGame::create(['merchant_id' => $merchant->id, 'game_id' => $game->game_id, 'status' => $game->status, 'merchant_status' => $game->merchant_status, 'rate_value' => $game->rate_value]);
-            } else {
-                foreach ($data['brand_ids'] ?? [] as $brandId) MerchantBrand::create(['merchant_id' => $merchant->id, 'unique_brand_id' => $brandId, 'status' => 1]);
+                foreach (MerchantGame::where('merchant_id', $source->id)->get() as $game) MerchantGame::create($game->only(['game_id', 'status', 'status_reason', 'status_time', 'rate_value', 'default_rtp']) + ['merchant_id' => $merchant->id]);
             }
             return (int) $merchant->id;
         });
@@ -111,8 +107,7 @@ class MerchantLogic extends BaseLogic
     {
         $merchant = $this->findScoped($id);
         return [
-            'brands' => MerchantBrand::where('merchant_id', $merchant->id)->get(['unique_brand_id', 'status', 'merchant_status']),
-            'games' => MerchantGame::with('game:id,game_code,name,brand_id,platform_code')->where('merchant_id', $merchant->id)->get(['game_id', 'status', 'merchant_status', 'rate_value']),
+            'games' => MerchantGame::with('game:id,game_code,name,brand_id,platform_code')->where('merchant_id', $merchant->id)->get(['game_id', 'status', 'status_reason', 'status_time', 'rate_value', 'default_rtp']),
         ];
     }
 
@@ -123,27 +118,26 @@ class MerchantLogic extends BaseLogic
         return $this->transaction(fn () => $this->saveCredits($merchant, $items));
     }
 
-    public function grants(int $id, array $brandIds, array $games): bool
+    public function grants(int $id, array $games): bool
     {
         $merchant = $this->findScoped($id);
-        $isAdmin = !EnterpriseScope::current((int) $this->adminInfo['id']);
         foreach ($games as $game) {
             if (isset($game['rate_value']) && $game['rate_value'] !== null && $game['rate_value'] !== '') {
                 $rate = (string) $game['rate_value'];
                 if (preg_match('/^\d+(?:\.\d{1,10})?$/', $rate) !== 1 || bccomp($rate, '1', 10) > 0) throw new ApiException('游戏费率无效');
             }
         }
-        return $this->transaction(function () use ($merchant, $brandIds, $games, $isAdmin) {
-            MerchantBrand::where('merchant_id', $merchant->id)->update([$isAdmin ? 'status' : 'merchant_status' => 0]);
-            foreach ($brandIds as $brandId) MerchantBrand::withTrashed()->updateOrCreate(
-                ['merchant_id' => $merchant->id, 'unique_brand_id' => $brandId],
-                [$isAdmin ? 'status' : 'merchant_status' => 1, 'delete_time' => null],
-            );
-            MerchantGame::where('merchant_id', $merchant->id)->update([$isAdmin ? 'status' : 'merchant_status' => 0]);
-            foreach ($games as $game) MerchantGame::withTrashed()->updateOrCreate(
-                ['merchant_id' => $merchant->id, 'game_id' => $game['game_id']],
-                ($isAdmin ? Arr::only($game, ['status', 'merchant_status', 'rate_value']) : Arr::only($game, ['merchant_status'])) + ['delete_time' => null],
-            );
+        return $this->transaction(function () use ($merchant, $games) {
+            foreach ($games as $game) {
+                $gameId = (int) ($game['game_id'] ?? 0);
+                $status = (int) ($game['status'] ?? 1) === 0 ? 0 : 1;
+                $fields = Arr::only($game, ['rate_value', 'default_rtp']) + ['status' => $status, 'status_reason' => $status ? 'manual_enabled' : 'manual_disabled', 'status_time' => gmdate('Y-m-d H:i:s.v'), 'delete_time' => null];
+                if ($status === 1 && ($fields['rate_value'] ?? null) === null && ($fields['default_rtp'] ?? null) === null) {
+                    MerchantGame::where(['merchant_id' => $merchant->id, 'game_id' => $gameId])->delete();
+                    continue;
+                }
+                MerchantGame::withTrashed()->updateOrCreate(['merchant_id' => $merchant->id, 'game_id' => $gameId], $fields);
+            }
             return true;
         });
     }

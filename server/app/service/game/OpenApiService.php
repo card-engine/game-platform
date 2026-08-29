@@ -4,7 +4,6 @@ namespace app\service\game;
 
 use app\model\Game;
 use app\model\Merchant;
-use app\model\MerchantBrand;
 use app\model\MerchantGame;
 use app\model\User;
 use app\service\game\adapter\AdapterRegistry;
@@ -16,30 +15,26 @@ class OpenApiService
 {
     public function games(Merchant $merchant, array $where = [])
     {
-        $currencies = $merchant->credits()->where('status', 1)->pluck('currency_code')->all();
-        $overrides = MerchantGame::where('merchant_id', $merchant->id)->get(['game_id', 'status', 'merchant_status'])->keyBy('game_id');
-        $enabled = $overrides->where('status', 1)->where('merchant_status', 1)->keys()->all();
-        $blocked = $overrides->keys()->all();
-        $brands = MerchantBrand::where(['merchant_id' => $merchant->id, 'status' => 1, 'merchant_status' => 1])->pluck('unique_brand_id')->all();
-
-        return Game::with('brand:id,name,names,provider_brand_code,unique_brand_id,is_gc', 'brand.uniqueBrand:id,name,names,code')->where('status', 1)->whereNotNull('game_code')
-            ->whereHas('brand', fn ($query) => $query->whereNotNull('unique_brand_id'))
-            ->where(function ($query) use ($currencies) {
-                if (!$currencies) $query->whereRaw('0 = 1');
-                foreach ($currencies as $currency) $query->orWhereJsonContains('currency_codes', $currency);
+        return Game::with('brand:id,name,names,provider_brand_code,unique_brand_id,is_gc,mapping_status', 'brand.uniqueBrand:id,name,names,code')
+            ->leftJoin('mg_merchant_games as merchant_game', function ($join) use ($merchant) {
+                $join->on('merchant_game.game_id', '=', 'mg_games.id')->where('merchant_game.merchant_id', $merchant->id)->whereNull('merchant_game.delete_time');
             })
-            ->where(fn ($query) => $query->whereIn('id', $enabled)->orWhere(fn ($q) => $q->whereHas('brand', fn ($brand) => $brand->whereIn('unique_brand_id', $brands))->whereNotIn('id', $blocked)))
-            ->when($where['game_id'] ?? null, fn ($query, $value) => $query->where('id', big2id((int) $value) ?: -1))
+            ->select('mg_games.*', 'merchant_game.status as merchant_status', 'merchant_game.status_reason as merchant_status_reason', 'merchant_game.rate_value as merchant_rate_value', 'merchant_game.default_rtp as merchant_default_rtp')
+            ->whereNull('mg_games.delete_time')
+            ->when($where['game_id'] ?? null, fn ($query, $value) => $query->where('mg_games.id', big2id((int) $value) ?: -1))
             ->when($where['brand_code'] ?? null, fn ($query, $value) => $query->whereHas('brand.uniqueBrand', fn ($brand) => $brand->where('code', $value)))
-            ->when($where['keyword'] ?? null, fn ($query, $value) => $query->where(fn ($q) => $q->where('name', 'like', "%{$value}%")->orWhere('game_code', 'like', "%{$value}%")));
+            ->when($where['keyword'] ?? null, fn ($query, $value) => $query->where(fn ($q) => $q->where('mg_games.name', 'like', "%{$value}%")->orWhere('mg_games.game_code', 'like', "%{$value}%")));
     }
 
     public function launch(Merchant $merchant, array $data, string $ip): array
     {
         $gameId = big2id((int) $data['game_id']);
-        $game = $this->games($merchant)->where('id', $gameId ?: -1)->first();
+        $game = $this->games($merchant)->where('mg_games.id', $gameId ?: -1)->first();
         if (!$game) throw new ApiException('游戏未授权或已停用');
         $currency = $this->currency($merchant, $game, $data['currency'] ?? null);
+        $config = AdapterRegistry::config($game->platform_code);
+        if (!($config['is_open'] ?? true)) throw new ApiException('游戏平台已关闭');
+        if ((int) $game->upstream_status !== 1 || (int) $game->platform_status !== 1 || (int) ($game->merchant_status ?? 1) !== 1) throw new ApiException('游戏不可用');
         $credit = $merchant->credits()->where(['currency_code' => $currency, 'status' => 1])->first();
         if ((int) $merchant->billing_mode === 1 && $credit->settlement_enabled && bccomp((string) $credit->available_amount, '0', 8) <= 0) throw new ApiException('商户服务费额度不足');
         $user = User::firstOrCreate(
@@ -50,12 +45,11 @@ class OpenApiService
 
         $playerId = 'mg_' . id2big((int) $user->id) . '_' . strtolower($currency);
         $adapter = AdapterRegistry::get($game->platform_code);
-        $config = AdapterRegistry::config($game->platform_code);
         $rtp = Db::table('mg_user_game_rtps')->where([
             'merchant_id' => $merchant->id, 'user_id' => $user->id, 'game_id' => $game->id, 'currency_code' => $currency,
-        ])->whereNull('delete_time')->value('rtp') ?? MerchantGame::where([
+        ])->whereNull('delete_time')->value('rtp') ?? ($game->merchant_default_rtp ?: MerchantGame::where([
             'merchant_id' => $merchant->id, 'game_id' => $game->id, 'status' => 1,
-        ])->value('default_rtp');
+        ])->value('default_rtp'));
         $result = $adapter->launch($config, $playerId, $game, [
             'currency_code' => $currency,
             'lang' => $data['language'] ?? $merchant->default_language,
@@ -74,7 +68,7 @@ class OpenApiService
     public function setRtp(Merchant $merchant, array $data): array
     {
         $gameId = big2id((int) $data['game_id']);
-        $game = $this->games($merchant)->where('id', $gameId ?: -1)->first();
+        $game = $this->games($merchant)->where('mg_games.id', $gameId ?: -1)->first();
         if (!$game || !$game->support_rtp) throw new ApiException('该游戏不支持 RTP 调整');
         $currency = $this->currency($merchant, $game, $data['currency'] ?? null);
         $rtp = (string) $data['rtp'];
@@ -84,7 +78,7 @@ class OpenApiService
         if (!$userIds) {
             MerchantGame::updateOrCreate(
                 ['merchant_id' => $merchant->id, 'game_id' => $game->id],
-                ['status' => 1, 'merchant_status' => 1, 'default_rtp' => $rtp],
+                ['status' => 1, 'default_rtp' => $rtp, 'status_reason' => 'manual_enabled', 'status_time' => gmdate('Y-m-d H:i:s.v')],
             );
             return ['game_id' => (string) $data['game_id'], 'currency' => $currency, 'rtp' => $rtp, 'scope' => 'game'];
         }

@@ -33,12 +33,15 @@ class MgsGamePlatformClient
     public function games(): array
     {
         $items = [];
+        $total = null;
         for ($page = 1; ; $page++) {
             $result = $this->post('/open_api/games', ['page' => $page, 'limit' => 100]);
             $rows = (array) ($result['list'] ?? []);
-            $items = array_merge($items, $rows);
-            if (!$rows || count($items) >= (int) ($result['total'] ?? count($items))) break;
+            $total ??= (int) ($result['total'] ?? 0);
+            foreach ($rows as $row) if (($id = (string) ($row['game_id'] ?? '')) !== '') $items[$id] = $row;
+            if (!$rows || count($items) >= $total) break;
         }
-        return $items;
+        if ($total === null || count($items) !== $total) throw new RuntimeException('游戏平台游戏目录分页不完整');
+        return array_values($items);
     }
 }

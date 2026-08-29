@@ -5,6 +5,7 @@ return [
     'platforms' => [
         'wxgame' => [
             'name' => 'WXGAME',
+            'is_open' => filter_var(env('GAME_WXGAME_IS_OPEN', 'true'), FILTER_VALIDATE_BOOLEAN),
             'is_gc' => false,
             'default_currency' => (string) env('GAME_WXGAME_DEFAULT_CURRENCY', 'USD'),
             'accounts' => [
@@ -25,6 +26,7 @@ return [
         ],
         'acewin' => [
             'name' => 'AceWin',
+            'is_open' => filter_var(env('GAME_ACEWIN_IS_OPEN', 'false'), FILTER_VALIDATE_BOOLEAN),
             'is_gc' => true,
             'url' => rtrim((string) env('GAME_ACEWIN_URL', ''), '/'),
             'agent_id' => (string) env('GAME_ACEWIN_AGENT_ID', ''),
@@ -34,6 +36,7 @@ return [
         ],
         'tada' => [
             'name' => 'TADA',
+            'is_open' => filter_var(env('GAME_TADA_IS_OPEN', 'false'), FILTER_VALIDATE_BOOLEAN),
             'is_gc' => true,
             'url' => rtrim((string) env('GAME_TADA_URL', ''), '/') . '/',
             'agent_id' => (string) env('GAME_TADA_AGENT_ID', ''),
@@ -44,6 +47,7 @@ return [
         ],
         'goldengatex' => [
             'name' => 'GoldenGateX',
+            'is_open' => filter_var(env('GAME_GOLDENGATEX_IS_OPEN', 'false'), FILTER_VALIDATE_BOOLEAN),
             'url' => rtrim((string) env('GAME_GOLDENGATEX_URL', ''), '/'),
             'client_id' => (string) env('GAME_GOLDENGATEX_CLIENT_ID', ''),
             'client_secret' => (string) env('GAME_GOLDENGATEX_CLIENT_SECRET', ''),

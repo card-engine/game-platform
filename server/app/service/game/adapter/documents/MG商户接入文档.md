@@ -129,7 +129,9 @@ POST https://mgames.im/open_api/games
 }
 ```
 
-可选传入 `game_id`、`keyword` 或统一品牌编码 `brand_code`。当前真实游戏示例：
+可选传入 `game_id`、`keyword` 或统一品牌编码 `brand_code`。接口始终返回完整游戏目录，不会因为游戏暂不可用而隐藏。商户应保存全部游戏，并按 `status` / `is_available` 同步本地状态；无 `mg_merchant_games` 覆盖时 `merchant_status` 为 `1`。
+
+当前真实游戏示例：
 
 ```json
 {
@@ -144,7 +146,14 @@ POST https://mgames.im/open_api/games
         "brand_code": "{{BRAND_CODE}}",
         "brand_name": "{{BRAND_NAME}}",
         "game_type": {{GAME_TYPE}},
+        "currency_codes": {{CURRENCY_CODES}},
         "currencies": {{CURRENCIES}},
+        "upstream_status": 1,
+        "platform_status": 1,
+        "merchant_status": 1,
+        "status": 1,
+        "is_available": true,
+        "unavailable_reason": null,
         "support_demo": {{SUPPORT_DEMO}},
         "support_rtp": {{SUPPORT_RTP}},
         "rtp_options": {{RTP_OPTIONS}}

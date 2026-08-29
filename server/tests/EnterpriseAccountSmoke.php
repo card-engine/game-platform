@@ -85,14 +85,14 @@ $gameBrand = GameBrand::create([
 ]);
 $game = Game::create([
     'game_code' => "scope_{$suffix}_1", 'brand_id' => $gameBrand->id, 'platform_code' => $gameBrand->platform_code,
-    'provider_game_code' => '1', 'name' => 'Visible Game', 'currency_codes' => ['USD'], 'status' => 1,
+    'provider_game_code' => '1', 'name' => 'Visible Game', 'currency_codes' => ['USD'], 'upstream_status' => 1, 'platform_status' => 1,
 ]);
 $hiddenGame = Game::create([
     'game_code' => "scope_{$suffix}_2", 'brand_id' => $gameBrand->id, 'platform_code' => $gameBrand->platform_code,
-    'provider_game_code' => '2', 'name' => 'Hidden Game', 'currency_codes' => ['USD'], 'status' => 1,
+    'provider_game_code' => '2', 'name' => 'Hidden Game', 'currency_codes' => ['USD'], 'upstream_status' => 1, 'platform_status' => 1,
 ]);
-MerchantGame::create(['merchant_id' => $merchant->id, 'game_id' => $game->id, 'status' => 1, 'merchant_status' => 1]);
-MerchantGame::create(['merchant_id' => $otherMerchant->id, 'game_id' => $hiddenGame->id, 'status' => 1, 'merchant_status' => 1]);
+MerchantGame::create(['merchant_id' => $merchant->id, 'game_id' => $game->id, 'status' => 1]);
+MerchantGame::create(['merchant_id' => $otherMerchant->id, 'game_id' => $hiddenGame->id, 'status' => 1]);
 $staff = null;
 
 try {

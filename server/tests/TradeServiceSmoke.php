@@ -3,7 +3,6 @@
 use app\model\Enterprise;
 use app\model\Game;
 use app\model\Merchant;
-use app\model\MerchantBrand;
 use app\model\MerchantCredit;
 use app\model\User;
 use app\service\game\SecretService;
@@ -26,7 +25,7 @@ function check(bool $result, string $message): void
 $suffix = bin2hex(random_bytes(4));
 $wallet = startMockWallet();
 $secret = $wallet['secret'];
-$game = Game::with('brand')->where('platform_code', 'wxgame')->where('status', 1)->firstOrFail();
+$game = Game::with('brand')->where('platform_code', 'wxgame')->where('upstream_status', 1)->where('platform_status', 1)->firstOrFail();
 $enterprise = Enterprise::create(['name' => "__mg_smoke_{$suffix}", 'merchant_limit' => 1, 'timezone' => 'UTC', 'default_language' => 'en', 'status' => 1]);
 $merchant = Merchant::create([
     'enterprise_id' => $enterprise->id, 'name' => "Smoke {$suffix}", 'wallet_mode' => 1, 'callback_url' => "http://127.0.0.1:{$wallet['port']}/app",
@@ -34,7 +33,6 @@ $merchant = Merchant::create([
 ]);
 $merchant->update(['mch_id' => (string) id2big($merchant->id)]);
 $credit = MerchantCredit::create(['merchant_id' => $merchant->id, 'currency_code' => 'USD', 'rate_value' => '0.1', 'available_amount' => '100', 'status' => 1]);
-MerchantBrand::create(['merchant_id' => $merchant->id, 'unique_brand_id' => $game->brand->unique_brand_id, 'status' => 1]);
 $user = User::create(['merchant_id' => $merchant->id, 'merchant_user_id' => "player_{$suffix}", 'status' => 1]);
 $player = 'mg_' . id2big($user->id) . '_usd';
 $trade = new TradeService();
@@ -124,7 +122,6 @@ try {
     Db::table('mg_merchant_bills')->where('credit_id', $credit->id)->delete();
     Db::table('mg_merchant_monthly_usages')->where('credit_id', $credit->id)->delete();
     Db::table('mg_merchant_games')->where('merchant_id', $merchant->id)->delete();
-    Db::table('mg_merchant_brands')->where('merchant_id', $merchant->id)->delete();
     Db::table('mg_users')->where('merchant_id', $merchant->id)->delete();
     Db::table('mg_merchant_credits')->where('merchant_id', $merchant->id)->delete();
     Db::table('mg_merchants')->where('id', $merchant->id)->delete();

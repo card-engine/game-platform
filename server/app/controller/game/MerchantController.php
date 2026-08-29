@@ -67,7 +67,7 @@ class MerchantController extends BaseController
     #[Permission('保存游戏授权', 'app:game:merchant:grant')]
     public function grants(Request $request): Response
     {
-        $this->logic->grants((int) $request->post('id'), $request->post('brand_ids', []), $request->post('games', []));
+        $this->logic->grants((int) $request->post('id'), $request->post('games', []));
         return $this->success('授权已保存');
     }
 

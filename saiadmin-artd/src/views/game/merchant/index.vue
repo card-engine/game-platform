@@ -137,12 +137,7 @@
       :role="options.role"
       @success="refreshData"
     />
-    <GrantDialog
-      v-model="grantVisible"
-      :merchant="current"
-      :brands="options.brands"
-      :role="options.role"
-    />
+    <GrantDialog v-model="grantVisible" :merchant="current" :brands="options.brands" />
 
     <ElDialog
       v-model="secretVisible"

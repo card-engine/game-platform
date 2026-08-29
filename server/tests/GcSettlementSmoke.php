@@ -3,7 +3,6 @@
 use app\model\Enterprise;
 use app\model\Game;
 use app\model\Merchant;
-use app\model\MerchantBrand;
 use app\model\MerchantCredit;
 use app\model\User;
 use app\service\game\SecretService;
@@ -22,7 +21,7 @@ function checkGc(bool $result, string $message): void
 $suffix = bin2hex(random_bytes(4));
 $wallet = startMockWallet(1);
 $secret = $wallet['secret'];
-$game = Game::with('brand')->where('platform_code', 'tada')->where('status', 1)->get()->first(fn ($game) => in_array('GC', $game->currency_codes, true));
+$game = Game::with('brand')->where('platform_code', 'tada')->where('upstream_status', 1)->where('platform_status', 1)->get()->first(fn ($game) => in_array('GC', $game->currency_codes, true));
 if (!$game || !$game->brand->unique_brand_id) throw new RuntimeException('没有可测试的 GC 游戏');
 
 $enterprise = Enterprise::create(['name' => "__mg_gc_{$suffix}", 'merchant_limit' => 1, 'timezone' => 'UTC', 'default_language' => 'en', 'status' => 1]);
@@ -34,7 +33,6 @@ $merchant = Merchant::create([
 $merchant->update(['mch_id' => (string) id2big((int) $merchant->id)]);
 $sc = MerchantCredit::create(['merchant_id' => $merchant->id, 'currency_code' => 'SC', 'rate_value' => '0.1', 'settlement_enabled' => 1, 'available_amount' => '100', 'status' => 1]);
 $gc = MerchantCredit::create(['merchant_id' => $merchant->id, 'currency_code' => 'GC', 'rate_value' => '0.1', 'settlement_enabled' => 0, 'available_amount' => '100', 'status' => 1]);
-MerchantBrand::create(['merchant_id' => $merchant->id, 'unique_brand_id' => $game->brand->unique_brand_id, 'status' => 1]);
 $user = User::create(['merchant_id' => $merchant->id, 'merchant_user_id' => "gc_{$suffix}", 'status' => 1]);
 $player = 'mg_' . id2big((int) $user->id) . '_gc';
 $base = ['player_id' => $player, 'game_code' => $game->provider_game_code, 'brand_code' => $game->brand->provider_brand_code, 'round_id' => "gc_round_{$suffix}"];
@@ -60,7 +58,6 @@ try {
     }
     Db::table('mg_merchant_bills')->whereIn('credit_id', [$sc->id, $gc->id])->delete();
     Db::table('mg_merchant_monthly_usages')->whereIn('credit_id', [$sc->id, $gc->id])->delete();
-    Db::table('mg_merchant_brands')->where('merchant_id', $merchant->id)->delete();
     Db::table('mg_users')->where('merchant_id', $merchant->id)->delete();
     Db::table('mg_merchant_credits')->where('merchant_id', $merchant->id)->delete();
     Db::table('mg_merchants')->where('id', $merchant->id)->delete();

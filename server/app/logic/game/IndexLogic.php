@@ -5,7 +5,6 @@ namespace app\logic\game;
 use app\model\Game;
 use app\model\GameBrand;
 use app\model\Merchant;
-use app\model\MerchantBrand;
 use app\model\UniqueBrand;
 use app\model\User;
 use app\enum\RedisKey;
@@ -54,13 +53,15 @@ class IndexLogic extends BaseLogic
     public function lists(array $where): array
     {
         $query = Game::with('brand:id,name,provider_brand_code,unique_brand_id', 'brand.uniqueBrand:id,code,name')
+            ->select('mg_games.*')
+            ->selectRaw('CASE WHEN upstream_status = 0 THEN 3 ELSE platform_status END AS status')
             ->when($where['platform_code'] ?? null, fn ($q, $value) => $q->where('platform_code', $value))
             ->when($where['brand_id'] ?? null, fn ($q, $value) => $q->where('brand_id', $value))
             ->when($where['unique_brand_id'] ?? null, fn ($q, $value) => $q->whereHas('brand', fn ($brand) => $brand->where('unique_brand_id', $value)))
-            ->when(($where['status'] ?? '') !== '', fn ($q) => $q->where('status', $where['status']))
+            ->when(($where['status'] ?? '') !== '', fn ($q) => (string) $where['status'] === '3' ? $q->where('upstream_status', 0) : $q->where('platform_status', $where['status']))
             ->when($where['keyword'] ?? null, fn ($q, $value) => $q->whereAny(['game_code', 'provider_game_code', 'name'], 'like', "%{$value}%"));
         if ($merchantId = (int) ($where['merchant_id'] ?? 0)) {
-            $query->orderByRaw('EXISTS (SELECT 1 FROM mg_merchant_games WHERE merchant_id = ? AND game_id = mg_games.id AND status = 1 AND merchant_status = 1 AND delete_time IS NULL) DESC', [$merchantId]);
+            $query->orderByRaw('EXISTS (SELECT 1 FROM mg_merchant_games WHERE merchant_id = ? AND game_id = mg_games.id AND status = 1 AND delete_time IS NULL) DESC', [$merchantId]);
         }
         return $this->getList($query);
     }
@@ -81,8 +82,8 @@ class IndexLogic extends BaseLogic
     public function mappingImpact(int $brandId, int $uniqueBrandId): array
     {
         return [
-            'merchant_count' => MerchantBrand::where(['unique_brand_id' => $uniqueBrandId, 'status' => 1])->distinct()->count('merchant_id'),
-            'game_count' => Game::where(['brand_id' => $brandId, 'status' => 1])->count(),
+            'merchant_count' => Merchant::where('status', 1)->count(),
+            'game_count' => Game::where(['brand_id' => $brandId, 'platform_status' => 1])->count(),
         ];
     }
 
@@ -117,6 +118,6 @@ class IndexLogic extends BaseLogic
 
     public function status(array $ids, int $status): int
     {
-        return Game::whereIn('id', $ids)->update(['status' => $status]);
+        return Game::whereIn('id', $ids)->where('upstream_status', 1)->update(['platform_status' => $status, 'platform_status_reason' => $status ? 'manual_enabled' : 'manual_disabled', 'platform_status_time' => gmdate('Y-m-d H:i:s.v')]);
     }
 }

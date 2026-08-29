@@ -89,9 +89,9 @@ try {
     ]);
     $game = Game::create([
         'game_code' => 'self_smoke_game', 'brand_id' => $providerBrand->id, 'platform_code' => 'wxgame',
-        'provider_game_code' => 'self_smoke_game', 'name' => 'Self Smoke Game', 'currency_codes' => ['USD'], 'status' => 1,
+        'provider_game_code' => 'self_smoke_game', 'name' => 'Self Smoke Game', 'currency_codes' => ['USD'], 'upstream_status' => 1, 'platform_status' => 1,
     ]);
-    MerchantGame::create(['merchant_id' => $merchant->id, 'game_id' => $game->id, 'status' => 1, 'merchant_status' => 1]);
+    MerchantGame::create(['merchant_id' => $merchant->id, 'game_id' => $game->id, 'status' => 1]);
 
     $trial = (new IndexLogic())->trial((int) $game->id, 'USD', '127.0.0.1');
     checkSelf($trial['game_url'] === 'https://example.test/demo', '真实自营商户试玩失败');

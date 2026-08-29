@@ -114,19 +114,6 @@
           />
         </ElSelect>
       </ElFormItem>
-      <ElFormItem :label="$t('game.grantBrands')"
-        ><ElSelect
-          v-model="form.brand_ids"
-          multiple
-          filterable
-          class="w-full"
-          :disabled="Boolean(form.copy_from_merchant_id)"
-          ><ElOption
-            v-for="item in options.brands"
-            :key="item.id"
-            :label="`${item.name} · ${item.code}`"
-            :value="item.id" /></ElSelect
-      ></ElFormItem>
       <ElFormItem :label="$t('game.remark')"
         ><ElInput v-model="form.remark" type="textarea" :rows="2"
       /></ElFormItem>
@@ -178,7 +165,6 @@
     status: 1,
     remark: '',
     credits: [newCredit()],
-    brand_ids: [] as number[],
     copy_from_merchant_id: undefined
   }
   const form = reactive<any>({ ...initial })

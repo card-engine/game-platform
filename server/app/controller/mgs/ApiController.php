@@ -18,14 +18,16 @@ class ApiController extends OpenController
     {
         $user = (new MgsAuthService())->user($request);
         $currency = strtoupper((string) $request->input('currency', (new MgsConfigService())->get('default_currency', config('mgs.default_currency', 'USD'))));
-        $games = Game::where('status', 1)->whereJsonContains('currency_codes', $currency)->orderBy('sort')->get(['id', 'name', 'names', 'icon_url', 'banner_url', 'game_type', 'currency_codes', 'is_hot', 'is_new']);
+        $games = Game::where('status', 1)->where('upstream_status', 1)->where('platform_status', 1)->where('merchant_status', 1)->whereNull('unavailable_reason')
+            ->whereJsonContains('currency_codes', $currency)->orderBy('sort')->orderByDesc('id')
+            ->get(['id', 'name', 'names', 'icon_url', 'banner_url', 'game_type', 'currency_codes', 'is_hot', 'is_new', 'upstream_status', 'platform_status', 'merchant_status']);
         return $this->success(['user_id' => $user->user_no, 'list' => $games]);
     }
 
     public function launch(Request $request): Response
     {
         $user = (new MgsAuthService())->user($request);
-        $game = Game::whereKey((int) $request->input('game_id'))->where('status', 1)->first();
+        $game = Game::whereKey((int) $request->input('game_id'))->where('status', 1)->where('upstream_status', 1)->where('platform_status', 1)->where('merchant_status', 1)->whereNull('unavailable_reason')->first();
         if (!$game) return $this->fail('游戏不存在或已停用');
         $currency = strtoupper((string) $request->input('currency', (new MgsConfigService())->get('default_currency', config('mgs.default_currency', 'USD'))));
         if (!in_array($currency, (array) $game->currency_codes, true)) return $this->fail('游戏不支持该币种');

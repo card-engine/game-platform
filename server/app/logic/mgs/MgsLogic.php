@@ -32,7 +32,7 @@ class MgsLogic extends BaseLogic
     {
         $query = Game::with('brand:id,name')->when($where['status'] !== '', fn ($q) => $q->where('status', (int) $where['status']))
             ->when($where['keyword'], fn ($q, $value) => $q->where(fn ($item) => $item->where('name', 'like', "%{$value}%")->orWhere('platform_game_code', 'like', "%{$value}%")))
-            ->orderBy('sort')->orderBy('id');
+            ->orderBy('sort')->orderByDesc('id');
         return $this->page($query);
     }
 

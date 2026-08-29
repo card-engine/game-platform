@@ -240,7 +240,11 @@ CREATE TABLE `mg_games` (
   `support_rtp` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '是否支持设置 RTP',
   `rtp_options` json DEFAULT NULL COMMENT '上游可选 RTP',
   `sort` int NOT NULL DEFAULT '0' COMMENT '排序值，越小越靠前',
-  `status` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '状态：0停用，1启用',
+  `upstream_status` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '上游事实状态：0不可用，1可用',
+  `platform_status` tinyint unsigned NOT NULL DEFAULT '0' COMMENT 'MG 平台运营状态：0关闭，1开启',
+  `platform_status_reason` varchar(32) DEFAULT NULL COMMENT 'MG 平台状态原因：upstream_available、upstream_unavailable、manual_disabled、manual_enabled 或 sync_protection',
+  `upstream_status_time` datetime(3) DEFAULT NULL COMMENT 'UTC 上游状态快照时间',
+  `platform_status_time` datetime(3) DEFAULT NULL COMMENT 'UTC MG 平台状态变更时间',
   `last_sync_time` datetime(3) DEFAULT NULL COMMENT 'UTC 最近同步时间',
   `extra` json DEFAULT NULL COMMENT '上游扩展数据',
   `created_by` bigint unsigned DEFAULT NULL,
@@ -251,8 +255,8 @@ CREATE TABLE `mg_games` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_provider_game` (`platform_code`,`brand_id`,`provider_game_code`),
   UNIQUE KEY `uk_game_code` (`game_code`),
-  KEY `idx_brand_status` (`brand_id`,`status`),
-  KEY `idx_platform_status` (`platform_code`,`status`)
+  KEY `idx_brand_upstream_status` (`brand_id`,`upstream_status`),
+  KEY `idx_platform_status` (`platform_code`,`platform_status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='游戏资源';
 
 CREATE TABLE `mg_hourly_stats` (
@@ -298,22 +302,6 @@ CREATE TABLE `mg_merchant_bills` (
   KEY `idx_source` (`source`,`source_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商户资金流水';
 
-CREATE TABLE `mg_merchant_brands` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `merchant_id` bigint unsigned NOT NULL COMMENT '商户 ID',
-  `unique_brand_id` bigint unsigned NOT NULL COMMENT '统一品牌 ID',
-  `status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '平台授权状态：0关闭，1开启',
-  `merchant_status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '企业上架状态：0关闭，1开启',
-  `created_by` bigint unsigned DEFAULT NULL,
-  `updated_by` bigint unsigned DEFAULT NULL,
-  `create_time` datetime(3) DEFAULT NULL,
-  `update_time` datetime(3) DEFAULT NULL,
-  `delete_time` datetime(3) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_merchant_brand` (`merchant_id`,`unique_brand_id`),
-  KEY `idx_brand_status` (`unique_brand_id`,`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商户品牌授权';
-
 CREATE TABLE `mg_merchant_credits` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `merchant_id` bigint unsigned NOT NULL COMMENT '商户 ID',
@@ -338,8 +326,9 @@ CREATE TABLE `mg_merchant_games` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `merchant_id` bigint unsigned NOT NULL COMMENT '商户 ID',
   `game_id` bigint unsigned NOT NULL COMMENT '游戏资源 ID',
-  `status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '平台授权状态：0关闭，1开启',
-  `merchant_status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '企业上架状态：0关闭，1开启',
+  `status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '商户单款覆盖状态：0关闭，1允许；无记录默认允许',
+  `status_reason` varchar(32) DEFAULT NULL COMMENT '商户单款状态原因：manual_disabled、upstream_unavailable 或 manual_enabled',
+  `status_time` datetime(3) DEFAULT NULL COMMENT 'UTC 商户单款状态变更时间',
   `rate_value` decimal(16,10) DEFAULT NULL COMMENT '此游戏覆盖的 GGR 费率',
   `default_rtp` varchar(16) DEFAULT NULL COMMENT '此商户下游戏默认 RTP',
   `created_by` bigint unsigned DEFAULT NULL,
@@ -956,6 +945,12 @@ CREATE TABLE `mgs_games` (
   `game_type` varchar(32) DEFAULT NULL COMMENT '游戏类型',
   `currency_codes` json NOT NULL COMMENT '游戏平台支持币种 JSON',
   `status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT 'MGS 状态：0停用，1启用',
+  `upstream_status` tinyint unsigned NOT NULL DEFAULT '0' COMMENT 'MG 上游状态快照：0不可用，1可用',
+  `platform_status` tinyint unsigned NOT NULL DEFAULT '0' COMMENT 'MG 平台状态快照：0不可用，1可用',
+  `merchant_status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT 'MG 商户覆盖状态快照：0关闭，1允许',
+  `unavailable_reason` varchar(64) DEFAULT NULL COMMENT 'MG 返回的不可用原因',
+  `platform_status_time` datetime(3) DEFAULT NULL COMMENT 'UTC MG 平台状态快照时间',
+  `upstream_status_time` datetime(3) DEFAULT NULL COMMENT 'UTC MG 上游状态快照时间',
   `is_hot` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '是否热门',
   `is_new` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '是否新品',
   `support_rtp` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '是否支持 RTP',

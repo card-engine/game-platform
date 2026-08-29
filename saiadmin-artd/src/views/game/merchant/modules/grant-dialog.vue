@@ -1,72 +1,13 @@
 <template>
   <ElDialog
     v-model="visible"
-    :title="`${merchant?.name || ''} · ${$t('game.gameGrant')}`"
+    :title="`${merchant?.name || ''} · ${$t('game.gameOverrides')}`"
     width="min(1100px, 97vw)"
     top="4vh"
     destroy-on-close
   >
     <div class="grant-dialog__body">
       <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div class="flex items-center gap-2 font-medium">
-          <span class="inline-flex items-center">
-            {{ $t('game.brandGrant') }}
-            <SuperBadge v-if="isSuper" inline />
-          </span>
-          <span class="text-xs font-normal text-g-500">{{ $t('game.grantEffectiveHint') }}</span>
-        </div>
-        <ElSpace>
-          <ElButton size="small" @click="setAllBrands(1)">{{
-            isSuper ? $t('game.allowAll') : $t('game.publishAll')
-          }}</ElButton>
-          <ElButton size="small" @click="setAllBrands(0)">{{
-            isSuper ? $t('game.denyAll') : $t('game.unpublishAll')
-          }}</ElButton>
-        </ElSpace>
-      </div>
-      <ElTable :data="brandRows" border height="190">
-        <ElTableColumn :label="$t('game.uniqueBrand')" min-width="210">
-          <template #default="{ row }">
-            <span class="font-medium">{{ row.name }}</span>
-            <span class="ml-2 text-xs text-g-500">{{ row.code }}</span>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn width="150" align="center">
-          <template #header>
-            <span class="inline-flex items-center">
-              {{ $t('game.platformAllow') }}
-              <SuperBadge inline />
-            </span>
-          </template>
-          <template #default="{ row }">
-            <ElSwitch
-              v-model="row.status"
-              :active-value="1"
-              :inactive-value="0"
-              :disabled="!isSuper"
-            />
-          </template>
-        </ElTableColumn>
-        <ElTableColumn :label="$t('game.enterprisePublish')" width="130" align="center">
-          <template #default="{ row }">
-            <ElSwitch
-              v-model="row.merchant_status"
-              :active-value="1"
-              :inactive-value="0"
-              :disabled="isSuper || !row.status"
-            />
-          </template>
-        </ElTableColumn>
-        <ElTableColumn :label="$t('game.result')" min-width="120" align="center">
-          <template #default="{ row }">
-            <ElTag :type="row.status && row.merchant_status ? 'success' : 'info'" size="small">
-              {{ row.status && row.merchant_status ? $t('game.opened') : $t('game.notOpened') }}
-            </ElTag>
-          </template>
-        </ElTableColumn>
-      </ElTable>
-
-      <div class="mb-3 mt-5 flex flex-wrap items-center justify-between gap-2">
         <div class="font-medium">{{ $t('game.gameOverrides') }}</div>
         <div class="flex flex-wrap gap-2">
           <ElSelect
@@ -98,8 +39,9 @@
           <ElButton :icon="Search" @click="loadGames">{{ $t('game.search') }}</ElButton>
         </div>
       </div>
-      <ElTable :data="games" v-loading="loading" border height="350">
-        <ElTableColumn :label="$t('game.override')" width="95" align="center">
+      <ElAlert type="info" :closable="false" :title="$t('game.grantEffectiveHint')" class="mb-3" />
+      <ElTable :data="games" v-loading="loading" border height="470">
+        <ElTableColumn :label="$t('game.override')" width="100" align="center">
           <template #default="{ row }">
             <ElTag v-if="overrides[row.id]" type="success" size="small">{{
               $t('game.configured')
@@ -109,51 +51,31 @@
             }}</ElButton>
           </template>
         </ElTableColumn>
-        <ElTableColumn :label="$t('game.game')" min-width="210">
-          <template #default="{ row }">
-            <div>{{ row.name }}</div>
-            <div class="text-xs text-g-500">{{ row.game_code }}</div>
-          </template>
+        <ElTableColumn :label="$t('game.game')" min-width="220">
+          <template #default="{ row }"
+            ><div>{{ row.name }}</div
+            ><div class="text-xs text-g-500">{{ row.game_code }}</div></template
+          >
         </ElTableColumn>
         <ElTableColumn
           prop="brand.unique_brand.name"
           :label="$t('game.uniqueBrand')"
-          min-width="120"
+          min-width="130"
         />
-        <ElTableColumn prop="brand.name" :label="$t('game.brandResource')" min-width="120" />
-        <ElTableColumn prop="platform_code" :label="$t('game.gamePlatform')" width="115" />
-        <ElTableColumn width="145" align="center">
-          <template #header>
-            <span class="inline-flex items-center">
-              {{ $t('game.platformAllow') }}
-              <SuperBadge inline />
-            </span>
-          </template>
+        <ElTableColumn prop="platform_code" :label="$t('game.gamePlatform')" width="120" />
+        <ElTableColumn :label="$t('game.status')" width="120" align="center">
           <template #default="{ row }">
             <ElSwitch
               v-if="overrides[row.id]"
               v-model="overrides[row.id].status"
               :active-value="1"
               :inactive-value="0"
-              :disabled="!isSuper"
             />
-            <span v-else class="text-g-500">{{ $t('game.followBrand') }}</span>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn :label="$t('game.enterprisePublish')" width="110" align="center">
-          <template #default="{ row }">
-            <ElSwitch
-              v-if="overrides[row.id]"
-              v-model="overrides[row.id].merchant_status"
-              :active-value="1"
-              :inactive-value="0"
-              :disabled="isSuper || !overrides[row.id].status"
-            />
-            <span v-else class="text-g-500">{{ $t('game.followBrand') }}</span>
+            <span v-else class="text-g-500">{{ $t('game.defaultValue') }}</span>
           </template>
         </ElTableColumn>
         <ElTableColumn
-          v-if="isSuper && merchant?.billing_mode === 1"
+          v-if="merchant?.billing_mode === 1"
           :label="`${$t('game.ggrRate')} %`"
           width="150"
         >
@@ -169,11 +91,12 @@
         $t('game.overrideSummary', { count: Object.keys(overrides).length })
       }}</div>
     </div>
-
-    <template #footer>
-      <ElButton @click="visible = false">{{ $t('game.cancel') }}</ElButton>
-      <ElButton type="primary" :loading="saving" @click="save">{{ $t('game.saveGrant') }}</ElButton>
-    </template>
+    <template #footer
+      ><ElButton @click="visible = false">{{ $t('game.cancel') }}</ElButton
+      ><ElButton type="primary" :loading="saving" @click="save">{{
+        $t('game.saveGrant')
+      }}</ElButton></template
+    >
   </ElDialog>
 </template>
 
@@ -184,22 +107,14 @@
   import merchantApi from '@/api/game/merchant'
   import listApi from '@/api/game/list'
   import { percentToRate, rateToPercent } from '@/utils/game/amount'
-  import SuperBadge from '@/components/business/super-badge.vue'
 
-  const props = defineProps<{
-    modelValue: boolean
-    merchant?: any
-    brands: any[]
-    role?: string
-  }>()
+  const props = defineProps<{ modelValue: boolean; merchant?: any; brands: any[] }>()
   const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
   const visible = computed({
     get: () => props.modelValue,
     set: (value) => emit('update:modelValue', value)
   })
   const { t } = useI18n()
-  const isSuper = computed(() => props.role === 'super_admin')
-  const brandRows = ref<any[]>([])
   const overrides = reactive<Record<number, any>>({})
   const games = ref<any[]>([])
   const loading = ref(false)
@@ -217,11 +132,7 @@
   const loadGames = async () => {
     loading.value = true
     try {
-      games.value = (await listApi.list(query)).data.sort((a: any, b: any) => {
-        const enabled = (item: any) =>
-          Number(Boolean(overrides[item.id]?.status && overrides[item.id]?.merchant_status))
-        return enabled(b) - enabled(a) || a.name.localeCompare(b.name)
-      })
+      games.value = (await listApi.list(query)).data
     } finally {
       loading.value = false
     }
@@ -231,59 +142,28 @@
     Object.keys(overrides).forEach((key) => delete overrides[Number(key)])
     query.merchant_id = props.merchant.id
     const state = await merchantApi.grants(props.merchant.id)
-    const mappings = new Map<number, any>(
-      state.brands.map((item: any) => [Number(item.unique_brand_id), item])
-    )
-    brandRows.value = props.brands
-      .map((item) => ({
-        ...item,
-        status: Number(mappings.get(item.id)?.status || 0),
-        merchant_status: Number(mappings.get(item.id)?.merchant_status || 0)
-      }))
-      .sort(
-        (a, b) =>
-          Number(Boolean(b.status && b.merchant_status)) -
-            Number(Boolean(a.status && a.merchant_status)) || a.name.localeCompare(b.name)
-      )
     state.games.forEach((item: any) => {
       overrides[Number(item.game_id)] = {
         ...item,
         status: Number(item.status),
-        merchant_status: Number(item.merchant_status),
         rate_percent: item.rate_value == null ? undefined : rateToPercent(item.rate_value)
       }
     })
     await loadGames()
   })
-  const setAllBrands = (status: number) => {
-    brandRows.value.forEach((item) => {
-      if (isSuper.value) item.status = status
-      else if (item.status) item.merchant_status = status
-    })
-  }
   const enable = (game: any) => {
-    if (overrides[game.id]) return
-    overrides[game.id] = {
-      game_id: game.id,
-      game,
-      status: 1,
-      merchant_status: 1,
-      rate_percent: undefined
-    }
+    overrides[game.id] = { game_id: game.id, status: 0, rate_percent: undefined }
   }
   const save = async () => {
     saving.value = true
     try {
       await merchantApi.saveGrants({
         id: props.merchant.id,
-        brand_ids: brandRows.value
-          .filter((item) => (isSuper.value ? item.status : item.merchant_status))
-          .map((item) => item.id),
         games: Object.values(overrides).map((item) => ({
           game_id: item.game_id,
           status: item.status,
-          merchant_status: item.merchant_status,
-          rate_value: item.rate_percent == null ? null : percentToRate(item.rate_percent)
+          rate_value: item.rate_percent == null ? null : percentToRate(item.rate_percent),
+          default_rtp: item.default_rtp ?? null
         }))
       })
       ElMessage.success(t('game.saveSuccess'))

@@ -46,7 +46,7 @@ try {
 
     $game = Game::create([
         'platform_game_id' => 'smoke-game', 'platform_game_code' => 'smoke-game', 'platform_brand_code' => 'smoke',
-        'brand_id' => 1, 'name' => 'Smoke Game', 'currency_codes' => ['USD'], 'status' => 1, 'rate_value' => '0.0300000000',
+        'brand_id' => 1, 'name' => 'Smoke Game', 'currency_codes' => ['USD'], 'status' => 1, 'upstream_status' => 1, 'platform_status' => 1, 'merchant_status' => 1, 'rate_value' => '0.0300000000',
     ]);
     $user = User::findOrFail(1);
     $wallet = Wallet::where(['user_id' => $user->id, 'currency_code' => 'USD'])->firstOrFail();

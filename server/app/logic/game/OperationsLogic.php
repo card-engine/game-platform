@@ -65,8 +65,8 @@ class OperationsLogic extends BaseLogic
             : (count($merchantIds) === 1 ? $merchantIds[0] : -1);
         $games = Game::query();
         if (!$isSuperAdmin) {
-            $games->whereIn('id', Db::table('mg_merchant_games')->whereIn('merchant_id', $merchantIds)
-                ->where(['status' => 1, 'merchant_status' => 1])->whereNull('delete_time')->select('game_id'));
+            $disabled = Db::table('mg_merchant_games')->whereIn('merchant_id', $merchantIds)->where('status', 0)->whereNull('delete_time')->select('game_id');
+            $games->whereNotIn('id', $disabled);
         }
         return [
             'business_date' => count($businessDates) === 1 ? $businessDates[0] : null,
@@ -79,13 +79,13 @@ class OperationsLogic extends BaseLogic
             'user_count' => User::whereIn('merchant_id', $merchantIds)->count(),
             'today_user_count' => $todayUserCount,
             'platform_count' => (clone $games)->distinct()->count('platform_code'),
-            'game_count' => (clone $games)->where('status', 1)->count(),
+            'game_count' => (clone $games)->where('platform_status', 1)->count(),
             'total_game_count' => (clone $games)->count(),
             'unknown_bill_count' => $unknown,
             'today_exception_count' => $today->sum('exception_count'),
             'today' => $today,
             'credits' => MerchantCredit::with('merchant:id,mch_id,name')->whereIn('merchant_id', $merchantIds)->where('status', 1)->orderBy('available_amount')->limit(12)->get(),
-            'platforms' => (clone $games)->selectRaw('platform_code, COUNT(*) game_count, SUM(status = 1) enabled_count, MAX(last_sync_time) last_sync_time')->groupBy('platform_code')->get(),
+            'platforms' => (clone $games)->selectRaw('platform_code, COUNT(*) game_count, SUM(platform_status = 1) enabled_count, MAX(last_sync_time) last_sync_time')->groupBy('platform_code')->get(),
             'hourly' => HourlyStat::where('merchant_id', $trendMerchantId)->latest('stat_date')->orderBy('stat_hour')->get(),
             'monthly' => MonthlyStat::where('merchant_id', $trendMerchantId)->orderByDesc('stat_month')->limit(12)->get()->reverse()->values(),
             'is_super_admin' => $isSuperAdmin,

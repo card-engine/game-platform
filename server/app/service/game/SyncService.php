@@ -14,9 +14,10 @@ class SyncService
     {
         $platform = strtolower($platform);
         $config = AdapterRegistry::config($platform);
+        if (!($config['is_open'] ?? true)) return ['platform' => $platform, 'brands' => 0, 'games' => 0, 'errors' => ['_' => '游戏平台已关闭']];
         $data = AdapterRegistry::get($platform)->sync($config);
         $defaultCurrency = strtoupper((string) ($config['default_currency'] ?? $config['currency'] ?? 'USD'));
-        $now = date('Y-m-d H:i:s');
+        $now = gmdate('Y-m-d H:i:s.v');
 
         return Db::transaction(function () use ($platform, $data, $defaultCurrency, $now) {
             $brands = [];
@@ -42,17 +43,27 @@ class SyncService
                 unset($item['brand_code']);
                 $codes = (bool) $brand->is_gc ? ['SC', 'GC'] : array_values(array_diff((array) ($item['currency_codes'] ?? []), ['SC', 'GC']));
                 $item['currency_codes'] = $codes ?: [$defaultCurrency === 'SC' || $defaultCurrency === 'GC' ? 'USD' : $defaultCurrency];
-                $game = Game::withTrashed()->updateOrCreate(
-                    ['platform_code' => $platform, 'brand_id' => $brand->id, 'provider_game_code' => $item['provider_game_code']],
-                    $item + ['status' => 1, 'last_sync_time' => $now, 'delete_time' => null],
-                );
+                $keys = ['platform_code' => $platform, 'brand_id' => $brand->id, 'provider_game_code' => $item['provider_game_code']];
+                $game = Game::withTrashed()->where($keys)->first();
+                $values = $item + ['upstream_status' => 1, 'upstream_status_time' => $now, 'last_sync_time' => $now, 'delete_time' => null];
+                if ($game) {
+                    $game->update($values);
+                } else {
+                    $game = Game::create($keys + $values + ['platform_status' => 1, 'platform_status_reason' => 'upstream_available', 'platform_status_time' => $now]);
+                }
                 $brandCode = $uniqueCodes->get($brand->unique_brand_id);
                 $gameCode = $brandCode ? Game::makeCode($brandCode, (int) $game->id) : null;
                 if ($game->game_code !== $gameCode) $game->update(['game_code' => $gameCode]);
                 $seen[] = $game->id;
             }
             if ($data['complete'] ?? true) {
-                Game::where('platform_code', $platform)->when($seen, fn ($query) => $query->whereNotIn('id', $seen))->update(['status' => 3]);
+                $stale = Game::where('platform_code', $platform)->when($seen, fn ($query) => $query->whereNotIn('id', $seen))->get(['id', 'platform_status']);
+                foreach ($stale as $game) {
+                    $fields = ['upstream_status' => 0, 'upstream_status_time' => $now];
+                    if ((int) $game->platform_status === 1) $fields += ['platform_status' => 0, 'platform_status_reason' => 'upstream_unavailable', 'platform_status_time' => $now];
+                    $game->update($fields);
+                    \app\model\MerchantGame::where('game_id', $game->id)->where('status', 1)->update(['status' => 0, 'status_reason' => 'upstream_unavailable', 'status_time' => $now]);
+                }
                 GameBrand::where('platform_code', $platform)->where('last_sync_time', '<', $now)->update(['status' => 2]);
             }
 

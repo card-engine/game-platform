@@ -4,7 +4,6 @@ use app\logic\game\MerchantLogic;
 use app\model\Enterprise;
 use app\model\Game;
 use app\model\Merchant;
-use app\model\MerchantBrand;
 use app\model\MerchantCredit;
 use app\model\MerchantGame;
 use app\service\game\SecretService;
@@ -20,7 +19,7 @@ function checkMerchantMode(bool $result, string $message): void
 }
 
 $suffix = bin2hex(random_bytes(4));
-$game = Game::with('brand')->where('status', 1)->whereHas('brand', fn ($brand) => $brand->whereNotNull('unique_brand_id'))->firstOrFail();
+$game = Game::with('brand')->where('upstream_status', 1)->where('platform_status', 1)->whereHas('brand', fn ($brand) => $brand->whereNotNull('unique_brand_id'))->firstOrFail();
 $enterprise = Enterprise::create(['name' => "__mg_mode_{$suffix}", 'merchant_limit' => 4, 'timezone' => 'UTC', 'default_language' => 'en', 'status' => 1]);
 $source = Merchant::create([
     'enterprise_id' => $enterprise->id, 'name' => "Source {$suffix}", 'wallet_mode' => 1, 'callback_url' => 'http://127.0.0.1',
@@ -28,7 +27,6 @@ $source = Merchant::create([
     'gc_exchange_rate' => '10000', 'timezone' => 'UTC', 'timeout_ms' => 1000, 'status' => 1,
 ]);
 $source->update(['mch_id' => (string) id2big((int) $source->id)]);
-MerchantBrand::create(['merchant_id' => $source->id, 'unique_brand_id' => $game->brand->unique_brand_id, 'status' => 1]);
 MerchantGame::create(['merchant_id' => $source->id, 'game_id' => $game->id, 'status' => 0, 'rate_value' => '0.02']);
 $logic = new MerchantLogic();
 $logic->init(['id' => 1]);
@@ -49,7 +47,6 @@ try {
     $credits = MerchantCredit::where('merchant_id', $targetId)->pluck('settlement_enabled', 'currency_code')->map(fn ($value) => (int) $value)->all();
     $target = Merchant::find($targetId);
     checkMerchantMode($credits === ['GC' => 0, 'SC' => 1] || $credits === ['SC' => 1, 'GC' => 0], 'SC/GC 结算开关错误: ' . json_encode($credits) . ', merchant mode=' . $target?->billing_mode);
-    checkMerchantMode(MerchantBrand::where(['merchant_id' => $targetId, 'unique_brand_id' => $game->brand->unique_brand_id])->exists(), '统一品牌授权未复制');
     checkMerchantMode(MerchantGame::where(['merchant_id' => $targetId, 'game_id' => $game->id, 'status' => 0])->exists(), '游戏例外未复制');
 
     $singleId = $logic->add([
@@ -77,7 +74,6 @@ try {
 } finally {
     $ids = array_filter([$source->id, $targetId, $singleId, $scId ?? null]);
     Db::table('mg_merchant_games')->whereIn('merchant_id', $ids)->delete();
-    Db::table('mg_merchant_brands')->whereIn('merchant_id', $ids)->delete();
     Db::table('mg_merchant_credits')->whereIn('merchant_id', $ids)->delete();
     Db::table('mg_merchants')->whereIn('id', $ids)->delete();
     Db::table('mg_enterprises')->where('id', $enterprise->id)->delete();

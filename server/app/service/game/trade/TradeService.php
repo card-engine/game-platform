@@ -178,9 +178,15 @@ class TradeService
                 $betTable = $this->betTable($original['bet_no']);
                 $betNo = $original['bet_no'];
             } else {
-                $game = Game::where('platform_code', $platform)->where('provider_game_code', $operation['game_code'] ?? '')
+                if ($action === 'debit' && !(bool) config("game_platforms.platforms.{$platform}.is_open", true)) {
+                    return ['result' => $this->result(3, 1004, '游戏平台已关闭', [], $action)];
+                }
+                $gameQuery = Game::where('platform_code', $platform)->where('provider_game_code', $operation['game_code'] ?? '')
                     ->when($operation['brand_code'] ?? '', fn ($query, $value) => $query->whereHas('brand', fn ($q) => $q->where('provider_brand_code', $value)))
-                    ->where('status', 1)->first();
+                    ->whereNull('delete_time');
+                if (($operation['action'] ?? '') === 'debit') $gameQuery->where('upstream_status', 1)->where('platform_status', 1)
+                    ->whereNotIn('id', MerchantGame::where(['merchant_id' => $merchant->id, 'status' => 0])->whereNull('delete_time')->select('game_id'));
+                $game = $gameQuery->first();
                 if (!$game) return ['result' => $this->result(3, 1004, '游戏不存在或已停用', [], $action)];
                 $roundId = trim((string) ($operation['parent_round_id'] ?? $operation['round_id'] ?? ''));
                 $roundKey = hash('sha256', "{$user->id}|{$currency}|{$game->id}|" . ($roundId ?: "transaction:{$operation['source_no']}"));

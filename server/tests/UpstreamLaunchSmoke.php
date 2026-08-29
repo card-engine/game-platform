@@ -3,7 +3,6 @@
 use app\model\Enterprise;
 use app\model\Game;
 use app\model\Merchant;
-use app\model\MerchantBrand;
 use app\model\MerchantCredit;
 use app\service\game\OpenApiService;
 use app\service\game\SecretService;
@@ -19,10 +18,9 @@ $merchant = Merchant::create([
     'secret' => SecretService::encrypt($suffix), 'language_codes' => ['en'], 'default_language' => 'en', 'timezone' => 'UTC', 'timeout_ms' => 30000, 'status' => 1,
 ]);
 $merchant->update(['mch_id' => (string) id2big((int) $merchant->id)]);
-$games = Game::with('brand')->whereIn('id', Game::whereIn('platform_code', ['wxgame', 'tada', 'goldengatex'])->where('status', 1)->whereHas('brand', fn ($brand) => $brand->whereNotNull('unique_brand_id'))->groupBy('platform_code')->selectRaw('MIN(id)')->pluck('MIN(id)'))->get()->keyBy('platform_code');
+$games = Game::with('brand')->whereIn('id', Game::whereIn('platform_code', ['wxgame', 'tada', 'goldengatex'])->where('upstream_status', 1)->where('platform_status', 1)->whereHas('brand', fn ($brand) => $brand->whereNotNull('unique_brand_id'))->groupBy('platform_code')->selectRaw('MIN(id)')->pluck('MIN(id)'))->get()->keyBy('platform_code');
 
 try {
-    foreach ($games as $game) MerchantBrand::create(['merchant_id' => $merchant->id, 'unique_brand_id' => $game->brand->unique_brand_id, 'status' => 1]);
     foreach ($games->map(fn ($game) => $game->currency_codes[0])->unique() as $currency) MerchantCredit::create(['merchant_id' => $merchant->id, 'currency_code' => $currency, 'rate_value' => 0, 'settlement_enabled' => 1, 'status' => 1]);
     $service = new OpenApiService();
     foreach (['wxgame', 'tada', 'goldengatex'] as $platform) {
@@ -45,7 +43,6 @@ try {
     echo "acewin launch skipped: game list unavailable from current upstream IP" . PHP_EOL;
 } finally {
     Db::table('mg_users')->where('merchant_id', $merchant->id)->delete();
-    Db::table('mg_merchant_brands')->where('merchant_id', $merchant->id)->delete();
     Db::table('mg_merchant_credits')->where('merchant_id', $merchant->id)->delete();
     Db::table('mg_merchants')->where('id', $merchant->id)->delete();
     Db::table('mg_enterprises')->where('id', $enterprise->id)->delete();

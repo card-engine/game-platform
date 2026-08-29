@@ -18,13 +18,13 @@ class MgsSyncService
         try {
             $items = (new MgsGamePlatformClient())->games();
             $seen = [];
-            Db::transaction(function () use ($items, &$seen) {
+            $now = gmdate('Y-m-d H:i:s.v');
+            Db::transaction(function () use ($items, &$seen, $now) {
                 foreach ($items as $item) {
                     $platformGameId = (string) ($item['game_id'] ?? '');
                     $brandCode = strtolower(trim((string) ($item['brand_code'] ?? '')));
                     if ($platformGameId === '' || $brandCode === '') continue;
                     $seen[] = $platformGameId;
-                    $now = gmdate('Y-m-d H:i:s.v');
                     $brand = Brand::withTrashed()->updateOrCreate(
                         ['platform' => 'mgames', 'platform_brand_code' => $brandCode],
                         ['name' => (string) ($item['brand_name'] ?? $brandCode), 'last_sync_time' => $now, 'delete_time' => null],
@@ -38,12 +38,16 @@ class MgsSyncService
                             'name' => (string) ($item['name'] ?? $platformGameId), 'icon_url' => $item['icon_url'] ?? null,
                             'game_type' => $item['game_type'] ?? null, 'currency_codes' => $item['currencies'] ?? [],
                             'support_rtp' => (int) ($item['support_rtp'] ?? 0), 'rtp_options' => $item['rtp_options'] ?? null,
+                            'upstream_status' => (int) ($item['upstream_status'] ?? 0), 'platform_status' => (int) ($item['platform_status'] ?? 0),
+                            'merchant_status' => (int) ($item['merchant_status'] ?? 1), 'unavailable_reason' => $item['unavailable_reason'] ?? null,
+                            'platform_status_time' => $item['platform_status_time'] ?? null, 'upstream_status_time' => $item['upstream_status_time'] ?? null,
                             'last_sync_time' => $now, 'delete_time' => null,
                         ],
                     );
                     if ($game->wasRecentlyCreated) $game->update(['rate_value' => (string) (new MgsConfigService())->get('platform_fee_rate', '0.0300000000')]);
                 }
-                if ($seen) Game::where('platform', 'mgames')->whereNotIn('platform_game_id', $seen)->update(['status' => 0]);
+                Game::where('platform', 'mgames')->when($seen, fn ($query) => $query->whereNotIn('platform_game_id', $seen))
+                    ->update(['upstream_status' => 0, 'platform_status' => 0, 'merchant_status' => 0, 'unavailable_reason' => 'upstream_unavailable', 'upstream_status_time' => $now, 'platform_status_time' => $now, 'update_time' => $now]);
             });
             return ['count' => count($seen), 'synced_time' => gmdate('Y-m-d H:i:s.v')];
         } finally {
