@@ -150,6 +150,9 @@
     margin: 8.5vh auto 0;
     padding: 0;
     overflow: hidden;
+    background: transparent !important;
+    border-radius: 0;
+    box-shadow: none;
 
     .el-dialog__header {
       display: none;
@@ -158,6 +161,7 @@
     .el-dialog__body {
       height: 100%;
       padding: 0;
+      background: transparent;
     }
 
     &.is-fullscreen {
