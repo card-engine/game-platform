@@ -165,8 +165,11 @@
     }
 
     &.is-fullscreen {
+      position: fixed;
+      inset: 0;
       height: 100vh;
       max-height: 100vh;
+      width: auto !important;
       margin: 0;
     }
   }
