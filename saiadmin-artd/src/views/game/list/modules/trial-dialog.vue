@@ -1,9 +1,9 @@
 <template>
   <ElDialog
     v-model="visible"
-    class="game-trial-dialog"
-    :width="isMobile ? '100%' : '83vw'"
-    :fullscreen="isMobile"
+    :class="['game-trial-dialog', `is-${orientation}`]"
+    :width="orientation === 'portrait' && isMobile ? '100%' : '83vw'"
+    :fullscreen="isMobile && orientation === 'portrait'"
     :show-close="false"
     :close-on-click-modal="false"
     :close-on-press-escape="true"
@@ -172,6 +172,20 @@
       width: auto !important;
       margin: 0;
     }
+
+    &.is-portrait {
+      height: 100vh;
+      max-height: 100vh;
+      margin-top: 0;
+      margin-bottom: 0;
+    }
+
+    &.is-landscape {
+      height: 83vh;
+      max-height: 83vh;
+      margin-top: 8.5vh;
+      margin-bottom: 0;
+    }
   }
 
   .game-trial-shell,
@@ -221,13 +235,13 @@
 
   .game-trial-controls {
     position: absolute;
-    top: auto;
-    bottom: 20%;
+    top: 30%;
+    bottom: auto;
     right: 0;
     z-index: 2;
     display: flex;
     align-items: center;
-    transform: translateY(50%);
+    transform: translateY(-50%);
   }
 
   .game-trial-handle,
