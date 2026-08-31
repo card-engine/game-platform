@@ -181,8 +181,9 @@
     }
 
     &.is-landscape {
-      height: 83vh;
-      max-height: 83vh;
+      height: auto;
+      max-height: none;
+      aspect-ratio: 16 / 9;
       margin-top: 8.5vh;
       margin-bottom: 0;
     }
@@ -235,13 +236,13 @@
 
   .game-trial-controls {
     position: absolute;
-    top: 30%;
-    bottom: auto;
+    top: auto;
+    bottom: 30%;
     right: 0;
     z-index: 2;
     display: flex;
     align-items: center;
-    transform: translateY(-50%);
+    transform: translateY(50%);
   }
 
   .game-trial-handle,
