@@ -215,7 +215,7 @@
   .game-trial-controls {
     position: absolute;
     top: auto;
-    bottom: 18%;
+    bottom: 20%;
     right: 0;
     z-index: 2;
     display: flex;
@@ -252,6 +252,7 @@
   .game-trial-actions {
     display: flex;
     flex-direction: column;
+    order: -1;
     gap: 10px;
     width: 0;
     overflow: hidden;
@@ -278,10 +279,6 @@
   }
 
   @media (max-width: 767px) {
-    .game-trial-controls {
-      bottom: 14%;
-    }
-
     .game-trial-handle {
       width: 18px;
       height: 88px;
