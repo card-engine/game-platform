@@ -170,6 +170,7 @@
       </ElTabPane>
       <ElTabPane :label="$t('game.brandResource')" name="brands" lazy><BrandResources /></ElTabPane>
     </ElTabs>
+    <TrialDialog v-model="trialVisible" :src="trialUrl" />
   </div>
 </template>
 
@@ -179,6 +180,7 @@
   import api from '@/api/game/list'
   import BrandResources from './modules/brand-resources.vue'
   import GameDefaultIcon from './modules/game-default-icon.vue'
+  import TrialDialog from './modules/trial-dialog.vue'
   import SuperBadge from '@/components/business/super-badge.vue'
   import { checkAuth } from '@/utils/tool'
   import { useI18n } from 'vue-i18n'
@@ -203,6 +205,8 @@
   const brands = ref<any[]>([])
   const uniqueBrands = ref<any[]>([])
   const syncing = ref(false)
+  const trialVisible = ref(false)
+  const trialUrl = ref('')
   const platformSwitcher = ref<HTMLElement>()
   const loadBrands = async () => {
     const [resources, unique] = await Promise.all([
@@ -245,13 +249,13 @@
     }
   }
   const trial = async (game: any, currency: string) => {
-    const page = window.open('about:blank', '_blank')
+    trialUrl.value = ''
+    trialVisible.value = true
     try {
       const data = await api.trial({ game_id: game.id, currency })
-      if (page) page.location.href = data.game_url
-      else ElMessage.warning(t('game.popupBlocked'))
+      if (trialVisible.value) trialUrl.value = data.game_url
     } catch (error) {
-      page?.close()
+      trialVisible.value = false
       throw error
     }
   }
