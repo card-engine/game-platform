@@ -168,7 +168,7 @@
 
     .el-dialog__body {
       height: 100%;
-      padding: 0;
+      padding: 0 !important;
       background: transparent;
       overflow: visible;
     }
