@@ -2,7 +2,7 @@
   <ElDialog
     v-model="visible"
     :class="['game-trial-dialog', `is-${orientation}`]"
-    :width="isMobile ? '100%' : '83vw'"
+    :width="isMobile ? '100%' : orientation === 'portrait' ? 'min(83vw, 56.25vh)' : '83vw'"
     :fullscreen="isMobile"
     :show-close="false"
     :close-on-click-modal="false"
@@ -252,8 +252,8 @@
 
   .game-trial-controls {
     position: absolute;
-    top: 12px;
-    left: calc(100% + 12px);
+    top: 8px;
+    left: calc(100% + 8px);
     z-index: 2;
     display: flex;
     align-items: center;
@@ -288,16 +288,19 @@
 
   .game-trial-actions {
     display: flex;
-    flex-direction: row;
-    gap: 10px;
+    flex-direction: column;
+    gap: 8px;
     width: auto;
-    overflow: hidden;
+    overflow: visible;
     opacity: 1;
   }
 
   .game-trial-controls:not(.is-mobile) .game-trial-action {
-    border-color: transparent;
-    background: transparent;
+    width: 46px;
+    height: 46px;
+    border-color: rgb(255 255 255 / 35%);
+    background: rgb(0 0 0 / 58%);
+    backdrop-filter: blur(4px);
   }
 
   .game-trial-controls.is-mobile {
