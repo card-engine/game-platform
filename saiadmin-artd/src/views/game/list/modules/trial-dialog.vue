@@ -214,12 +214,13 @@
 
   .game-trial-controls {
     position: absolute;
-    top: 68%;
+    top: auto;
+    bottom: 18%;
     right: 0;
     z-index: 2;
     display: flex;
     align-items: center;
-    transform: translateY(-50%);
+    transform: translateY(50%);
   }
 
   .game-trial-handle,
@@ -278,7 +279,7 @@
 
   @media (max-width: 767px) {
     .game-trial-controls {
-      top: 72%;
+      bottom: 14%;
     }
 
     .game-trial-handle {
