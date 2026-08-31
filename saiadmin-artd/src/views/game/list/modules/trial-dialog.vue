@@ -2,8 +2,8 @@
   <ElDialog
     v-model="visible"
     :class="['game-trial-dialog', `is-${orientation}`]"
-    :width="orientation === 'portrait' && isMobile ? '100%' : '83vw'"
-    :fullscreen="isMobile && orientation === 'portrait'"
+    :width="isMobile ? '100%' : '83vw'"
+    :fullscreen="isMobile"
     :show-close="false"
     :close-on-click-modal="false"
     :close-on-press-escape="true"
@@ -26,8 +26,13 @@
         />
       </div>
 
-      <div class="game-trial-controls" :class="{ 'is-expanded': controlsExpanded }" @click.stop>
+      <div
+        class="game-trial-controls"
+        :class="{ 'is-mobile': isMobile, 'is-expanded': controlsExpanded }"
+        @click.stop
+      >
         <button
+          v-if="isMobile"
           type="button"
           class="game-trial-handle"
           :aria-label="$t('game.trialControls')"
@@ -36,7 +41,7 @@
           <ArtSvgIcon icon="ri:more-2-fill" />
         </button>
         <div class="game-trial-actions">
-          <ElTooltip :content="$t('game.switchOrientation')" placement="left">
+          <ElTooltip v-if="!isMobile" :content="$t('game.switchOrientation')" placement="left">
             <button type="button" class="game-trial-action" @click="switchOrientation">
               <ArtSvgIcon
                 :icon="orientation === 'portrait' ? 'ri:landscape-line' : 'ri:smartphone-line'"
@@ -48,7 +53,7 @@
               <ArtSvgIcon icon="ri:refresh-line" />
             </button>
           </ElTooltip>
-          <ElTooltip :content="$t('game.openTrialWindow')" placement="left">
+          <ElTooltip v-if="!isMobile" :content="$t('game.openTrialWindow')" placement="left">
             <button type="button" class="game-trial-action" @click="openWindow">
               <ArtSvgIcon icon="ri:external-link-line" />
             </button>
@@ -78,6 +83,9 @@
 
   const updateMobile = () => {
     isMobile.value = window.matchMedia('(max-width: 767px)').matches
+    if (isMobile.value) {
+      orientation.value = window.innerWidth > window.innerHeight ? 'landscape' : 'portrait'
+    }
   }
   const scheduleCollapse = () => {
     clearTimeout(collapseTimer)
@@ -149,7 +157,7 @@
     max-height: 83vh;
     margin: 8.5vh auto 0;
     padding: 0;
-    overflow: hidden;
+    overflow: visible;
     background: transparent !important;
     border-radius: 0;
     box-shadow: none;
@@ -162,6 +170,7 @@
       height: 100%;
       padding: 0;
       background: transparent;
+      overflow: visible;
     }
 
     &.is-fullscreen {
@@ -173,14 +182,14 @@
       margin: 0;
     }
 
-    &.is-portrait {
+    &.is-portrait:not(.is-fullscreen) {
       height: 100vh;
       max-height: 100vh;
       margin-top: 0;
       margin-bottom: 0;
     }
 
-    &.is-landscape {
+    &.is-landscape:not(.is-fullscreen) {
       height: auto;
       max-height: none;
       aspect-ratio: 16 / 9;
@@ -194,8 +203,15 @@
     position: relative;
     width: 100%;
     height: 100%;
-    overflow: hidden;
     background: #050505;
+  }
+
+  .game-trial-shell {
+    overflow: visible;
+  }
+
+  .game-trial-stage {
+    overflow: hidden;
   }
 
   .game-trial-stage {
@@ -213,13 +229,13 @@
   }
 
   .game-trial-stage.is-portrait .game-trial-frame {
-    width: auto;
-    height: 100%;
+    width: min(100%, 56.25vh);
+    height: auto;
     aspect-ratio: 9 / 16;
   }
 
   .game-trial-stage.is-landscape .game-trial-frame {
-    width: 100%;
+    width: min(100%, 177.7778vh);
     height: auto;
     aspect-ratio: 16 / 9;
   }
@@ -236,13 +252,12 @@
 
   .game-trial-controls {
     position: absolute;
-    top: auto;
-    bottom: 30%;
-    right: 0;
+    top: 12px;
+    left: calc(100% + 12px);
     z-index: 2;
     display: flex;
     align-items: center;
-    transform: translateY(50%);
+    transform: none;
   }
 
   .game-trial-handle,
@@ -273,6 +288,27 @@
 
   .game-trial-actions {
     display: flex;
+    flex-direction: row;
+    gap: 10px;
+    width: auto;
+    overflow: hidden;
+    opacity: 1;
+  }
+
+  .game-trial-controls:not(.is-mobile) .game-trial-action {
+    border-color: transparent;
+    background: transparent;
+  }
+
+  .game-trial-controls.is-mobile {
+    top: auto;
+    left: auto;
+    right: 0;
+    bottom: 30%;
+    transform: translateY(50%);
+  }
+
+  .game-trial-controls.is-mobile .game-trial-actions {
     flex-direction: column;
     order: -1;
     gap: 10px;
@@ -286,9 +322,9 @@
       transform 0.2s ease;
   }
 
-  .game-trial-controls.is-expanded .game-trial-actions {
+  .game-trial-controls.is-mobile.is-expanded .game-trial-actions {
     width: 54px;
-    margin-right: 12px;
+    margin-right: 8px;
     opacity: 1;
     transform: translateX(0);
   }
