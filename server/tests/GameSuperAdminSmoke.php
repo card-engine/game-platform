@@ -53,6 +53,15 @@ $merchantCount = app\model\Merchant::count();
 $context = requestSuper($token, '/game/context');
 checkSuper(($context['code'] ?? 0) === 200 && ($context['data']['role'] ?? '') === 'super_admin', '游戏超管上下文错误');
 checkSuper(count($context['data']['merchants'] ?? []) === $merchantCount, '游戏超管未看到全部商户参数');
+$overview = requestSuper($token, '/game/operations/overview');
+$timezone = new DateTimeZone((string) (new app\service\game\ConfigService())->get('platform_timezone', 'UTC'));
+$today = new DateTimeImmutable('now', $timezone);
+foreach (['hourly' => $today, 'hourly_yesterday' => $today->modify('-1 day')] as $field => $date) {
+    $rows = $overview['data'][$field] ?? [];
+    $hours = array_column($rows, 'stat_hour');
+    checkSuper(count($rows) <= 24 && $hours === array_values(array_unique($hours)) && $hours === collect($hours)->sort()->values()->all(), "{$field} 小时数据格式错误");
+    checkSuper(collect($rows)->every(fn ($row) => $row['stat_date'] === $date->format('Y-m-d')), "{$field} 统计日期错误");
+}
 
 foreach ([
     ['/game/settings', []],

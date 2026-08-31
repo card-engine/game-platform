@@ -63,6 +63,16 @@ class OperationsLogic extends BaseLogic
         $trendMerchantId = $isSuperAdmin
             ? (count($selectedMerchantIds) === 1 && count($merchantIds) === 1 ? $merchantIds[0] : 0)
             : (count($merchantIds) === 1 ? $merchantIds[0] : -1);
+        $hourly = collect();
+        if ($trendMerchantId >= 0) {
+            $timezone = $trendMerchantId === 0
+                ? (new ConfigService())->get('platform_timezone', 'UTC')
+                : Merchant::whereKey($trendMerchantId)->value('timezone');
+            $trendDate = new \DateTimeImmutable('now', new \DateTimeZone($timezone));
+            $hourly = HourlyStat::where('merchant_id', $trendMerchantId)
+                ->whereIn('stat_date', [$trendDate->format('Y-m-d'), $trendDate->modify('-1 day')->format('Y-m-d')])
+                ->orderBy('stat_date')->orderBy('stat_hour')->get()->groupBy('stat_date');
+        }
         $games = Game::query();
         if (!$isSuperAdmin) {
             $disabled = Db::table('mg_merchant_games')->whereIn('merchant_id', $merchantIds)->where('status', 0)->whereNull('delete_time')->select('game_id');
@@ -86,7 +96,8 @@ class OperationsLogic extends BaseLogic
             'today' => $today,
             'credits' => MerchantCredit::with('merchant:id,mch_id,name')->whereIn('merchant_id', $merchantIds)->where('status', 1)->orderBy('available_amount')->limit(12)->get(),
             'platforms' => (clone $games)->selectRaw('platform_code, COUNT(*) game_count, SUM(platform_status = 1) enabled_count, MAX(last_sync_time) last_sync_time')->groupBy('platform_code')->get(),
-            'hourly' => HourlyStat::where('merchant_id', $trendMerchantId)->latest('stat_date')->orderBy('stat_hour')->get(),
+            'hourly' => isset($trendDate) ? $hourly->get($trendDate->format('Y-m-d'), collect())->values() : [],
+            'hourly_yesterday' => isset($trendDate) ? $hourly->get($trendDate->modify('-1 day')->format('Y-m-d'), collect())->values() : [],
             'monthly' => MonthlyStat::where('merchant_id', $trendMerchantId)->orderByDesc('stat_month')->limit(12)->get()->reverse()->values(),
             'is_super_admin' => $isSuperAdmin,
             'platform_stats_rebuild' => $isSuperAdmin ? (new PlatformStatsRebuildService())->status() : ['status' => 'idle'],

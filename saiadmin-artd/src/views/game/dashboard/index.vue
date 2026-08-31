@@ -33,7 +33,7 @@
           height="230px"
           :data="hourlySeries"
           :x-axis-data="hourLabels"
-          :colors="chartColors"
+          :colors="hourlyChartColors"
           :show-area-color="true"
           :show-legend="true"
           legend-position="top"
@@ -171,6 +171,7 @@
     const colors = useChartOps().colors
     return [colors[0], colors[1], isDark.value ? '#B7C0CF' : '#667085']
   })
+  const hourlyChartColors = computed(() => chartColors.value.flatMap((color) => [color, color]))
   const loading = ref(false)
   const data = reactive<any>({ today: [], credits: [], platforms: [] })
   const hourLabels = Array.from(
@@ -178,23 +179,33 @@
     (_, index) => `${String(index).padStart(2, '0')}:00`
   )
   const hourlySeries = computed(() => {
-    const rows = new Map<number, any>(
+    const today = new Map<number, any>(
       (data.hourly || []).map((item: any) => [Number(item.stat_hour), item])
     )
+    const yesterday = new Map<number, any>(
+      (data.hourly_yesterday || []).map((item: any) => [Number(item.stat_hour), item])
+    )
+    const todayLength = Math.max(-1, ...today.keys()) + 1
+    const values = (rows: Map<number, any>, field: string, length: number) =>
+      Array.from({ length }, (_, hour) => Number(rows.get(hour)?.[field] || 0))
     return [
+      ['active_user_count', t('game.activeUsers')],
+      ['bet_count', t('game.betCount')],
+      ['converted_bet_amount', t('game.convertedBetAmount')]
+    ].flatMap(([field, name]) => [
       {
-        name: t('game.activeUsers'),
-        data: hourLabels.map((_, hour) => Number(rows.get(hour)?.active_user_count || 0))
+        name: `${t('game.today')} · ${name}`,
+        data: values(today, field, todayLength)
       },
       {
-        name: t('game.betCount'),
-        data: hourLabels.map((_, hour) => Number(rows.get(hour)?.bet_count || 0))
-      },
-      {
-        name: t('game.convertedBetAmount'),
-        data: hourLabels.map((_, hour) => Number(rows.get(hour)?.converted_bet_amount || 0))
+        name: `${t('game.yesterday')} · ${name}`,
+        data: values(yesterday, field, 24),
+        lineWidth: 1.5,
+        symbol: 'circle' as const,
+        symbolSize: 3,
+        areaStyle: { custom: { opacity: 0 } }
       }
-    ]
+    ])
   })
   const months = Array.from({ length: 12 }, (_, index) => {
     const date = new Date()
