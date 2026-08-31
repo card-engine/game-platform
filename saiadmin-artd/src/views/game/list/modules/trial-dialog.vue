@@ -43,9 +43,7 @@
         <div class="game-trial-actions">
           <ElTooltip v-if="!isMobile" :content="$t('game.switchOrientation')" placement="left">
             <button type="button" class="game-trial-action" @click="switchOrientation">
-              <ArtSvgIcon
-                :icon="orientation === 'portrait' ? 'ri:landscape-line' : 'ri:smartphone-line'"
-              />
+              <ArtSvgIcon icon="hugeicons:screen-rotation" />
             </button>
           </ElTooltip>
           <ElTooltip :content="$t('game.refreshTrial')" placement="left">
