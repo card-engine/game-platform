@@ -162,6 +162,7 @@
   import api from '@/api/game/operations'
   import { useChartOps } from '@/hooks/core/useChart'
   import { useSettingStore } from '@/store/modules/setting'
+  import { hexToRgba } from '@/utils/ui'
   import { merchantMoney, money } from '@/utils/game/amount'
   import { mittBus } from '@/utils/sys'
   import { useI18n } from 'vue-i18n'
@@ -172,7 +173,10 @@
     const colors = useChartOps().colors
     return [colors[0], colors[1], isDark.value ? '#B7C0CF' : '#667085']
   })
-  const hourlyChartColors = computed(() => [...chartColors.value, ...chartColors.value])
+  const hourlyChartColors = computed(() => [
+    ...chartColors.value,
+    ...chartColors.value.map((color) => hexToRgba(color, 0.45).rgba)
+  ])
   const loading = ref(false)
   const data = reactive<any>({ today: [], credits: [], platforms: [] })
   const hourLabels = Array.from(
