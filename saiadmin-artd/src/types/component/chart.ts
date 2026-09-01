@@ -109,6 +109,8 @@ export interface BarDataItem {
   barWidth?: string | number
   /** 堆叠分组名称 */
   stack?: string
+  /** 柱体纹理 */
+  decal?: any
 }
 
 // 柱状图 Props 接口 - 统一柱状图配置
@@ -121,6 +123,10 @@ export interface BarChartProps extends BaseChartProps, AxisDisplayProps, Interac
   barWidth?: string | number
   /** 是否堆叠显示 */
   stack?: boolean
+  /** 图例字号 */
+  legendFontSize?: number
+  /** 图例间距 */
+  legendItemGap?: number
   /** 圆角 */
   borderRadius?: number | number[]
 }

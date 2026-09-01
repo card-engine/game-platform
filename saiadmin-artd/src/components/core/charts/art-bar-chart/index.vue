@@ -83,10 +83,12 @@
 
   // 获取基础样式配置
   const getBaseItemStyle = (
-    color: string | InstanceType<typeof graphic.LinearGradient> | undefined
+    color: string | InstanceType<typeof graphic.LinearGradient> | undefined,
+    decal?: any
   ) => ({
     borderRadius: props.borderRadius,
-    color: typeof color === 'string' ? createGradientColor(color) : color
+    color: typeof color === 'string' ? createGradientColor(color) : color,
+    decal
   })
 
   // 创建系列配置
@@ -96,6 +98,7 @@
     color?: string | InstanceType<typeof graphic.LinearGradient>
     barWidth?: string | number
     stack?: string
+    decal?: any
   }) => {
     const animationConfig = getAnimationConfig()
 
@@ -104,7 +107,7 @@
       data: config.data,
       type: 'bar' as const,
       stack: config.stack,
-      itemStyle: getBaseItemStyle(config.color),
+      itemStyle: getBaseItemStyle(config.color, config.decal),
       barWidth: config.barWidth || props.barWidth,
       ...animationConfig
     }
@@ -167,7 +170,10 @@
 
       // 添加图例配置
       if (props.showLegend && isMultipleData.value) {
-        options.legend = getLegendStyle(props.legendPosition)
+        options.legend = getLegendStyle(props.legendPosition, {
+          itemGap: props.legendItemGap ?? 20,
+          textStyle: { color: getCssVar('--el-text-color-primary'), fontSize: props.legendFontSize }
+        })
       }
 
       // 生成系列数据
@@ -181,7 +187,8 @@
             data: item.data,
             color: computedColor,
             barWidth: item.barWidth,
-            stack: props.stack ? item.stack || 'total' : undefined
+            stack: props.stack ? item.stack || 'total' : undefined,
+            decal: item.decal
           })
         })
       } else {
