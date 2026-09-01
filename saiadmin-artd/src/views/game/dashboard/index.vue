@@ -44,7 +44,7 @@
         <template #header
           ><div class="card-title">{{ $t('game.monthlyVisits') }}</div></template
         >
-        <ArtBarChart
+        <ArtLineChart
           height="230px"
           :data="monthlySeries"
           :x-axis-data="monthLabels"
@@ -195,12 +195,12 @@
     ]
     return [
       ...metrics.map(([field, name]) => ({
-        name: `${t('game.today')} · ${name}`,
+        name: `${t('game.today')}${name}`,
         data: values(today, field, 24),
         stack: 'today'
       })),
       ...metrics.map(([field, name]) => ({
-        name: `${t('game.yesterday')} · ${name}`,
+        name: `${t('game.yesterday')}${name}`,
         data: values(yesterday, field, 24),
         stack: 'yesterday'
       }))
