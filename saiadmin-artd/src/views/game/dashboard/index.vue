@@ -29,12 +29,13 @@
         <template #header
           ><div class="card-title">{{ $t('game.flowTrend') }}</div></template
         >
-        <ArtLineChart
+        <ArtBarChart
           height="230px"
           :data="hourlySeries"
           :x-axis-data="hourLabels"
           :colors="hourlyChartColors"
-          :show-area-color="true"
+          :stack="true"
+          bar-width="32%"
           :show-legend="true"
           legend-position="top"
         />
@@ -171,7 +172,7 @@
     const colors = useChartOps().colors
     return [colors[0], colors[1], isDark.value ? '#B7C0CF' : '#667085']
   })
-  const hourlyChartColors = computed(() => chartColors.value.flatMap((color) => [color, color]))
+  const hourlyChartColors = computed(() => [...chartColors.value, ...chartColors.value])
   const loading = ref(false)
   const data = reactive<any>({ today: [], credits: [], platforms: [] })
   const hourLabels = Array.from(
@@ -185,27 +186,25 @@
     const yesterday = new Map<number, any>(
       (data.hourly_yesterday || []).map((item: any) => [Number(item.stat_hour), item])
     )
-    const todayLength = Math.max(-1, ...today.keys()) + 1
     const values = (rows: Map<number, any>, field: string, length: number) =>
       Array.from({ length }, (_, hour) => Number(rows.get(hour)?.[field] || 0))
-    return [
+    const metrics = [
       ['active_user_count', t('game.activeUsers')],
       ['bet_count', t('game.betCount')],
       ['converted_bet_amount', t('game.convertedBetAmount')]
-    ].flatMap(([field, name]) => [
-      {
+    ]
+    return [
+      ...metrics.map(([field, name]) => ({
         name: `${t('game.today')} · ${name}`,
-        data: values(today, field, todayLength)
-      },
-      {
+        data: values(today, field, 24),
+        stack: 'today'
+      })),
+      ...metrics.map(([field, name]) => ({
         name: `${t('game.yesterday')} · ${name}`,
         data: values(yesterday, field, 24),
-        lineWidth: 1.5,
-        symbol: 'circle' as const,
-        symbolSize: 3,
-        areaStyle: { custom: { opacity: 0 } }
-      }
-    ])
+        stack: 'yesterday'
+      }))
+    ]
   })
   const months = Array.from({ length: 12 }, (_, index) => {
     const date = new Date()
