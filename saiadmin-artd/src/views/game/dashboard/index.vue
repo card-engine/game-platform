@@ -50,6 +50,7 @@
           height="230px"
           :data="monthlySeries"
           :x-axis-data="monthLabels"
+          :x-axis-label-interval="0"
           :colors="chartColors"
           :show-legend="true"
           legend-position="top"

@@ -205,7 +205,10 @@
         data: props.xAxisData,
         axisTick: getAxisTickStyle(),
         axisLine: getAxisLineStyle(props.showAxisLine),
-        axisLabel: getAxisLabelStyle(props.showAxisLabel)
+        axisLabel: {
+          ...getAxisLabelStyle(props.showAxisLabel),
+          ...(props.xAxisLabelInterval !== undefined ? { interval: props.xAxisLabelInterval } : {})
+        }
       },
       yAxis: {
         type: 'value',

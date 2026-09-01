@@ -164,6 +164,8 @@ export interface LineChartProps extends BaseChartProps, AxisDisplayProps, Intera
   data: number[] | LineDataItem[]
   /** X轴标签数据 */
   xAxisData?: string[]
+  /** X轴标签显示间隔；0 表示全部显示 */
+  xAxisLabelInterval?: number | 'auto'
   /** 线条宽度 */
   lineWidth?: number
   /** 是否显示区域填充 */
