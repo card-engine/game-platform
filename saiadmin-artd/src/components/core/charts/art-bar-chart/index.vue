@@ -156,7 +156,7 @@
         xAxis: {
           type: 'category',
           data: props.xAxisData,
-          axisTick: getAxisTickStyle(),
+          axisTick: props.showAxisTick ? { show: true, length: 5 } : getAxisTickStyle(),
           axisLine: getAxisLineStyle(props.showAxisLine),
           axisLabel: getAxisLabelStyle(props.showAxisLabel)
         },

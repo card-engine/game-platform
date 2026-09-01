@@ -77,6 +77,8 @@ export interface BaseChartProps {
   isEmpty?: boolean
   /** 颜色配置 */
   colors?: string[]
+  /** 是否显示横轴刻度 */
+  showAxisTick?: boolean
 }
 
 // 轴线显示控制接口 - 统一轴线相关配置

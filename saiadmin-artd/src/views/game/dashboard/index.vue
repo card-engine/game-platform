@@ -36,6 +36,7 @@
           :colors="hourlyChartColors"
           :stack="true"
           bar-width="32%"
+          :show-axis-tick="true"
           :legend-font-size="12"
           :legend-item-gap="8"
           :show-legend="true"
@@ -51,6 +52,7 @@
           :data="monthlySeries"
           :x-axis-data="monthLabels"
           :x-axis-label-interval="0"
+          :show-axis-tick="true"
           :colors="chartColors"
           :show-legend="true"
           legend-position="top"
@@ -167,6 +169,7 @@
   import { useSettingStore } from '@/store/modules/setting'
   import { merchantMoney, money } from '@/utils/game/amount'
   import { mittBus } from '@/utils/sys'
+  import { hexToRgba } from '@/utils/ui'
   import { useI18n } from 'vue-i18n'
 
   const { t } = useI18n()
@@ -175,7 +178,10 @@
     const colors = useChartOps().colors
     return [colors[0], colors[1], isDark.value ? '#B7C0CF' : '#667085']
   })
-  const hourlyChartColors = computed(() => [...chartColors.value, ...chartColors.value])
+  const hourlyChartColors = computed(() => [
+    ...chartColors.value.map((color) => hexToRgba(color, 0.73).rgba),
+    ...chartColors.value
+  ])
   const loading = ref(false)
   const data = reactive<any>({ today: [], credits: [], platforms: [] })
   const hourLabels = Array.from(
