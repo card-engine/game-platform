@@ -27,11 +27,6 @@
         favicon.type = 'image/svg+xml'
 
         const updateFavicon = () => {
-          if (!document.documentElement.classList.contains('dark')) {
-            favicon.href = '/favicon-light.svg?v=3'
-            return
-          }
-
           const color = getComputedStyle(document.documentElement)
             .getPropertyValue('--el-color-primary')
             .trim()
