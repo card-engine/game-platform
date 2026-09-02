@@ -70,3 +70,5 @@ echo "⚙️  服务状态: $(/usr/bin/systemctl is-active mgames.service)"
 echo "🔄 开机启动: $(/usr/bin/systemctl is-enabled mgames.service)"
 echo "🪪 主进程 PID: $(/usr/bin/systemctl show mgames.service --property=MainPID --value)"
 echo "🌐 HTTP 检查: $HTTP_CODE"
+echo '📋 Webman 进程状态:'
+/www/server/php/84/bin/php webman status
