@@ -1,6 +1,6 @@
 # MGames 发版说明
 
-`deploy.sh` 负责更新代码、安装依赖、构建管理端、升级数据库和重启 Webman。首次发布时会自动安装 `mgames.service`。
+`deploy.sh` 负责更新代码、安装依赖、构建管理端、升级数据库和重启 Webman。首次发布时会自动安装根目录的 `mgames.service`。
 
 ## 环境要求
 
@@ -15,14 +15,12 @@
 
 ## 发版
 
-在项目任意安装路径下都可以执行：
-
 ```bash
-cd /www/wwwroot/game-platform/deploy
+cd /www/wwwroot/game-platform
 ./deploy.sh
 ```
 
-脚本会根据自身位置找到项目根目录及其下的 `server` 和 `saiadmin-artd` 目录，并依次执行：
+脚本会以自身所在目录为项目根目录，并依次执行：
 
 1. 拉取当前 Git 分支。
 2. 安装生产环境 Composer 依赖。
@@ -53,18 +51,11 @@ Webman 由 systemd 统一管理，不要再手动启动守护进程：
 ## 卸载服务
 
 ```bash
-cd /www/wwwroot/game-platform/deploy
+cd /www/wwwroot/game-platform
 ./deploy.sh uninstall
 ```
 
-卸载命令会：
-
-1. 停止 `mgames.service`。
-2. 取消开机启动。
-3. 删除 `/etc/systemd/system/mgames.service`。
-4. 重新加载 systemd 配置。
-
-项目代码、数据库和日志不会被删除。再次执行 `./deploy.sh` 会重新安装并启动服务。
+卸载命令会停止服务、取消开机启动、删除 `/etc/systemd/system/mgames.service` 并重新加载 systemd。项目代码、数据库和日志不会被删除。
 
 ## 更新 service 模板
 

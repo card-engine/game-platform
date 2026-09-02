@@ -1,6 +1,10 @@
 #!/usr/bin/env php
 <?php
 
+if (ini_get('opcache.jit') !== 'disable' && ini_get('opcache.jit') !== 'off') {
+    ini_set('opcache.jit', 'off');
+}
+
 use Webman\Config;
 use Webman\Console\Command;
 use Webman\Console\Util;

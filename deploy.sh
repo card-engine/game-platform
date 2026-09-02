@@ -2,8 +2,7 @@
 
 set -Eeuo pipefail
 
-DEPLOY_DIR="$(cd "$(/usr/bin/dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-PROJECT_DIR="$(/usr/bin/dirname "$DEPLOY_DIR")"
+PROJECT_DIR="$(cd "$(/usr/bin/dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 SERVER_DIR="$PROJECT_DIR/server"
 
 if [[ "${1:-}" == 'uninstall' ]]; then
@@ -44,7 +43,7 @@ cd "$SERVER_DIR"
 
 if [[ ! -f /etc/systemd/system/mgames.service ]]; then
     echo '⚙️  正在安装 MGames 服务...'
-    /usr/bin/install -m 0644 "$DEPLOY_DIR/mgames.service" /etc/systemd/system/mgames.service
+    /usr/bin/install -m 0644 "$PROJECT_DIR/mgames.service" /etc/systemd/system/mgames.service
     /usr/bin/sed -i "s|^WorkingDirectory=.*|WorkingDirectory=$SERVER_DIR|" /etc/systemd/system/mgames.service
     /usr/bin/systemctl daemon-reload
     /usr/bin/systemctl enable mgames.service
