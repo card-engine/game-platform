@@ -22,11 +22,6 @@ echo '⬇️  正在更新代码...'
 BRANCH="$(/usr/bin/git branch --show-current)"
 /usr/bin/git pull --ff-only origin "$BRANCH"
 
-echo "🌿 分支: $BRANCH"
-echo "🔖 版本: $(/usr/bin/git rev-parse --short HEAD)"
-echo "👤 作者: $(/usr/bin/git log -1 --pretty='%an')"
-echo "📝 说明: $(/usr/bin/git log -1 --pretty='%s')"
-
 echo '📦 正在安装后端依赖...'
 cd "$SERVER_DIR"
 /www/server/php/84/bin/php /usr/bin/composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
@@ -65,8 +60,12 @@ done
 echo
 echo '✅ 发版完成'
 echo '━━━━━━━━━━━━━━━━'
-echo "⏱️  服务恢复: $((SECONDS - START_TIME)) 秒"
-echo "⚙️  服务状态: $(/usr/bin/systemctl is-active mgames.service)"
+echo "🌿 分支: $BRANCH"
+echo "🔖 版本: $(/usr/bin/git rev-parse --short HEAD)"
+echo "👤 作者: $(/usr/bin/git log -1 --pretty='%an')"
+echo "📝 说明: $(/usr/bin/git log -1 --pretty='%s')"
+echo "⏱️ 服务恢复: $((SECONDS - START_TIME)) 秒"
+echo "⚙️ 服务状态: $(/usr/bin/systemctl is-active mgames.service)"
 echo "🔄 开机启动: $(/usr/bin/systemctl is-enabled mgames.service)"
 echo "🪪 主进程 PID: $(/usr/bin/systemctl show mgames.service --property=MainPID --value)"
 echo "🌐 HTTP 检查: $HTTP_CODE"
