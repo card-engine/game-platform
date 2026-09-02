@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * 验证空库首次安装、结构差异修复、内置数据同步和重复升级幂等性。
+ *
+ * 脚本会创建并删除 `__mg_upgrade_test_<进程号>` 临时数据库，仅用于具备建库权限的
+ * 本地或独立测试环境，不属于生产发版流程。
+ */
+
 use app\command\DbUpgradeCommand;
 use app\service\game\ConfigService;
 use Symfony\Component\Console\Tester\CommandTester;

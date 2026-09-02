@@ -15,4 +15,4 @@
 
 菜单使用 `code`、按钮使用 `slug` 定位，禁止依赖自增 ID。内置角色权限以 `system.php` 为准精确同步；配置实际值和定时任务启停状态只在首次创建时写入，后续升级保留后台设置。
 
-生产环境使用 `deploy/mgames.service` 托管 Webman。部署代码和依赖后执行数据库升级，再由 systemd 重启服务。
+生产环境使用仓库根目录的 `deploy/mgames.service` 托管 Webman。部署代码和依赖后执行数据库升级，再由 systemd 重启服务。
