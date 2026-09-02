@@ -13,7 +13,7 @@
  */
 
 return [
-    'event_loop' => '',
+    'event_loop' => Workerman\Events\Swoole::class,
     'stop_timeout' => 2,
     'pid_file' => runtime_path() . '/webman.pid',
     'status_file' => runtime_path() . '/webman.status',

@@ -14,12 +14,14 @@ enum RedisKey: string
     public const EXPIRE_2_DAYS = 172800;
 
     /** Locks. */
+    case LockGameTask = 'lock:mg:task:%s'; // string MG 定时任务锁，格式：action
     case LockConfigsRebuild = 'lock:mg:configs:rebuild'; // string 全局配置缓存重建锁
     case LockUserWallet = 'lock:mg:user_wallet:%d:%d:%s'; // string 玩家资金锁，格式：merchant_id:user_id:currency_code
     case LockExchangeRateSync = 'lock:mg:exchange_rate:sync:%s'; // string 汇率同步锁，格式：rate_date
     case LockStatsRefresh = 'lock:mg:stats:refresh:%s'; // string 统计时间桶刷新锁，格式：bucket_hash
     case LockGameBrandCode = 'lock:mg:game_brand_code:%d'; // string 品牌游戏编码生成锁，格式：brand_id
     case LockMgsConfigsRebuild = 'lock:mgs:configs:rebuild'; // string MGS 配置缓存重建锁
+    case LockMgsTask = 'lock:mgs:task:%s'; // string MGS 定时任务锁，格式：action
     case LockMgsSync = 'lock:mgs:sync'; // string MGS 游戏同步锁
     case LockMgsUserWallet = 'lock:mgs:user_wallet:%d:%s'; // string MGS 用户资金锁，格式：user_id:currency_code
     case LockMgsStatsRefresh = 'lock:mgs:stats:refresh:%s'; // string MGS 统计时间桶锁，格式：日期或日期小时

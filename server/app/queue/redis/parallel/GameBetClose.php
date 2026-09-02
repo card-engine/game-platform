@@ -1,6 +1,6 @@
 <?php
 
-namespace app\queue\redis;
+namespace app\queue\redis\parallel;
 
 use app\service\game\trade\MonthlyTableService;
 use app\service\game\trade\TradeService;

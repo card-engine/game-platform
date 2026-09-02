@@ -7,7 +7,7 @@ use app\model\MerchantCredit;
 use app\model\User;
 use app\service\game\SecretService;
 use app\service\game\report\DailyStatService;
-use app\queue\redis\GameBetClose;
+use app\queue\redis\parallel\GameBetClose;
 use app\service\game\trade\MonthlyTableService;
 use app\service\game\trade\TradeService;
 use support\Db;

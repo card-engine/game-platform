@@ -1,6 +1,6 @@
 <?php
 
-namespace app\queue\redis;
+namespace app\queue\redis\serial;
 
 use app\enum\RedisKey;
 use app\model\Merchant;

@@ -6,7 +6,7 @@ use app\enum\RedisKey;
 use app\model\mgs\Game;
 use app\model\mgs\User;
 use app\model\mgs\Wallet;
-use app\queue\redis\MgsStatsRefresh;
+use app\queue\redis\serial\MgsStatsRefresh;
 use RuntimeException;
 use support\Db;
 use support\Redis;
