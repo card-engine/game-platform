@@ -1,8 +1,8 @@
 <!-- 混合菜单 -->
 <template>
-  <div class="relative box-border flex-c w-full overflow-hidden">
+  <div class="relative box-border flex-c w-full min-w-0 overflow-hidden">
     <!-- 左侧滚动按钮 -->
-    <div v-show="showLeftArrow" class="button-arrow" @click="scroll('left')">
+    <div v-show="showLeftArrow" class="button-arrow left-0" @click="scroll('left')">
       <ElIcon>
         <ArrowLeft />
       </ElIcon>
@@ -11,6 +11,7 @@
     <!-- 滚动容器 -->
     <ElScrollbar
       ref="scrollbarRef"
+      class="min-w-0 flex-1"
       wrap-class="scrollbar-wrapper"
       :horizontal="true"
       @scroll="handleScroll"
@@ -47,7 +48,7 @@
     </ElScrollbar>
 
     <!-- 右侧滚动按钮 -->
-    <div v-show="showRightArrow" class="button-arrow right-2" @click="scroll('right')">
+    <div v-show="showRightArrow" class="button-arrow right-0" @click="scroll('right')">
       <ElIcon>
         <ArrowRight />
       </ElIcon>
@@ -58,7 +59,8 @@
 <script setup lang="ts">
   import { ref, computed, onMounted, nextTick, watch } from 'vue'
   import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
-  import { useThrottleFn } from '@vueuse/core'
+  import { useResizeObserver, useThrottleFn } from '@vueuse/core'
+  import type { ScrollbarInstance } from 'element-plus'
   import { formatMenuTitle } from '@/utils/router'
   import { handleMenuJump } from '@/utils/navigation'
   import type { AppRouteRecord } from '@/types/router'
@@ -83,22 +85,9 @@
     list: () => []
   })
 
-  const scrollbarRef = ref<any>()
+  const scrollbarRef = ref<ScrollbarInstance>()
   const showLeftArrow = ref(false)
   const showRightArrow = ref(false)
-  let menuClickScrolling = false
-
-  /** 滚动配置 */
-  const SCROLL_CONFIG = {
-    /** 点击按钮时的滚动距离 */
-    BUTTON_SCROLL_DISTANCE: 200,
-    /** 鼠标滚轮快速滚动时的步长 */
-    WHEEL_FAST_STEP: 35,
-    /** 鼠标滚轮慢速滚动时的步长 */
-    WHEEL_SLOW_STEP: 30,
-    /** 区分快慢滚动的阈值 */
-    WHEEL_FAST_THRESHOLD: 100
-  }
 
   /**
    * 获取当前激活路径
@@ -153,10 +142,10 @@
     const { scrollLeft, scrollWidth, clientWidth } = scrollbarRef.value.wrapRef
 
     // 判断是否显示左侧滚动按钮
-    showLeftArrow.value = scrollLeft > 0
+    showLeftArrow.value = scrollLeft > 1
 
     // 判断是否显示右侧滚动按钮
-    showRightArrow.value = scrollLeft + clientWidth < scrollWidth
+    showRightArrow.value = scrollLeft + clientWidth < scrollWidth - 1
   }
 
   /**
@@ -172,42 +161,33 @@
   const scroll = (direction: ScrollDirection): void => {
     if (!scrollbarRef.value?.wrapRef) return
 
-    const currentScroll = scrollbarRef.value.wrapRef.scrollLeft
-    const targetScroll =
-      direction === 'left'
-        ? currentScroll - SCROLL_CONFIG.BUTTON_SCROLL_DISTANCE
-        : currentScroll + SCROLL_CONFIG.BUTTON_SCROLL_DISTANCE
+    const wrap = scrollbarRef.value.wrapRef
+    const distance = Math.min(200, wrap.clientWidth * 0.8)
 
     // 平滑滚动到目标位置
-    scrollbarRef.value.wrapRef.scrollTo({
-      left: targetScroll,
+    wrap.scrollTo({
+      left: wrap.scrollLeft + (direction === 'left' ? -distance : distance),
       behavior: 'smooth'
     })
   }
 
-  const handleMenuClick = (item: AppRouteRecord, event: MouseEvent): void => {
+  // 只移动到菜单可见，不居中或带出相邻菜单。
+  const revealMenu = (element: HTMLElement): void => {
     const wrap = scrollbarRef.value?.wrapRef
-    const element = event.currentTarget as HTMLElement
-    if (wrap) {
-      const viewport = wrap.getBoundingClientRect()
-      const rect = element.getBoundingClientRect()
-      let sibling: Element | null = null
-      if (rect.right > viewport.right - rect.width / 2) sibling = element.nextElementSibling
-      else if (rect.left < viewport.left + rect.width / 2) sibling = element.previousElementSibling
-
-      if (sibling) {
-        const siblingRect = sibling.getBoundingClientRect()
-        let delta = 0
-        if (siblingRect.right > viewport.right) delta = siblingRect.right - viewport.right + 12
-        else if (siblingRect.left < viewport.left) delta = siblingRect.left - viewport.left - 12
-        wrap.scrollTo({
-          left: wrap.scrollLeft + delta,
-          behavior: 'smooth'
-        })
-      }
+    if (!wrap) return
+    const viewport = wrap.getBoundingClientRect()
+    const rect = element.getBoundingClientRect()
+    const delta =
+      rect.left < viewport.left
+        ? rect.left - viewport.left
+        : Math.max(0, rect.right - viewport.right)
+    if (delta) {
+      wrap.scrollTo({ left: wrap.scrollLeft + delta, behavior: 'instant' })
     }
-    menuClickScrolling = true
-    window.setTimeout(() => (menuClickScrolling = false), 350)
+  }
+
+  const handleMenuClick = (item: AppRouteRecord, event: MouseEvent): void => {
+    revealMenu(event.currentTarget as HTMLElement)
     handleMenuJump(item, true)
   }
 
@@ -217,29 +197,15 @@
    * @param event 滚轮事件
    */
   const handleWheel = (event: WheelEvent): void => {
-    // 立即阻止默认滚动行为和事件冒泡，避免页面滚动
+    const wrap = scrollbarRef.value?.wrapRef
+    if (event.ctrlKey || !wrap || wrap.scrollWidth <= wrap.clientWidth) return
+
     event.preventDefault()
     event.stopPropagation()
-
-    // 直接处理滚动，提升响应性
-    if (!scrollbarRef.value?.wrapRef) return
-
-    const { wrapRef } = scrollbarRef.value
-    const { scrollLeft, scrollWidth, clientWidth } = wrapRef
-
-    // 使用更小的滚动步长，让滚动更平滑
-    const scrollStep =
-      Math.abs(event.deltaY) > SCROLL_CONFIG.WHEEL_FAST_THRESHOLD
-        ? SCROLL_CONFIG.WHEEL_FAST_STEP
-        : SCROLL_CONFIG.WHEEL_SLOW_STEP
-    const scrollDelta = event.deltaY > 0 ? scrollStep : -scrollStep
-    const targetScroll = Math.max(0, Math.min(scrollLeft + scrollDelta, scrollWidth - clientWidth))
-
-    // 立即滚动，无动画
-    wrapRef.scrollLeft = targetScroll
-
-    // 更新滚动按钮状态
-    handleScrollCore()
+    // 触控板保留真实位移和惯性；鼠标纵向滚轮转换为横向，兼容行/页单位。
+    const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
+    const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? wrap.clientWidth : 1
+    wrap.scrollTo({ left: wrap.scrollLeft + delta * unit, behavior: 'instant' })
   }
 
   /**
@@ -248,23 +214,15 @@
   const initScrollState = (): void => {
     nextTick(() => {
       const wrap = scrollbarRef.value?.wrapRef
-      const active = wrap?.querySelector('.menu-item-active') as HTMLElement | null
-      if (wrap && active) {
-        const viewport = wrap.getBoundingClientRect()
-        const rect = active.getBoundingClientRect()
-        if (rect.left < viewport.left || rect.right > viewport.right) {
-          wrap.scrollTo({
-            left: wrap.scrollLeft + rect.left - viewport.left - (viewport.width - rect.width) / 2,
-            behavior: 'smooth'
-          })
-        }
-      }
+      const active = wrap?.querySelector<HTMLElement>('.menu-item-active')
+      if (active) revealMenu(active)
       handleScrollCore()
     })
   }
 
   // 顶部时间会引起容器尺寸变化，不能因此重置用户正在浏览的滚动位置。
-  watch(currentActivePath, () => !menuClickScrolling && initScrollState())
+  useResizeObserver(() => scrollbarRef.value?.wrapRef, handleScrollCore)
+  watch(() => processedMenuList.value.find((item) => item.isActive)?.path, initScrollState)
   watch(() => processedMenuList.value.length, initScrollState)
   onMounted(() => {
     initScrollState()
@@ -303,7 +261,8 @@
   :deep(.scrollbar-wrapper) {
     flex: 1;
     min-width: 0;
-    margin: 0 50px 0 30px;
+    margin: 0 32px;
+    overscroll-behavior-x: contain;
   }
 
   .menu-item-active::after {
@@ -316,11 +275,5 @@
     margin: auto;
     content: '';
     background-color: var(--theme-color);
-  }
-
-  @media (width <= 1440px) {
-    :deep(.scrollbar-wrapper) {
-      margin: 0 45px;
-    }
   }
 </style>
