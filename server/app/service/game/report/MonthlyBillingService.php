@@ -3,12 +3,11 @@
 namespace app\service\game\report;
 
 use app\model\Merchant;
+use app\model\MerchantCredit;
 use app\model\MerchantMonthlyBill;
 use app\model\MonthlyStat;
 use DateTimeImmutable;
 use DateTimeZone;
-use app\model\MerchantCredit;
-use app\service\game\trade\MonthlyTableService;
 use support\Db;
 
 class MonthlyBillingService
@@ -37,8 +36,8 @@ class MonthlyBillingService
             $billingMonth = $billingMonth->modify('first day of this month');
             $monthDate = $billingMonth->format('Y-m-d');
             $months[] = $billingMonth->format('Y-m');
-            if (MerchantMonthlyBill::where(['merchant_id' => $merchant->id, 'billing_month' => $monthDate])->exists()) continue;
-            $first = !MerchantMonthlyBill::where('merchant_id', $merchant->id)->exists();
+            if (MerchantMonthlyBill::withTrashed()->where(['merchant_id' => $merchant->id, 'billing_month' => $monthDate, 'billing_mode' => 2])->exists()) continue;
+            $first = !MerchantMonthlyBill::withTrashed()->where(['merchant_id' => $merchant->id, 'billing_mode' => 2])->exists();
             $sourceMonth = $billingMonth->modify('-1 month')->format('Y-m-d');
             $stat = $first ? null : $this->stats($merchant, $sourceMonth);
             $value = $stat ? ((int) $merchant->monthly_metric === 1 ? (string) $stat->converted_bet_amount : (string) $stat->bet_count) : '0';
@@ -51,30 +50,82 @@ class MonthlyBillingService
             ]);
             $created++;
         }
-        foreach (Merchant::where(['billing_mode' => 1, 'status' => 1])->get() as $merchant) {
-            $billingMonth = new DateTimeImmutable(($month ?: 'first day of this month'), new DateTimeZone($merchant->timezone ?: 'UTC'));
-            $billingMonth = $billingMonth->modify('first day of this month');
-            $source = $billingMonth->modify('-1 month');
-            $start = $source->format('Y-m-d');
-            $end = $billingMonth->format('Y-m-d');
-            $tables = [];
-            foreach ([-1, 0, 1] as $offset) $tables[] = (new MonthlyTableService())->table('bets', $source->modify("{$offset} month")->format('ym'));
-            $union = implode(' UNION ALL ', array_map(fn ($table) => "SELECT currency_code, SUM(ggr_amount) ggr_amount FROM `{$table}` WHERE merchant_id = ? AND business_date >= ? AND business_date < ? AND status = 2 AND delete_time IS NULL GROUP BY currency_code", $tables));
-            $bindings = array_merge(...array_fill(0, count($tables), [$merchant->id, $start, $end]));
-            foreach (Db::select("SELECT currency_code, SUM(ggr_amount) ggr_amount FROM ({$union}) bets GROUP BY currency_code", $bindings) as $row) {
-                $ggr = (string) $row->ggr_amount;
-                $billable = bccomp($ggr, '0', 8) > 0 ? $ggr : '0.00000000';
-                $credit = MerchantCredit::where(['merchant_id' => $merchant->id, 'currency_code' => $row->currency_code])->first();
-                if (!$credit || MerchantMonthlyBill::where(['merchant_id' => $merchant->id, 'currency_code' => $row->currency_code, 'billing_month' => $billingMonth->format('Y-m-d')])->exists()) continue;
-                $fee = bcmul($billable, (string) $credit->rate_value, 8);
-                MerchantMonthlyBill::create(['bill_no' => mg_no('MF'), 'merchant_id' => $merchant->id, 'currency_code' => $row->currency_code, 'billing_month' => $billingMonth->format('Y-m-d'), 'source_month' => $source->format('Y-m-d'), 'metric_type' => 0, 'metric_value' => $ggr, 'ggr_amount' => $ggr, 'billable_ggr_amount' => $billable, 'amount' => $fee, 'status' => 0, 'rules_snapshot' => ['billing_mode' => 1, 'rate_value' => $credit->rate_value]]);
-                $before = (string) $credit->payable_amount;
-                $credit->update(['payable_amount' => bcadd($before, $fee, 8)]);
-                if (bccomp($fee, '0', 8) > 0) Db::table('mg_merchant_bills')->insert(['bill_no' => mg_no('MC'), 'credit_id' => $credit->id, 'type' => 2, 'direction' => 2, 'amount' => $fee, 'before_amount' => $before, 'after_amount' => $credit->payable_amount, 'source' => 'monthly_ggr', 'source_no' => $merchant->id . ':' . $billingMonth->format('Ym'), 'data' => json_encode(['ggr_amount' => $ggr, 'billable_ggr_amount' => $billable]), 'create_time' => gmdate('Y-m-d H:i:s')]);
-                $created++;
+        // 按注单快照出账；停用或切换计费模式不能抹掉历史费用，任务停机后补齐遗漏月份。
+        $tables = array_filter(Db::connection()->getSchemaBuilder()->getTableListing(null, false), fn ($table) => preg_match('/^mg_bets_\d{4}$/', $table));
+        foreach (Merchant::get() as $merchant) {
+            $source = (new DateTimeImmutable($month ?: 'first day of this month', new DateTimeZone($merchant->timezone)))->modify('first day of last month')->format('Y-m');
+            $periods = collect([$source]);
+            foreach ($tables as $table) {
+                $first = Db::table($table)->where('merchant_id', $merchant->id)->where('billing_mode', 1)->where('settlement_enabled', 1)->whereNull('delete_time')->min('settled_time');
+                if (!$first) continue;
+                $first = (new DateTimeImmutable($first, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($merchant->timezone))->modify('first day of this month');
+                while ($first->format('Y-m') <= $source) {
+                    $periods->push($first->format('Y-m'));
+                    $first = $first->modify('+1 month');
+                }
             }
+            $periods = $periods->unique()->sort();
+            foreach ($periods as $period) $created += $this->generateGgr($merchant, $period);
+            $months[] = $source;
         }
         return ['months' => array_values(array_unique($months)), 'created' => $created];
+    }
+
+    /** 汇总已结束自然月，正负 GGR 及各注单费率均参与抵扣。 */
+    public function generateGgr(Merchant $merchant, string $month): int
+    {
+        $previous = MerchantMonthlyBill::where(['merchant_id' => $merchant->id, 'billing_mode' => 1, 'source_month' => $month . '-01'])->value('rules_snapshot');
+        $zone = new DateTimeZone($previous['timezone'] ?? $merchant->timezone);
+        $start = new DateTimeImmutable($month . '-01 00:00:00', $zone);
+        $end = $start->modify('+1 month');
+        if ($end > new DateTimeImmutable('now', $zone)) return 0;
+        $tables = array_values(array_filter(Db::connection()->getSchemaBuilder()->getTableListing(null, false), fn ($table) => preg_match('/^mg_bets_\d{4}$/', $table)));
+        if (!$tables) return 0;
+        $utc = new DateTimeZone('UTC');
+        $union = implode(' UNION ALL ', array_map(fn ($table) => "SELECT currency_code, merchant_rate_value, ggr_amount, merchant_fee FROM `{$table}` WHERE merchant_id = ? AND settled_time >= ? AND settled_time < ? AND status = 2 AND billing_mode = 1 AND settlement_enabled = 1 AND currency_code <> 'GC' AND delete_time IS NULL", $tables));
+        $bindings = array_merge(...array_fill(0, count($tables), [$merchant->id, $start->setTimezone($utc)->format('Y-m-d H:i:s'), $end->setTimezone($utc)->format('Y-m-d H:i:s')]));
+        $rows = collect(Db::select("SELECT currency_code, merchant_rate_value, COUNT(*) bet_count, SUM(ggr_amount) ggr_amount, SUM(merchant_fee) legacy_fee FROM ({$union}) bets GROUP BY currency_code, merchant_rate_value", $bindings))->groupBy('currency_code');
+        $created = 0;
+        foreach ($rows as $currency => $rates) {
+            $created += Db::transaction(function () use ($merchant, $currency, $rates, $start, $end) {
+                $credit = MerchantCredit::where(['merchant_id' => $merchant->id, 'currency_code' => $currency])->lockForUpdate()->firstOrFail();
+                $bill = MerchantMonthlyBill::withTrashed()->firstOrNew(['merchant_id' => $merchant->id, 'currency_code' => $currency, 'billing_month' => $end->format('Y-m-d'), 'billing_mode' => 1]);
+                $ggr = $weighted = $legacy = '0.00000000';
+                foreach ($rates as $rate) {
+                    $ggr = bcadd($ggr, (string) $rate->ggr_amount, 8);
+                    $weighted = bcadd($weighted, bcmul((string) $rate->ggr_amount, (string) $rate->merchant_rate_value, 8), 8);
+                    $legacy = bcadd($legacy, (string) $rate->legacy_fee, 8);
+                }
+                $billable = bccomp($ggr, '0', 8) > 0 ? $ggr : '0.00000000';
+                $fee = bccomp($ggr, '0', 8) > 0 && bccomp($weighted, '0', 8) > 0 ? $weighted : '0.00000000';
+                if ($bill->exists && in_array((int) $bill->status, [1, 3], true)) {
+                    if (bccomp((string) $bill->amount, $fee, 8) !== 0 || bccomp((string) $bill->ggr_amount, $ggr, 8) !== 0) throw new \RuntimeException("月结账单 {$bill->bill_no} 已支付或减免，迟到交易需对账调整");
+                    return 0;
+                }
+                // 旧版已按单笔收费的部分抵扣，避免升级后重复收费。
+                $difference = bcsub($fee, $bill->exists ? (string) $bill->amount : $legacy, 8);
+                $created = (int) !$bill->exists;
+                $snapshot = ['timezone' => $start->getTimezone()->getName(), 'rates' => $rates->values()->all(), 'legacy_fee' => $legacy, 'weighted_fee' => $weighted];
+                $bill->fill([
+                    'bill_no' => $bill->bill_no ?: mg_no('MF'), 'source_month' => $start->format('Y-m-d'),
+                    'metric_type' => 0, 'metric_value' => $ggr, 'ggr_amount' => $ggr, 'billable_ggr_amount' => $billable,
+                    'amount' => $fee, 'rules_snapshot' => $snapshot, 'delete_time' => null,
+                ])->save();
+                $before = (string) $credit->payable_amount;
+                $credit->update(['payable_amount' => bcadd($before, $difference, 8), 'available_amount' => bcsub((string) $credit->available_amount, $difference, 8)]);
+                Db::table('mg_merchant_monthly_usages')->updateOrInsert(
+                    ['credit_id' => $credit->id, 'billing_month' => $start->format('Y-m-d')],
+                    ['bet_count' => $rates->sum('bet_count'), 'ggr_amount' => $ggr, 'billable_ggr_amount' => $billable, 'billed_amount' => $fee, 'rules_snapshot' => json_encode($snapshot), 'update_time' => gmdate('Y-m-d H:i:s'), 'delete_time' => null],
+                );
+                if (bccomp($difference, '0', 8) !== 0) Db::table('mg_merchant_bills')->insert([
+                    'bill_no' => mg_no('MC'), 'credit_id' => $credit->id, 'type' => 2, 'direction' => bccomp($difference, '0', 8) > 0 ? 2 : 1,
+                    'amount' => ltrim($difference, '-'), 'before_amount' => $before, 'after_amount' => $credit->payable_amount,
+                    'source' => 'monthly_ggr', 'source_no' => $bill->bill_no, 'data' => json_encode(['ggr_amount' => $ggr, 'billable_ggr_amount' => $billable]), 'create_time' => gmdate('Y-m-d H:i:s'),
+                ]);
+                return $created;
+            });
+        }
+        return $created;
     }
 
     private function fee(Merchant $merchant, string $value): string

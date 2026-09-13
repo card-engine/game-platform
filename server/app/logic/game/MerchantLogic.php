@@ -183,7 +183,8 @@ class MerchantLogic extends BaseLogic
         return [
             'merchant' => $merchant->only(['id', 'name', 'billing_mode', 'monthly_metric', 'monthly_min_fee', 'monthly_tiers']),
             'credits' => $credits,
-            'bill' => MerchantMonthlyBill::where('merchant_id', $merchant->id)->latest('billing_month')->first(),
+            'bill' => MerchantMonthlyBill::where(['merchant_id' => $merchant->id, 'billing_mode' => 2])->latest('billing_month')->first(),
+            'ggr_bills' => MerchantMonthlyBill::where(['merchant_id' => $merchant->id, 'billing_mode' => 1])->latest('billing_month')->orderBy('currency_code')->limit(36)->get(),
             'stats' => $preview ? $preview['stats'] : null,
             'next_fee' => $preview['next_fee'] ?? null,
         ];
@@ -195,7 +196,23 @@ class MerchantLogic extends BaseLogic
         if (!in_array($status, [0, 1, 2, 3], true)) throw new ApiException('账单状态无效');
         $bill = MerchantMonthlyBill::findOrFail($id);
         $this->findScoped((int) $bill->merchant_id);
-        return $bill->update(['status' => $status, 'paid_time' => in_array($status, [1, 3], true) ? date('Y-m-d H:i:s') : null, 'remark' => $remark]);
+        return $this->transaction(function () use ($bill, $status, $remark) {
+            $credit = (int) $bill->billing_mode === 1 ? MerchantCredit::where(['merchant_id' => $bill->merchant_id, 'currency_code' => $bill->currency_code])->lockForUpdate()->firstOrFail() : null;
+            $bill = MerchantMonthlyBill::lockForUpdate()->findOrFail($bill->id);
+            if ((int) $bill->status === $status) return true;
+            if ($credit && in_array((int) $bill->status, [1, 3], true)) throw new ApiException('已支付或减免的 GGR 账单不能重复变更');
+            if ($credit && in_array($status, [1, 3], true)) {
+                $before = (string) $credit->payable_amount;
+                if (bccomp($before, (string) $bill->amount, 8) < 0) throw new ApiException('应付余额与账单不一致，请先对账');
+                $credit->update(['payable_amount' => bcsub($before, (string) $bill->amount, 8), 'available_amount' => $status === 3 ? bcadd((string) $credit->available_amount, (string) $bill->amount, 8) : $credit->available_amount]);
+                if (bccomp((string) $bill->amount, '0', 8) > 0) MerchantBill::insert([
+                    'bill_no' => mg_no('MC'), 'credit_id' => $credit->id, 'type' => 4, 'direction' => 1, 'amount' => $bill->amount,
+                    'before_amount' => $before, 'after_amount' => $credit->payable_amount, 'source' => $status === 1 ? 'monthly_ggr_payment' : 'monthly_ggr_waiver',
+                    'source_no' => $bill->bill_no, 'remark' => $remark, 'created_by' => $this->adminInfo['id'], 'create_time' => gmdate('Y-m-d H:i:s'),
+                ]);
+            }
+            return $bill->update(['status' => $status, 'paid_time' => in_array($status, [1, 3], true) ? gmdate('Y-m-d H:i:s') : null, 'remark' => $remark]);
+        });
     }
 
     public function adjustCredit(int $creditId, string $amount, int $direction, string $remark): int

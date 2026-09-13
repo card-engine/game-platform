@@ -219,16 +219,9 @@ class TradeService
 
             $bet ??= (array) Db::table($betTable)->where('bet_no', $betNo)->lockForUpdate()->first();
             $reserved = $rollbackReserved = '0.00000000';
-            if ((int) $bet['settlement_enabled'] === 1 && (int) $bet['status'] !== 2 && $action === 'debit') {
+            if ((int) $bet['settlement_enabled'] === 1 && $action === 'debit') {
                 $reserved = bcmul($operation['amount'], (string) $bet['merchant_rate_value'], 8);
-            } elseif ((int) $bet['status'] === 2) {
-                $projected = $bet;
-                $field = ['debit' => 'bet_amount', 'credit' => 'win_amount', 'rollback_debit' => 'bet_rollback_amount', 'rollback_credit' => 'win_rollback_amount'][$action];
-                $projected[$field] = bcadd((string) $projected[$field], $operation['amount'], 8);
-                $projected['ggr_amount'] = bcsub(bcsub($projected['bet_amount'], $projected['bet_rollback_amount'], 8), bcsub($projected['win_amount'], $projected['win_rollback_amount'], 8), 8);
-                $reserved = bcsub($this->fee($projected), (string) $bet['merchant_fee'], 8);
-                if (bccomp($reserved, '0', 8) < 0) $reserved = '0.00000000';
-            } elseif ($action === 'rollback_debit') {
+            } elseif ((int) $bet['status'] !== 2 && $action === 'rollback_debit') {
                 $rollbackReserved = bcmul($operation['amount'], (string) $bet['merchant_rate_value'], 8);
                 if (bccomp($rollbackReserved, (string) $bet['reserved_fee'], 8) > 0) $rollbackReserved = (string) $bet['reserved_fee'];
             }
@@ -300,7 +293,7 @@ class TradeService
             $actions = json_decode($bet['actions'] ?: '[]', true) ?: [];
             $actions[] = ['bill_no' => $bill['bill_no'], 'type' => $action, 'amount' => $bill['amount'], 'source_no' => $bill['source_no'], 'time' => $this->now()];
             $bet['ggr_amount'] = bcsub(bcsub($bet['bet_amount'], $bet['bet_rollback_amount'], 8), bcsub($bet['win_amount'], $bet['win_rollback_amount'], 8), 8);
-            $bet['billable_ggr_amount'] = (int) $bet['settlement_enabled'] === 1 && bccomp($bet['ggr_amount'], '0', 8) > 0 ? $bet['ggr_amount'] : '0.00000000';
+            $bet['billable_ggr_amount'] = (int) $bet['settlement_enabled'] === 1 ? $bet['ggr_amount'] : '0.00000000';
             $updates = [
                 $amountField => $bet[$amountField], $countField => $bet[$countField], 'actions' => json_encode($actions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 'ggr_amount' => $bet['ggr_amount'], 'billable_ggr_amount' => $bet['billable_ggr_amount'], 'status' => max(1, (int) $bet['status']), 'update_time' => $this->now(),
@@ -326,69 +319,23 @@ class TradeService
 
     private function settle(array $bet, Merchant $merchant, string $currency, bool $late = false, string $reserved = '0.00000000'): array
     {
-        $fee = (int) $bet['billing_mode'] === 1 ? '0.00000000' : $this->fee($bet);
-        if ($late) {
-            $difference = bcsub($fee, (string) $bet['merchant_fee'], 8);
-            if (bccomp($difference, '0', 8) < 0) $difference = '0.00000000';
-            if (bccomp($difference, '0', 8) === 0 && bccomp($reserved, '0', 8) === 0) return [];
-            $credit = MerchantCredit::where(['merchant_id' => $merchant->id, 'currency_code' => $currency])->lockForUpdate()->firstOrFail();
-            $before = (string) $credit->payable_amount;
-            $credit->update([
-                'available_amount' => bcadd((string) $credit->available_amount, bcsub($reserved, $difference, 8), 8),
-                'reserved_amount' => bcsub((string) $credit->reserved_amount, $reserved, 8),
-                'payable_amount' => bcadd($before, $difference, 8),
-            ]);
-            $month = substr($bet['business_date'], 0, 7) . '-01';
-            Db::table('mg_merchant_monthly_usages')->updateOrInsert(
-                ['credit_id' => $credit->id, 'billing_month' => $month],
-                ['rules_snapshot' => json_encode(['billing_mode' => $bet['billing_mode'], 'rate_value' => $bet['merchant_rate_value']]), 'update_time' => $this->now(), 'delete_time' => null],
-            );
-            Db::table('mg_merchant_monthly_usages')->where(['credit_id' => $credit->id, 'billing_month' => $month])->update([
-                'billed_amount' => Db::raw("billed_amount + {$difference}"), 'reserved_amount' => Db::raw("GREATEST(reserved_amount - {$reserved}, 0)"), 'update_time' => $this->now(),
-            ]);
-            if (bccomp($difference, '0', 8) > 0) Db::table('mg_merchant_bills')->insert([
-                'bill_no' => mg_no('MC'), 'credit_id' => $credit->id, 'type' => 2, 'direction' => 2, 'amount' => $difference,
-                'before_amount' => $before, 'after_amount' => $credit->payable_amount, 'source' => 'bet_adjustment',
-                'source_no' => $bet['bet_no'], 'data' => json_encode(['ggr_amount' => $bet['ggr_amount'], 'billable_ggr_amount' => $bet['billable_ggr_amount']]),
-                'create_time' => $this->now(),
-            ]);
-            return ['merchant_fee' => bccomp($difference, '0', 8) > 0 ? $fee : $bet['merchant_fee'], 'reserved_fee' => bcsub((string) $bet['reserved_fee'], $reserved, 8)];
-        }
-        $reserved = (string) $bet['reserved_fee'];
+        // 注单只释放预留额度，最终服务费由月结确认；保留旧版已收费用供月结抵扣。
+        $reserved = $late ? $reserved : (string) $bet['reserved_fee'];
         $credit = MerchantCredit::where(['merchant_id' => $merchant->id, 'currency_code' => $currency])->lockForUpdate()->firstOrFail();
         $month = substr($bet['business_date'], 0, 7) . '-01';
         Db::table('mg_merchant_monthly_usages')->updateOrInsert(
             ['credit_id' => $credit->id, 'billing_month' => $month],
             ['rules_snapshot' => json_encode(['billing_mode' => $bet['billing_mode'], 'rate_value' => $bet['merchant_rate_value']]), 'update_time' => $this->now(), 'delete_time' => null],
         );
-        $difference = bcsub($reserved, $fee, 8);
         $credit->update([
-            'available_amount' => bcadd((string) $credit->available_amount, $difference, 8),
+            'available_amount' => bcadd((string) $credit->available_amount, $reserved, 8),
             'reserved_amount' => bcsub((string) $credit->reserved_amount, $reserved, 8),
-            'payable_amount' => bcadd((string) $credit->payable_amount, $fee, 8),
         ]);
         Db::table('mg_merchant_monthly_usages')->where(['credit_id' => $credit->id, 'billing_month' => $month])->update([
-            'bet_count' => Db::raw('bet_count + 1'), 'billed_amount' => Db::raw("billed_amount + {$fee}"),
+            'bet_count' => Db::raw('bet_count + ' . (int) !$late),
             'reserved_amount' => Db::raw("GREATEST(reserved_amount - {$reserved}, 0)"), 'update_time' => $this->now(),
         ]);
-        if (bccomp($fee, '0', 8) > 0) {
-            Db::table('mg_merchant_bills')->insert([
-                'bill_no' => mg_no('MC'), 'credit_id' => $credit->id, 'type' => 2, 'direction' => 2, 'amount' => $fee,
-                'before_amount' => $credit->getOriginal('payable_amount'), 'after_amount' => $credit->payable_amount,
-                'source' => 'bet', 'source_no' => $bet['bet_no'], 'data' => json_encode(['ggr_amount' => $bet['ggr_amount'], 'billable_ggr_amount' => $bet['billable_ggr_amount']]),
-                'create_time' => $this->now(),
-            ]);
-        }
-        return ['merchant_fee' => $fee, 'reserved_fee' => '0.00000000', 'status' => 2, 'settled_time' => $this->now()];
-    }
-
-    private function fee(array $bet): string
-    {
-        if ((int) $bet['settlement_enabled'] !== 1) return '0.00000000';
-        if ((int) $bet['billing_mode'] !== 1) return '0.00000000';
-        $base = (string) $bet['ggr_amount'];
-        if (bccomp($base, '0', 8) < 0) $base = '0.00000000';
-        return bcmul($base, (string) $bet['merchant_rate_value'], 8);
+        return ['reserved_fee' => bcsub((string) $bet['reserved_fee'], $reserved, 8), 'status' => 2, 'settled_time' => $bet['settled_time'] ?: $this->now()];
     }
 
     private function release(string $betTable, array $bill, Merchant $merchant, string $currency, string $amount): void

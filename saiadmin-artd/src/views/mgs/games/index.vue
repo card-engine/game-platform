@@ -60,10 +60,9 @@
         <template #status="{ row }"
           ><ElSwitch
             v-permission="'app:mgs:game:update'"
-            v-model="row.status"
-            :active-value="1"
-            :inactive-value="0"
-            @change="(value) => updateStatus(row, Number(value))"
+            :model-value="Number(row.status) === 1"
+            :loading="row.saving"
+            :before-change="() => updateStatus(row)"
         /></template>
         <template #operation="{ row }"
           ><SaButton
@@ -112,13 +111,16 @@
       syncing.value = false
     }
   }
-  const updateStatus = async (row: any, status: number) => {
+  const updateStatus = async (row: any) => {
+    const status = Number(row.status) === 1 ? 0 : 1
+    row.saving = true
     try {
       await api.gameStatus({ id: row.id, status })
+      row.status = status
       ElMessage.success(t('mgs.saved'))
-    } catch (error) {
-      row.status = status ? 0 : 1
-      throw error
+      return true
+    } finally {
+      row.saving = false
     }
   }
   const {

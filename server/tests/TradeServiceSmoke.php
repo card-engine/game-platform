@@ -50,7 +50,7 @@ try {
     check($trade->handle('wxgame', $base + ['action' => 'credit', 'source_no' => "credit_2_{$suffix}", 'round_id' => "round_{$suffix}", 'amount' => '4', 'finished' => true])['status'] === 2, '最终派奖失败');
     $betTable = 'mg_bets_' . gmdate('ym');
     $bet = (array) Db::table($betTable)->where('merchant_id', $merchant->id)->where('provider_round_id', "round_{$suffix}")->first();
-    check($bet['ggr_amount'] === '4.00000000' && $bet['merchant_fee'] === '0.40000000', 'GGR 或费用错误');
+    check($bet['ggr_amount'] === '4.00000000' && $bet['merchant_fee'] === '0.00000000', 'GGR 错误或提前收取单笔费用');
 
     $rollback = $trade->handle('wxgame', $base + ['action' => 'rollback_debit', 'source_no' => "rollback_{$suffix}", 'original_source_no' => "debit_{$suffix}", 'round_id' => "round_{$suffix}", 'amount' => '2', 'finished' => true]);
     check($rollback['status'] === 2, '退款失败');
@@ -62,8 +62,8 @@ try {
     check($secondRollback['status'] === 2, '第二次部分退款失败');
     $bet = (array) Db::table($betTable)->where('id', $bet['id'])->first();
     $credit->refresh();
-    check($bet['ggr_amount'] === '-2.00000000' && $bet['merchant_fee'] === '0.40000000', '负 GGR 被退费或归零');
-    check($credit->payable_amount === '0.40000000', '负 GGR 产生了退费');
+    check($bet['ggr_amount'] === '-2.00000000' && $bet['billable_ggr_amount'] === '-2.00000000' && $bet['merchant_fee'] === '0.00000000', '负 GGR 未保留');
+    check($credit->payable_amount === '0.00000000', '月结前产生了费用');
 
     $available = $credit->available_amount;
     $credit->update(['available_amount' => '0.05000000']);
@@ -73,7 +73,7 @@ try {
     check($trade->handle('wxgame', $base + ['action' => 'debit', 'source_no' => "late_{$suffix}", 'round_id' => "round_{$suffix}", 'amount' => '15', 'finished' => true])['status'] === 2, '结算后补扣失败');
     $bet = (array) Db::table($betTable)->where('id', $bet['id'])->first();
     $credit->refresh();
-    check($bet['merchant_fee'] === '1.30000000' && $credit->payable_amount === '1.30000000' && $credit->reserved_amount === '0.00000000', '正差额补收错误');
+    check($bet['merchant_fee'] === '0.00000000' && $credit->payable_amount === '0.00000000' && $credit->reserved_amount === '0.00000000', '补单提前收费或未释放额度');
 
     $before = $credit->available_amount;
     check($trade->handle('wxgame', $base + ['action' => 'debit', 'source_no' => "fail_{$suffix}", 'round_id' => "failed_round_{$suffix}", 'amount' => '5'])['status'] === 3, '确定失败状态错误');

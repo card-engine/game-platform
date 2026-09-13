@@ -17,7 +17,10 @@
       @scroll="handleScroll"
       @wheel="handleWheel"
     >
-      <div class="box-border flex-c flex-shrink-0 flex-nowrap h-15 whitespace-nowrap">
+      <div
+        ref="menuTrackRef"
+        class="box-border flex-c w-max min-w-full flex-shrink-0 flex-nowrap h-15 whitespace-nowrap"
+      >
         <template v-for="item in processedMenuList" :key="item.meta.title">
           <div
             v-if="!item.meta.isHide"
@@ -86,8 +89,10 @@
   })
 
   const scrollbarRef = ref<ScrollbarInstance>()
+  const menuTrackRef = ref<HTMLDivElement>()
   const showLeftArrow = ref(false)
   const showRightArrow = ref(false)
+  let browsingMenu = false
 
   /**
    * 获取当前激活路径
@@ -160,6 +165,7 @@
    */
   const scroll = (direction: ScrollDirection): void => {
     if (!scrollbarRef.value?.wrapRef) return
+    browsingMenu = true
 
     const wrap = scrollbarRef.value.wrapRef
     const distance = Math.min(200, wrap.clientWidth * 0.8)
@@ -187,6 +193,7 @@
   }
 
   const handleMenuClick = (item: AppRouteRecord, event: MouseEvent): void => {
+    browsingMenu = true
     const element = event.currentTarget as HTMLElement
     revealMenu(element)
 
@@ -226,6 +233,7 @@
   const handleWheel = (event: WheelEvent): void => {
     const wrap = scrollbarRef.value?.wrapRef
     if (event.ctrlKey || !wrap || wrap.scrollWidth <= wrap.clientWidth) return
+    browsingMenu = true
 
     event.preventDefault()
     event.stopPropagation()
@@ -247,11 +255,17 @@
     })
   }
 
-  // 顶部时间会引起容器尺寸变化，不能因此重置用户正在浏览的滚动位置。
-  useResizeObserver(() => scrollbarRef.value?.wrapRef, handleScrollCore)
+  // 商户信息异步加载会再次缩窄菜单；用户主动浏览后不再抢回选中项。
+  useResizeObserver(
+    () => [scrollbarRef.value?.wrapRef, menuTrackRef.value],
+    () => (browsingMenu ? handleScrollCore() : initScrollState())
+  )
   watch(
     () => processedMenuList.value.map((item) => `${item.path}:${item.isActive}`).join('|'),
-    initScrollState,
+    () => {
+      browsingMenu = false
+      initScrollState()
+    },
     { flush: 'post' }
   )
   watch(() => processedMenuList.value.length, initScrollState)

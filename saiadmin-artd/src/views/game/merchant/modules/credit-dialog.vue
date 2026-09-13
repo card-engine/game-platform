@@ -91,6 +91,34 @@
             </template>
           </ElTableColumn>
         </ElTable>
+        <template v-if="ggrBills.length">
+          <div class="mb-2 mt-5 font-medium">{{ $t('game.recentBill') }}</div>
+          <ElTable :data="ggrBills" border>
+            <ElTableColumn prop="source_month" :label="$t('game.billingPeriod')" min-width="115" />
+            <ElTableColumn prop="currency_code" :label="$t('game.currency')" width="85" />
+            <ElTableColumn prop="ggr_amount" label="GGR" min-width="120" />
+            <ElTableColumn
+              prop="billable_ggr_amount"
+              :label="$t('game.billable')"
+              min-width="120"
+            />
+            <ElTableColumn prop="amount" :label="$t('game.billingAmount')" min-width="120" />
+            <ElTableColumn :label="$t('game.billingStatus')" width="110">
+              <template #default="{ row }">{{ billStatus[row.status] }}</template>
+            </ElTableColumn>
+            <ElTableColumn v-if="canEdit" :label="$t('game.operation')" width="110">
+              <template #default="{ row }">
+                <ElButton
+                  v-if="row.status === 0 || row.status === 2"
+                  link
+                  type="primary"
+                  @click="markPaid(row.id, row.remark)"
+                  >{{ $t('game.markPaid') }}</ElButton
+                >
+              </template>
+            </ElTableColumn>
+          </ElTable>
+        </template>
       </template>
 
       <template v-else>
@@ -222,7 +250,7 @@
                   class="w-full"
                   type="success"
                   plain
-                  @click="markPaid"
+                  @click="markPaid(bill.id, bill.remark)"
                 >
                   {{ $t('game.markPaid') }}
                 </ElButton>
@@ -311,6 +339,7 @@
   const stats = ref<any>()
   const nextFee = ref('0')
   const bill = ref<any>()
+  const ggrBills = ref<{ id: number; status: number; remark: string }[]>([])
   const billStatus = computed<Record<number, string>>(() => ({
     0: t('game.pending'),
     1: t('game.paid'),
@@ -344,6 +373,7 @@
       stats.value = data.stats
       nextFee.value = data.next_fee || monthlyMinFee.value
       bill.value = data.bill
+      ggrBills.value = data.ggr_bills
     } finally {
       loading.value = false
     }
@@ -385,8 +415,8 @@
     await load()
     emit('success')
   }
-  const markPaid = async () => {
-    await api.updateMonthlyBill({ id: bill.value.id, status: 1, remark: bill.value.remark || '' })
+  const markPaid = async (id: number, remark = '') => {
+    await api.updateMonthlyBill({ id, status: 1, remark })
     ElMessage.success(t('game.billMarkedPaid'))
     await load()
   }

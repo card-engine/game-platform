@@ -2863,7 +2863,7 @@ return array (
       'rule' => '0 10 * * * *',
       'singleton' => 1,
       'status' => 1,
-      'remark' => '每小时按商户当地月份幂等生成账单',
+      'remark' => '每小时检查商户当地月份，自动生成上月净 GGR 和阶梯月费账单，复核未支付 GGR 账单',
     ),
     3 =>
     array (

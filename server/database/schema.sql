@@ -43,7 +43,8 @@ CREATE TABLE `mg_bets_template` (
   KEY `idx_merchant_date` (`merchant_id`,`business_date`,`id`),
   KEY `idx_platform_date` (`platform_date`,`merchant_id`,`id`),
   KEY `idx_user_time` (`user_id`,`create_time`,`id`),
-  KEY `idx_status_time` (`status`,`update_time`)
+  KEY `idx_status_time` (`status`,`update_time`),
+  KEY `idx_merchant_settled` (`merchant_id`,`settled_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='注单月表模板';
 
 CREATE TABLE `mg_bills_template` (
@@ -343,18 +344,19 @@ CREATE TABLE `mg_merchant_games` (
 
 CREATE TABLE `mg_merchant_monthly_bills` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `bill_no` varchar(40) NOT NULL COMMENT '阶梯月费账单号',
+  `bill_no` varchar(40) NOT NULL COMMENT '商户月结账单号',
   `merchant_id` bigint unsigned NOT NULL COMMENT '商户 ID',
   `currency_code` varchar(16) NOT NULL DEFAULT 'USD' COMMENT '结算币种',
+  `billing_mode` tinyint unsigned NOT NULL DEFAULT '2' COMMENT '账单类型：1月度净 GGR，2阶梯月费',
   `billing_month` date NOT NULL COMMENT '收费月份，保存当月第一天',
   `source_month` date DEFAULT NULL COMMENT '阶梯计算来源月份；首月为空',
-  `metric_type` tinyint unsigned NOT NULL COMMENT '阶梯指标：1月投注额，2月注单量',
+  `metric_type` tinyint unsigned NOT NULL COMMENT '计费指标：0月度净 GGR，1月投注额，2月注单量',
   `metric_value` decimal(24,8) NOT NULL DEFAULT '0.00000000' COMMENT '来源月份指标值',
   `ggr_amount` decimal(24,8) NOT NULL DEFAULT '0.00000000' COMMENT '来源月份净 GGR，可正可负',
   `billable_ggr_amount` decimal(24,8) NOT NULL DEFAULT '0.00000000' COMMENT '来源月份可计费 GGR，负数按零计',
-  `amount` decimal(24,8) NOT NULL COMMENT '本月应付金额，单位 U',
+  `amount` decimal(24,8) NOT NULL COMMENT '月结总费用，单位为 currency_code',
   `status` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '状态：0待支付，1已支付，2已逾期，3已减免',
-  `rules_snapshot` json NOT NULL COMMENT '出账时阶梯规则快照',
+  `rules_snapshot` json NOT NULL COMMENT '出账时费率、时区或阶梯规则快照',
   `paid_time` datetime(3) DEFAULT NULL COMMENT 'UTC 支付或减免时间',
   `remark` varchar(500) DEFAULT NULL COMMENT '账单备注',
   `created_by` bigint unsigned DEFAULT NULL,
@@ -364,9 +366,9 @@ CREATE TABLE `mg_merchant_monthly_bills` (
   `delete_time` datetime(3) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_bill_no` (`bill_no`),
-  UNIQUE KEY `uk_merchant_currency_month` (`merchant_id`,`currency_code`,`billing_month`),
+  UNIQUE KEY `uk_merchant_month` (`merchant_id`,`billing_month`,`currency_code`,`billing_mode`),
   KEY `idx_month_status` (`billing_month`,`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商户阶梯月费账单';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商户月结账单';
 
 CREATE TABLE `mg_merchant_monthly_usages` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -374,6 +376,8 @@ CREATE TABLE `mg_merchant_monthly_usages` (
   `billing_month` date NOT NULL COMMENT '商户时区计费月份，保存当月第一天',
   `bet_count` bigint unsigned NOT NULL DEFAULT '0' COMMENT '已结算有效注单量',
   `billed_amount` decimal(24,8) NOT NULL DEFAULT '0.00000000' COMMENT '已确认服务费',
+  `ggr_amount` decimal(24,8) NOT NULL DEFAULT '0.00000000' COMMENT '月度已结单净 GGR，允许负数',
+  `billable_ggr_amount` decimal(24,8) NOT NULL DEFAULT '0.00000000' COMMENT '月结可计费 GGR，月度净值负数按零计',
   `reserved_amount` decimal(24,8) NOT NULL DEFAULT '0.00000000' COMMENT '下注中预留服务费',
   `rules_snapshot` json NOT NULL COMMENT '计费方式和费率快照',
   `create_time` datetime(3) DEFAULT NULL,

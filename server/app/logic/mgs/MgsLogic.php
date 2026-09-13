@@ -38,7 +38,7 @@ class MgsLogic extends BaseLogic
 
     public function gameStatus(int $id, int $status): void
     {
-        Game::whereKey($id)->update(['status' => $status ? 1 : 0, 'update_time' => $this->now()]);
+        Game::findOrFail($id)->update(['status' => $status ? 1 : 0, 'update_time' => $this->now()]);
     }
 
     public function gameConfig(int $id, array $data): void
