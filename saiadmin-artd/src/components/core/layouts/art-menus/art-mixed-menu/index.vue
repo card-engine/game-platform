@@ -187,7 +187,34 @@
   }
 
   const handleMenuClick = (item: AppRouteRecord, event: MouseEvent): void => {
-    revealMenu(event.currentTarget as HTMLElement)
+    const element = event.currentTarget as HTMLElement
+    revealMenu(element)
+
+    const wrap = scrollbarRef.value?.wrapRef
+    if (wrap) {
+      const viewport = wrap.getBoundingClientRect()
+      const rect = element.getBoundingClientRect()
+      const edge = 12
+      const sibling =
+        rect.right >= viewport.right - edge
+          ? element.nextElementSibling
+          : rect.left <= viewport.left + edge
+            ? element.previousElementSibling
+            : null
+
+      if (sibling instanceof HTMLElement) {
+        const siblingRect = sibling.getBoundingClientRect()
+        const delta =
+          sibling === element.nextElementSibling
+            ? siblingRect.right - viewport.right + edge
+            : siblingRect.left - viewport.left - edge
+        const max = wrap.scrollWidth - wrap.clientWidth
+        wrap.scrollTo({
+          left: Math.max(0, Math.min(max, wrap.scrollLeft + delta)),
+          behavior: 'instant'
+        })
+      }
+    }
     handleMenuJump(item, true)
   }
 
