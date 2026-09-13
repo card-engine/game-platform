@@ -249,7 +249,11 @@
 
   // 顶部时间会引起容器尺寸变化，不能因此重置用户正在浏览的滚动位置。
   useResizeObserver(() => scrollbarRef.value?.wrapRef, handleScrollCore)
-  watch(() => processedMenuList.value.find((item) => item.isActive)?.path, initScrollState)
+  watch(
+    () => processedMenuList.value.map((item) => `${item.path}:${item.isActive}`).join('|'),
+    initScrollState,
+    { flush: 'post' }
+  )
   watch(() => processedMenuList.value.length, initScrollState)
   onMounted(() => {
     initScrollState()

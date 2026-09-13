@@ -326,7 +326,7 @@ class TradeService
 
     private function settle(array $bet, Merchant $merchant, string $currency, bool $late = false, string $reserved = '0.00000000'): array
     {
-        $fee = $this->fee($bet);
+        $fee = (int) $bet['billing_mode'] === 1 ? '0.00000000' : $this->fee($bet);
         if ($late) {
             $difference = bcsub($fee, (string) $bet['merchant_fee'], 8);
             if (bccomp($difference, '0', 8) < 0) $difference = '0.00000000';

@@ -345,10 +345,13 @@ CREATE TABLE `mg_merchant_monthly_bills` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `bill_no` varchar(40) NOT NULL COMMENT '阶梯月费账单号',
   `merchant_id` bigint unsigned NOT NULL COMMENT '商户 ID',
+  `currency_code` varchar(16) NOT NULL DEFAULT 'USD' COMMENT '结算币种',
   `billing_month` date NOT NULL COMMENT '收费月份，保存当月第一天',
   `source_month` date DEFAULT NULL COMMENT '阶梯计算来源月份；首月为空',
   `metric_type` tinyint unsigned NOT NULL COMMENT '阶梯指标：1月投注额，2月注单量',
   `metric_value` decimal(24,8) NOT NULL DEFAULT '0.00000000' COMMENT '来源月份指标值',
+  `ggr_amount` decimal(24,8) NOT NULL DEFAULT '0.00000000' COMMENT '来源月份净 GGR，可正可负',
+  `billable_ggr_amount` decimal(24,8) NOT NULL DEFAULT '0.00000000' COMMENT '来源月份可计费 GGR，负数按零计',
   `amount` decimal(24,8) NOT NULL COMMENT '本月应付金额，单位 U',
   `status` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '状态：0待支付，1已支付，2已逾期，3已减免',
   `rules_snapshot` json NOT NULL COMMENT '出账时阶梯规则快照',
@@ -361,7 +364,7 @@ CREATE TABLE `mg_merchant_monthly_bills` (
   `delete_time` datetime(3) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_bill_no` (`bill_no`),
-  UNIQUE KEY `uk_merchant_month` (`merchant_id`,`billing_month`),
+  UNIQUE KEY `uk_merchant_currency_month` (`merchant_id`,`currency_code`,`billing_month`),
   KEY `idx_month_status` (`billing_month`,`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商户阶梯月费账单';
 
