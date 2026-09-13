@@ -44,11 +44,26 @@
         >
         <template #currencies="{ row }"
           ><ElSpace wrap
-            ><ElTag v-for="item in row.currency_codes || []" :key="item" size="small">{{
-              item
-            }}</ElTag></ElSpace
-          ></template
-        >
+            ><ElTooltip
+              v-for="item in row.currency_codes || []"
+              :key="item"
+              :content="$t('game.clickToTrial')"
+              :disabled="!canTrial"
+            >
+              <ElTag
+                :class="canTrial && 'cursor-pointer'"
+                size="small"
+                :disable-transitions="true"
+                @click="canTrial && trial(row, item)"
+              >
+                {{ item }}
+                <ArtSvgIcon
+                  v-if="canTrial"
+                  icon="ri:play-mini-fill"
+                  class="ml-0.5 inline-block align-[-2px]"
+                />
+              </ElTag> </ElTooltip></ElSpace
+        ></template>
         <template #tags="{ row }"
           ><ElSpace
             ><ElTag v-if="row.is_hot" type="danger" size="small">{{ $t('mgs.hot') }}</ElTag
@@ -65,14 +80,11 @@
             :before-change="() => updateStatus(row)"
         /></template>
         <template #operation="{ row }"
-          ><ElSpace
-            ><ElButton v-permission="'app:mgs:game:update'" link type="primary" @click="trial(row)"
-              >试玩</ElButton
-            ><SaButton
-              v-permission="'app:mgs:game:update'"
-              type="secondary"
-              @click="showDialog('edit', row)" /></ElSpace
-        ></template>
+          ><SaButton
+            v-permission="'app:mgs:game:update'"
+            type="secondary"
+            @click="showDialog('edit', row)"
+        /></template>
       </ArtTable>
     </ElCard>
     <EditDialog
@@ -94,19 +106,20 @@
   import TableSearch from '../modules/table-search.vue'
   import EditDialog from './modules/edit-dialog.vue'
   import TrialDialog from '@/views/game/list/modules/trial-dialog.vue'
+  import { checkAuth } from '@/utils/tool'
 
   const { t, locale } = useI18n()
   const filters = reactive<any>({ keyword: '', status: '' })
   const syncing = ref(false)
+  const canTrial = computed(() => checkAuth('app:mgs:game:update'))
   const trialVisible = ref(false)
   const trialUrl = ref('')
-  const trial = async (row: any) => {
+  const trial = async (row: { id: number }, currency: string) => {
     trialUrl.value = ''
     trialVisible.value = true
     try {
-      const currency = row.currency_codes?.[0]
-      if (!currency) throw new Error('该游戏没有可用币种')
-      trialUrl.value = (await api.trial({ id: row.id, currency })).game_url
+      const data = await api.trial({ id: row.id, currency })
+      if (trialVisible.value) trialUrl.value = data.game_url
     } catch (error) {
       trialVisible.value = false
       throw error

@@ -16,8 +16,10 @@ use Webman\Route;
 
 Route::disableDefaultRoute();
 
+// 管理端登录续期；后台接口统一经过全局登录、权限和操作日志中间件。
 Route::post('/auth/refresh', [app\controller\AuthController::class, 'refresh']);
 
+// MG 游戏平台管理端：企业、商户、游戏供给和运营统计。
 Route::group('/game', function () {
     Route::get('/context', [app\controller\game\ContextController::class, 'index']);
     fastRoute('enterprise', app\controller\game\EnterpriseController::class);
@@ -70,8 +72,7 @@ Route::group('/game', function () {
     Route::get('/operations/reports', [app\controller\game\OperationsController::class, 'reports']);
 })->middleware([app\middleware\EnterpriseStatus::class]);
 
-Route::post('/mgs/games/trial', [app\controller\mgs\AdminController::class, 'trial'])->middleware([app\middleware\EnterpriseStatus::class]);
-
+// MG 面向下游商户的服务端接口：商户签名认证，提供目录、进游、RTP 和注单查询。
 Route::group('/open_api', function () {
     Route::post('/games', [app\controller\openapi\OpenApiController::class, 'games']);
     Route::post('/launch', [app\controller\openapi\OpenApiController::class, 'launch']);
@@ -79,13 +80,17 @@ Route::group('/open_api', function () {
     Route::post('/bets', [app\controller\openapi\OpenApiController::class, 'bets']);
 })->middleware([app\middleware\MerchantAuth::class]);
 
+// 上游游戏平台回调：按平台前缀区分适配器。
 Route::post('/provider/{platform:wxgame|acewin|tada|goldengatex}/{action:[A-Za-z-]+}', [app\controller\provider\ProviderController::class, 'callback']);
+
+// 自营平台管理接口：后台登录后访问，统一使用 /mgs 前缀。
 Route::group('/mgs', function () {
     Route::get('/overview', [app\controller\mgs\AdminController::class, 'overview']);
     Route::get('/games', [app\controller\mgs\AdminController::class, 'games']);
     Route::post('/games/sync', [app\controller\mgs\AdminController::class, 'sync']);
     Route::put('/games/status', [app\controller\mgs\AdminController::class, 'status']);
     Route::put('/games/config', [app\controller\mgs\AdminController::class, 'config']);
+    Route::post('/games/trial', [app\controller\mgs\AdminController::class, 'trial'])->middleware([app\middleware\EnterpriseStatus::class]);
     Route::get('/users', [app\controller\mgs\AdminController::class, 'users']);
     Route::get('/bets', [app\controller\mgs\AdminController::class, 'bets']);
     Route::get('/bills', [app\controller\mgs\AdminController::class, 'bills']);
@@ -94,10 +99,13 @@ Route::group('/mgs', function () {
     Route::post('/settlements/generate', [app\controller\mgs\AdminController::class, 'generateSettlement']);
 });
 
+// MGS 玩家业务接口：免后台登录，但由 MgsAuthService 校验用户签名。
+// 浏览器接入需另行设计玩家凭证，不能向前端暴露服务端签名密钥。
 Route::group('/api', function () {
     Route::get('/games', [app\controller\mgs\ApiController::class, 'games']);
     Route::post('/games/launch', [app\controller\mgs\ApiController::class, 'launch']);
     Route::get('/user', [app\controller\mgs\ApiController::class, 'user']);
     Route::get('/wallet', [app\controller\mgs\ApiController::class, 'wallet']);
+    // MG -> MGS 钱包回调：由 MgsCallbackService 独立验签，不属于浏览器余额接口。
     Route::post('/mgames/{action:balance|bet|win|cancel}', [app\controller\mgs\CallbackController::class, 'callback']);
 });
