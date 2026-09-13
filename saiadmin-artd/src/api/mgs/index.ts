@@ -8,6 +8,8 @@ export default {
   gameStatus: (data: { id: number; status: number }) =>
     request.put({ url: '/mgs/games/status', data }),
   gameConfig: (data: Record<string, any>) => request.put({ url: '/mgs/games/config', data }),
+  trial: (data: { id: number; currency: string }) =>
+    request.post<{ game_url: string }>({ url: '/mgs/games/trial', data }),
   users: (params: Record<string, any>) =>
     request.get<Api.Common.ApiPage>({ url: '/mgs/users', params }),
   bets: (params: Record<string, any>) =>

@@ -65,11 +65,14 @@
             :before-change="() => updateStatus(row)"
         /></template>
         <template #operation="{ row }"
-          ><SaButton
-            v-permission="'app:mgs:game:update'"
-            type="secondary"
-            @click="showDialog('edit', row)"
-        /></template>
+          ><ElSpace
+            ><ElButton v-permission="'app:mgs:game:update'" link type="primary" @click="trial(row)"
+              >试玩</ElButton
+            ><SaButton
+              v-permission="'app:mgs:game:update'"
+              type="secondary"
+              @click="showDialog('edit', row)" /></ElSpace
+        ></template>
       </ArtTable>
     </ElCard>
     <EditDialog
@@ -78,6 +81,7 @@
       :data="dialogData"
       @success="refreshData"
     />
+    <TrialDialog v-model="trialVisible" :src="trialUrl" />
   </div>
 </template>
 
@@ -89,10 +93,25 @@
   import api from '@/api/mgs'
   import TableSearch from '../modules/table-search.vue'
   import EditDialog from './modules/edit-dialog.vue'
+  import TrialDialog from '@/views/game/list/modules/trial-dialog.vue'
 
   const { t, locale } = useI18n()
   const filters = reactive<any>({ keyword: '', status: '' })
   const syncing = ref(false)
+  const trialVisible = ref(false)
+  const trialUrl = ref('')
+  const trial = async (row: any) => {
+    trialUrl.value = ''
+    trialVisible.value = true
+    try {
+      const currency = row.currency_codes?.[0]
+      if (!currency) throw new Error('该游戏没有可用币种')
+      trialUrl.value = (await api.trial({ id: row.id, currency })).game_url
+    } catch (error) {
+      trialVisible.value = false
+      throw error
+    }
+  }
   const search = () => {
     Object.assign(searchParams, filters)
     getData()

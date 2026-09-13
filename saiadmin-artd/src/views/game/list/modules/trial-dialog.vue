@@ -77,13 +77,15 @@
   const frameLoading = ref(true)
   const frameKey = ref(0)
   const isMobile = ref(false)
+  const orientationKey = 'mgames:game-trial:orientation'
   let collapseTimer: ReturnType<typeof setTimeout> | undefined
 
   const updateMobile = () => {
     isMobile.value = window.matchMedia('(max-width: 767px)').matches
-    if (isMobile.value) {
+    const saved = localStorage.getItem(orientationKey)
+    if (saved === 'portrait' || saved === 'landscape') orientation.value = saved
+    else if (isMobile.value)
       orientation.value = window.innerWidth > window.innerHeight ? 'landscape' : 'portrait'
-    }
   }
   const scheduleCollapse = () => {
     clearTimeout(collapseTimer)
@@ -102,6 +104,7 @@
   }
   const switchOrientation = () => {
     orientation.value = orientation.value === 'portrait' ? 'landscape' : 'portrait'
+    localStorage.setItem(orientationKey, orientation.value)
     scheduleCollapse()
   }
   const refreshFrame = () => {

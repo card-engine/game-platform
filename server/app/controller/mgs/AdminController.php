@@ -51,6 +51,12 @@ class AdminController extends BaseController
         return $this->success('操作成功');
     }
 
+    #[Permission('自营游戏试玩', 'app:mgs:game:update')]
+    public function trial(Request $request): Response
+    {
+        return $this->success($this->logic->trial((int) $request->post('id'), strtoupper((string) $request->post('currency')), $request->getRealIp()));
+    }
+
     #[Permission('自营用户列表', 'app:mgs:user:index')]
     public function users(Request $request): Response
     {

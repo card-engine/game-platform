@@ -70,6 +70,8 @@ Route::group('/game', function () {
     Route::get('/operations/reports', [app\controller\game\OperationsController::class, 'reports']);
 })->middleware([app\middleware\EnterpriseStatus::class]);
 
+Route::post('/mgs/games/trial', [app\controller\mgs\AdminController::class, 'trial'])->middleware([app\middleware\EnterpriseStatus::class]);
+
 Route::group('/open_api', function () {
     Route::post('/games', [app\controller\openapi\OpenApiController::class, 'games']);
     Route::post('/launch', [app\controller\openapi\OpenApiController::class, 'launch']);

@@ -4,6 +4,8 @@ namespace app\logic\mgs;
 
 use app\model\mgs\Game;
 use app\model\mgs\User;
+use app\model\Merchant;
+use app\service\game\OpenApiService;
 use app\service\mgs\MgsTableService;
 use app\service\mgs\MgsConfigService;
 use DateTimeImmutable;
@@ -14,6 +16,15 @@ use support\Db;
 
 class MgsLogic extends BaseLogic
 {
+    public function trial(int $id, string $currency, string $ip): array
+    {
+        $game = Game::findOrFail($id);
+        $merchant = Merchant::where(['mch_id' => (new MgsConfigService())->get('game_platform_mch_id', config('mgs.mch_id')), 'status' => 1])->first()
+            ?: throw new ApiException('自营商户未初始化，请执行数据库升级');
+        $user = User::where(['id' => 1, 'status' => 1])->first()
+            ?: throw new ApiException('系统玩家未初始化，请执行数据库升级');
+        return (new OpenApiService())->launch($merchant, ['user_id' => $user->user_no, 'game_id' => $game->platform_game_id, 'currency' => $currency, 'language' => $merchant->default_language], $ip);
+    }
     public function overview(): array
     {
         $today = (new DateTimeImmutable('now', new DateTimeZone((string) (new MgsConfigService())->get('platform_timezone', config('mgs.timezone', 'UTC')))))->format('Y-m-d');
