@@ -23,7 +23,7 @@ class MgsLogic extends BaseLogic
             ?: throw new ApiException('自营商户未初始化，请执行数据库升级');
         $user = User::where(['id' => 1, 'status' => 1])->first()
             ?: throw new ApiException('系统玩家未初始化，请执行数据库升级');
-        return (new OpenApiService())->launch($merchant, ['user_id' => $user->user_no, 'game_id' => $game->platform_game_id, 'currency' => $currency, 'language' => $merchant->default_language], $ip);
+        return (new OpenApiService())->launch($merchant, ['user_id' => (string) $user->unique_id, 'game_id' => $game->platform_game_id, 'currency' => $currency, 'language' => $merchant->default_language], $ip);
     }
     public function overview(): array
     {
@@ -70,7 +70,7 @@ class MgsLogic extends BaseLogic
     public function users(array $where): array
     {
         $query = User::with('wallets:id,user_id,currency_code,balance')->when($where['status'] !== '', fn ($q) => $q->where('status', (int) $where['status']))
-            ->when($where['keyword'], fn ($q, $value) => $q->where(fn ($item) => $item->where('user_no', 'like', "%{$value}%")->orWhere('nickname', 'like', "%{$value}%")));
+            ->when($where['keyword'], fn ($q, $value) => $q->where(fn ($item) => $item->where('unique_id', 'like', "%{$value}%")->orWhere('nickname', 'like', "%{$value}%")));
         return $this->page($query);
     }
 
@@ -87,10 +87,10 @@ class MgsLogic extends BaseLogic
         }
         $number = $type === 'bets' ? 'bet_no' : 'bill_no';
         $query = Db::query()->fromSub($union, 't')->join('mgs_users as u', 'u.id', '=', 't.user_id')->leftJoin('mgs_games as g', 'g.id', '=', 't.game_id')
-            ->select('t.*', 'u.user_no', 'u.nickname', 'g.name as game_name')
+            ->select('t.*', 'u.unique_id', 'u.nickname', 'g.name as game_name')
             ->when($where['status'] !== '', fn ($q) => $q->where('t.status', (int) $where['status']))
             ->when($type === 'bills' && $where['type'] !== '', fn ($q) => $q->where('t.type', $where['type']))
-            ->when($where['keyword'], fn ($q, $value) => $q->where(fn ($item) => $item->where("t.{$number}", 'like', "%{$value}%")->orWhere('u.user_no', 'like', "%{$value}%")->orWhere('g.name', 'like', "%{$value}%")->orWhere('t.' . ($type === 'bets' ? 'platform_round_id' : 'transaction_id'), 'like', "%{$value}%")));
+            ->when($where['keyword'], fn ($q, $value) => $q->where(fn ($item) => $item->where("t.{$number}", 'like', "%{$value}%")->orWhere('u.unique_id', 'like', "%{$value}%")->orWhere('g.name', 'like', "%{$value}%")->orWhere('t.' . ($type === 'bets' ? 'platform_round_id' : 'transaction_id'), 'like', "%{$value}%")));
         $result = $this->page($query, "t.{$number}");
         $field = $type === 'bets' ? 'actions' : 'data';
         foreach ($result['data'] as $row) {

@@ -66,9 +66,9 @@ try {
     checkUpgrade(support\Db::table('sa_system_user')->whereIn('username', ['admin', 'game_admin'])->count() === 2, '内置管理员未创建');
     checkUpgrade(password_verify('Admin-Test-123!', support\Db::table('sa_system_user')->where('username', 'admin')->value('password')), '初始密码写入错误');
     $mgsUser = (array) support\Db::table('mgs_users')->where('id', 1)->first();
-    checkUpgrade($mgsUser['user_no'] === 'system' && (int) $mgsUser['status'] === 1, 'MGS 系统用户未创建');
+    checkUpgrade((int) $mgsUser['unique_id'] === id2big((int) $mgsUser['id']) && (int) $mgsUser['status'] === 1, 'MGS 系统用户未创建');
     $gameUser = (array) support\Db::table('mg_users')->where('id', 1)->first();
-    checkUpgrade((int) $gameUser['merchant_id'] === 1 && $gameUser['merchant_user_id'] === $mgsUser['user_no']
+    checkUpgrade((int) $gameUser['merchant_id'] === 1 && $gameUser['merchant_user_id'] === (string) $mgsUser['unique_id']
         && $gameUser['nickname'] === '系统玩家' && (int) $gameUser['status'] === 1, '游戏平台系统玩家未与 MGS 系统用户对应');
     checkUpgrade(support\Db::table('mgs_wallets')->where(['user_id' => 1, 'currency_code' => 'USD'])->value('balance') === '1000000.00000000', 'MGS 系统钱包未创建');
     $mgsMchId = json_decode(support\Db::table('mgs_configs')->where('code', 'game_platform_mch_id')->value('value'), true);
@@ -105,7 +105,7 @@ try {
     checkUpgrade((int) support\Db::table('sa_tool_crontab')->where('name', 'MG 汇率同步')->value('status') === 2, '定时任务启停状态被覆盖');
     checkUpgrade(support\Db::table('sa_system_menu')->where('code', 'MgDashboard')->value('name') === '运营看板', '菜单定义未更新');
     $gameUser = (array) support\Db::table('mg_users')->where('id', 1)->first();
-    checkUpgrade((int) $gameUser['merchant_id'] === 1 && $gameUser['merchant_user_id'] === $mgsUser['user_no']
+    checkUpgrade((int) $gameUser['merchant_id'] === 1 && $gameUser['merchant_user_id'] === (string) $mgsUser['unique_id']
         && $gameUser['nickname'] === '系统玩家' && (int) $gameUser['status'] === 1, '游戏平台系统玩家对应关系未恢复');
     checkUpgrade(support\Db::table('mgs_wallets')->where(['user_id' => 1, 'currency_code' => 'USD'])->value('balance') === '123.00000000', '重复升级重置了 MGS 钱包余额');
     checkUpgrade(support\Db::table('sa_system_role')->where('id', $ownerRoleId)->value('name') === '企业负责人', '内置角色未更新');

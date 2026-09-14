@@ -977,7 +977,8 @@ CREATE TABLE `mgs_games` (
 
 CREATE TABLE `mgs_users` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `user_no` varchar(128) NOT NULL COMMENT 'C 端业务用户编号',
+  `unique_id` bigint unsigned DEFAULT NULL COMMENT '按统一 id2big 算法生成的对外用户编号',
+  `browser_token_hash` char(64) DEFAULT NULL COMMENT '浏览器玩家凭证 SHA-256 摘要',
   `nickname` varchar(150) DEFAULT NULL COMMENT '用户昵称，可选',
   `language` varchar(16) NOT NULL DEFAULT 'en' COMMENT '用户语言编码',
   `status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '状态：0停用，1启用',
@@ -988,7 +989,8 @@ CREATE TABLE `mgs_users` (
   `update_time` datetime(3) DEFAULT NULL,
   `delete_time` datetime(3) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_user_no` (`user_no`),
+  UNIQUE KEY `uk_unique_id` (`unique_id`),
+  UNIQUE KEY `uk_browser_token_hash` (`browser_token_hash`),
   KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='MGS C 端用户';
 

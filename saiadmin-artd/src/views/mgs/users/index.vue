@@ -28,8 +28,8 @@
         @pagination:current-change="handleCurrentChange"
       >
         <template #user="{ row }"
-          ><div class="font-medium">{{ row.nickname || row.user_no }}</div
-          ><div class="text-xs text-g-500">{{ row.user_no }}</div></template
+          ><div class="font-medium">{{ row.nickname || row.unique_id }}</div
+          ><div class="text-xs text-g-500">{{ row.unique_id }}</div></template
         >
         <template #wallets="{ row }"
           ><div v-for="item in row.wallets || []" :key="item.id" class="leading-6"

@@ -65,7 +65,7 @@ try {
     $mgsUser = MgsUser::findOrFail(1);
     $merchant = Merchant::findOrFail(1);
     $user = User::findOrFail(1);
-    checkSelf((int) $user->merchant_id === (int) $merchant->id && $user->merchant_user_id === $mgsUser->user_no, '双端系统用户未对应');
+    checkSelf((int) $user->merchant_id === (int) $merchant->id && $user->merchant_user_id === (string) $mgsUser->unique_id, '双端系统用户未对应');
     checkSelf(Wallet::where(['user_id' => $mgsUser->id, 'currency_code' => 'USD'])->exists(), 'MGS 系统钱包未初始化');
 
     $walletServer = startMockWallet();

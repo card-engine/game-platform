@@ -26,9 +26,11 @@ class MgsCallbackService
     public function handle(string $action, array $params): array
     {
         $currency = strtoupper(trim((string) ($params['currency'] ?? '')));
-        $userNo = trim((string) ($params['user_id'] ?? ''));
-        if ($userNo === '' || $currency === '') throw new RuntimeException('用户或币种不能为空');
-        $user = User::firstOrCreate(['user_no' => $userNo], ['language' => config('mgs.default_language', 'en'), 'status' => 1]);
+        $uniqueId = trim((string) ($params['user_id'] ?? ''));
+        if ($uniqueId === '' || $currency === '') throw new RuntimeException('用户或币种不能为空');
+        $id = big2id((int) $uniqueId);
+        $user = $id === false ? null : User::find($id);
+        if (!$user) throw new RuntimeException('用户不存在');
         if ((int) $user->status !== 1) throw new RuntimeException('用户已停用');
         if ($action === 'balance') {
             $wallet = Wallet::firstOrCreate(['user_id' => $user->id, 'currency_code' => $currency], ['balance' => '0.00000000']);

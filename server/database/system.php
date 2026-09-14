@@ -2802,7 +2802,7 @@ return array (
   array (
     0 => array (
       'id' => 1,
-      'user_no' => 'system',
+      'unique_id' => id2big(1),
       'nickname' => '系统用户',
       'language' => env('MGS_DEFAULT_LANGUAGE', 'en'),
       'status' => 1,
@@ -2822,7 +2822,7 @@ return array (
     0 =>
     array (
       'id' => 1,
-      'merchant_user_id' => 'system',
+      'merchant_user_id' => (string) id2big(1),
       'nickname' => '系统玩家',
       'status' => 1,
     ),

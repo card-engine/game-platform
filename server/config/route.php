@@ -99,9 +99,10 @@ Route::group('/mgs', function () {
     Route::post('/settlements/generate', [app\controller\mgs\AdminController::class, 'generateSettlement']);
 });
 
-// MGS 玩家业务接口：免后台登录，但由 MgsAuthService 校验用户签名。
-// 浏览器接入需另行设计玩家凭证，不能向前端暴露服务端签名密钥。
+// MGS 自营平台玩家接口：浏览器凭证认证；资金回调仍单独验签。
 Route::group('/api', function () {
+    Route::post('/session', [app\controller\mgs\ApiController::class, 'session']);
+    Route::get('/brands', [app\controller\mgs\ApiController::class, 'brands']);
     Route::get('/games', [app\controller\mgs\ApiController::class, 'games']);
     Route::post('/games/launch', [app\controller\mgs\ApiController::class, 'launch']);
     Route::get('/user', [app\controller\mgs\ApiController::class, 'user']);

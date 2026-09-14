@@ -44,8 +44,8 @@
           ><div class="text-xs text-g-500">{{ row.platform_round_id }}</div></template
         >
         <template #user="{ row }"
-          ><div>{{ row.nickname || row.user_no }}</div
-          ><div class="text-xs text-g-500">{{ row.user_no }}</div></template
+          ><div>{{ row.nickname || row.unique_id }}</div
+          ><div class="text-xs text-g-500">{{ row.unique_id }}</div></template
         >
         <template #amounts="{ row }"
           ><div
@@ -74,7 +74,7 @@
     <ElDrawer v-model="drawer" :title="$t('mgs.betDetail')" size="min(720px, 94vw)">
       <ElDescriptions v-if="current" :column="2" border class="mb-4"
         ><ElDescriptionsItem :label="$t('mgs.betNo')">{{ current.bet_no }}</ElDescriptionsItem
-        ><ElDescriptionsItem :label="$t('mgs.user')">{{ current.user_no }}</ElDescriptionsItem
+        ><ElDescriptionsItem :label="$t('mgs.user')">{{ current.unique_id }}</ElDescriptionsItem
         ><ElDescriptionsItem :label="$t('mgs.game')">{{ current.game_name }}</ElDescriptionsItem
         ><ElDescriptionsItem :label="$t('mgs.currency')">{{
           current.currency_code

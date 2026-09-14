@@ -30,7 +30,7 @@ class SystemDataService
             $selfMerchant = $this->selfMerchant();
             $this->mgsConfigs($data['mgs_configs'] ?? [], (string) $selfMerchant->mch_id);
             $this->mgsUsers($data['mgs_users'] ?? []);
-            $this->gameUsers($data['game_users'], $selfMerchant, (string) $data['mgs_users'][0]['user_no']);
+            $this->gameUsers($data['game_users'], $selfMerchant, (string) $data['mgs_users'][0]['unique_id']);
             $this->mgsWallets($data['mgs_wallets'] ?? []);
             $this->crontabs($data['crontabs']);
             $this->users($data['users'], $roles);
@@ -159,7 +159,10 @@ class SystemDataService
 
     private function mgsUsers(array $users): void
     {
-        foreach ($users as $user) $this->upsert('mgs_users', ['id' => $user['id']], $user);
+        foreach ($users as $user) {
+            $user['unique_id'] = $user['unique_id'] ?? id2big((int) $user['id']);
+            $this->upsert('mgs_users', ['id' => $user['id']], $user);
+        }
     }
 
     private function mgsWallets(array $wallets): void

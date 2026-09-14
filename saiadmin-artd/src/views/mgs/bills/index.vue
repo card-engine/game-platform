@@ -53,8 +53,8 @@
           ><div class="text-xs text-g-500">{{ row.transaction_id }}</div></template
         >
         <template #user="{ row }"
-          ><div>{{ row.nickname || row.user_no }}</div
-          ><div class="text-xs text-g-500">{{ row.user_no }}</div></template
+          ><div>{{ row.nickname || row.unique_id }}</div
+          ><div class="text-xs text-g-500">{{ row.unique_id }}</div></template
         >
         <template #type="{ row }"
           ><ElTag size="small">{{ types[row.type] || row.type }}</ElTag></template
@@ -96,8 +96,7 @@
       <pre
         v-if="current?.data"
         class="mt-4 whitespace-pre-wrap break-all rounded bg-g-100 p-4 text-xs"
-        >{{ JSON.stringify(current.data, null, 2) }}</pre
-      >
+        >{{ JSON.stringify(current.data, null, 2) }}</pre>
     </ElDrawer>
   </div>
 </template>

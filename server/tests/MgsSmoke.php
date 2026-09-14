@@ -52,7 +52,7 @@ try {
     $wallet = Wallet::where(['user_id' => $user->id, 'currency_code' => 'USD'])->firstOrFail();
     $wallet->update(['balance' => '100.00000000']);
     $service = new MgsCallbackService();
-    $base = ['user_id' => $user->user_no, 'currency' => 'USD', 'game_id' => 'smoke-game', 'parent_round_id' => 'round-1', 'round_id' => 'round-1'];
+    $base = ['user_id' => (string) $user->unique_id, 'currency' => 'USD', 'game_id' => 'smoke-game', 'parent_round_id' => 'round-1', 'round_id' => 'round-1'];
     $service->handle('bet', $base + ['transaction_id' => 'tx-bet-1', 'bet_amount' => '10']);
     $service->handle('bet', $base + ['transaction_id' => 'tx-bet-1', 'bet_amount' => '10']);
     try {
@@ -99,10 +99,11 @@ try {
     if ((int) $late['status'] !== 2 || $late['settled_time'] !== $bet['settled_time']) throw new RuntimeException('结单后补发派奖重新打开了注单');
     $service->handle('cancel', $base + ['transaction_id' => 'tx-cancel-win-late', 'original_transaction_id' => 'tx-win-late', 'original_type' => 'win']);
     if ((string) $wallet->fresh()->balance !== '100.00000000') throw new RuntimeException('补发派奖回滚余额不正确');
-    $user2 = User::create(['user_no' => 'system-2', 'language' => 'en', 'status' => 1]);
+    $user2 = User::create(['language' => 'en', 'status' => 1]);
+    $user2->update(['unique_id' => id2big((int) $user2->id)]);
     $wallet2 = Wallet::create(['user_id' => $user2->id, 'currency_code' => 'USD', 'balance' => '100.00000000']);
-    $service->handle('bet', ['user_id' => $user2->user_no, 'currency' => 'USD', 'game_id' => 'smoke-game', 'transaction_id' => 'tx-bet-1', 'bet_amount' => '2']);
-    $service->handle('bet', ['user_id' => $user2->user_no, 'currency' => 'USD', 'game_id' => 'smoke-game', 'transaction_id' => 'tx-bet-2', 'bet_amount' => '3']);
+    $service->handle('bet', ['user_id' => (string) $user2->unique_id, 'currency' => 'USD', 'game_id' => 'smoke-game', 'transaction_id' => 'tx-bet-1', 'bet_amount' => '2']);
+    $service->handle('bet', ['user_id' => (string) $user2->unique_id, 'currency' => 'USD', 'game_id' => 'smoke-game', 'transaction_id' => 'tx-bet-2', 'bet_amount' => '3']);
     if ((string) $wallet2->fresh()->balance !== '95.00000000' || Db::table('mgs_bets_' . gmdate('ym'))->where('user_id', $user2->id)->count() !== 2) throw new RuntimeException('无局号交易被丢弃或错误合并');
     echo "MGS smoke test passed\n";
 } finally {
