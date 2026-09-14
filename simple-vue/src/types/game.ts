@@ -1,4 +1,4 @@
-export type GameType = 'slot' | 'fish' | 'table' | 'poker' | 'sport'
+export type GameType = 'slot' | 'fish' | 'table' | 'poker' | 'sport' | 'other'
 
 export interface BrandStat {
   gameBrand: string

@@ -35,6 +35,7 @@ const categories = [
   { value: 'fish', label: 'category.fishing', icon: FishSymbol },
   { value: 'poker', label: 'category.poker', icon: Spade },
   { value: 'sport', label: 'category.sports', icon: Volleyball },
+  { value: 'other', label: 'category.other', icon: Gamepad2 },
 ] as const
 const themes = [
   { value: 'system', label: 'theme.system', icon: Monitor },
@@ -138,6 +139,10 @@ const selectedStats = computed(() => [...(brandStats.value?.[selectedType.value]
 
 watch(selectedStats, async (stats) => {
   if (!brandStats.value) return
+  if (!stats.length && !lobbyState.type) {
+    selectedType.value = (Object.entries(brandStats.value).find(([, items]) => items.length)?.[0] as GameType) || selectedType.value
+    return
+  }
   if (!stats.some(({ gameBrand }) => gameBrand.toLowerCase() === selectedBrand.value)) {
     selectedBrand.value = stats[0]?.gameBrand.toLowerCase() || ''
   }

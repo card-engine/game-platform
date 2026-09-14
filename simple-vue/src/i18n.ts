@@ -4,7 +4,7 @@ const messages = {
   'en-US': {
     step: 'Step {number}',
     home: 'MGames home', categories: 'Game categories', providers: 'Game providers', language: 'Language', openTelegram: 'Open Telegram', search: 'Search games', featuredGames: 'Featured games', featured: 'FEATURED', playNow: 'Play', playFeatured: 'Play featured game {name}', play: 'Play {name}', gameCount: '{count} games', gamesTitle: '{brand} Games', games: 'Games', loadingGames: 'Loading games', providerUnavailable: 'Provider data is unavailable', tryAgain: 'Try again', gamesLoadFailed: 'Games could not be loaded', noGames: 'No games found', noGamesHint: 'Try another search or provider.',
-    category: { slots: 'Slots', mini: 'MiniGames', fishing: 'Fishing', poker: 'Poker', sports: 'Sports' },
+    category: { slots: 'Slots', mini: 'MiniGames', fishing: 'Fishing', poker: 'Poker', sports: 'Sports', other: 'Other' },
     theme: { label: 'Color theme', system: 'Follow system theme', light: 'Use light theme', dark: 'Use dark theme' },
     access: { title: 'Unlock game access', hint: 'Enter the access password to launch any game.', password: 'Access password', wrong: 'Incorrect access password', cancel: 'Cancel', unlock: 'Unlock and play' },
     player: { label: 'Game player', reload: 'Refresh', fullscreen: 'Fullscreen', newWindow: 'New window', close: 'Exit game' },
@@ -13,7 +13,7 @@ const messages = {
   'zh-CN': {
     step: '步骤 {number}',
     home: 'MGames 首页', categories: '游戏分类', providers: '游戏厂商', language: '语言', openTelegram: '打开 Telegram', search: '搜索游戏', featuredGames: '精选游戏', featured: '精选', playNow: '启动', playFeatured: '进入精选游戏 {name}', play: '进入游戏 {name}', gameCount: '{count} 款游戏', gamesTitle: '{brand} 游戏', games: '游戏', loadingGames: '正在加载游戏', providerUnavailable: '厂商数据暂不可用', tryAgain: '重试', gamesLoadFailed: '游戏加载失败', noGames: '未找到游戏', noGamesHint: '请尝试其他关键词或厂商。',
-    category: { slots: '老虎机', mini: '小游戏', fishing: '捕鱼', poker: '棋牌', sports: '体育' },
+    category: { slots: '老虎机', mini: '小游戏', fishing: '捕鱼', poker: '棋牌', sports: '体育', other: '其他' },
     theme: { label: '颜色主题', system: '跟随系统主题', light: '使用亮色主题', dark: '使用暗色主题' },
     access: { title: '解锁游戏', hint: '输入访问密码后即可进入任意游戏。', password: '访问密码', wrong: '访问密码不正确', cancel: '取消', unlock: '解锁并进入' },
     player: { label: '游戏窗口', reload: '刷新', fullscreen: '全屏', newWindow: '新窗打开', close: '退出游戏' },
@@ -22,7 +22,7 @@ const messages = {
   'ja-JP': {
     step: 'ステップ {number}',
     home: 'MGames ホーム', categories: 'ゲームカテゴリー', providers: 'ゲームプロバイダー', language: '言語', openTelegram: 'Telegramを開く', search: 'ゲームを検索', featuredGames: 'おすすめゲーム', featured: 'おすすめ', playNow: '今すぐプレイ', playFeatured: 'おすすめゲーム {name} をプレイ', play: '{name} をプレイ', gameCount: '{count} ゲーム', gamesTitle: '{brand} ゲーム', games: 'ゲーム', loadingGames: 'ゲームを読み込み中', providerUnavailable: 'プロバイダー情報を取得できません', tryAgain: '再試行', gamesLoadFailed: 'ゲームを読み込めませんでした', noGames: 'ゲームが見つかりません', noGamesHint: '検索語またはプロバイダーを変更してください。',
-    category: { slots: 'スロット', mini: 'ミニゲーム', fishing: 'フィッシング', poker: 'ポーカー', sports: 'スポーツ' },
+    category: { slots: 'スロット', mini: 'ミニゲーム', fishing: 'フィッシング', poker: 'ポーカー', sports: 'スポーツ', other: 'その他' },
     theme: { label: 'カラーテーマ', system: 'システム設定に従う', light: 'ライトテーマ', dark: 'ダークテーマ' },
     access: { title: 'ゲームをアンロック', hint: 'アクセスパスワードを入力すると、すべてのゲームを起動できます。', password: 'アクセスパスワード', wrong: 'パスワードが正しくありません', cancel: 'キャンセル', unlock: 'アンロックしてプレイ' },
     player: { label: 'ゲームプレイヤー', reload: '更新', fullscreen: '全画面', newWindow: '新規ウィンドウ', close: 'ゲーム終了' },
@@ -31,7 +31,7 @@ const messages = {
   'ko-KR': {
     step: '단계 {number}',
     home: 'MGames 홈', categories: '게임 카테고리', providers: '게임 제공사', language: '언어', openTelegram: 'Telegram 열기', search: '게임 검색', featuredGames: '추천 게임', featured: '추천', playNow: '지금 플레이', playFeatured: '추천 게임 {name} 플레이', play: '{name} 플레이', gameCount: '게임 {count}개', gamesTitle: '{brand} 게임', games: '게임', loadingGames: '게임 불러오는 중', providerUnavailable: '제공사 데이터를 사용할 수 없습니다', tryAgain: '다시 시도', gamesLoadFailed: '게임을 불러올 수 없습니다', noGames: '게임을 찾을 수 없습니다', noGamesHint: '다른 검색어나 제공사를 선택해 보세요.',
-    category: { slots: '슬롯', mini: '미니 게임', fishing: '낚시', poker: '포커', sports: '스포츠' },
+    category: { slots: '슬롯', mini: '미니 게임', fishing: '낚시', poker: '포커', sports: '스포츠', other: '기타' },
     theme: { label: '색상 테마', system: '시스템 설정 따르기', light: '라이트 테마', dark: '다크 테마' },
     access: { title: '게임 잠금 해제', hint: '모든 게임을 실행하려면 접속 비밀번호를 입력하세요.', password: '접속 비밀번호', wrong: '접속 비밀번호가 올바르지 않습니다', cancel: '취소', unlock: '잠금 해제 후 플레이' },
     player: { label: '게임 플레이어', reload: '새로고침', fullscreen: '전체화면', newWindow: '새 창', close: '게임 종료' },
@@ -40,7 +40,7 @@ const messages = {
   'th-TH': {
     step: 'ขั้นตอนที่ {number}',
     home: 'หน้าหลัก MGames', categories: 'หมวดหมู่เกม', providers: 'ผู้ให้บริการเกม', language: 'ภาษา', openTelegram: 'เปิด Telegram', search: 'ค้นหาเกม', featuredGames: 'เกมแนะนำ', featured: 'แนะนำ', playNow: 'เล่นเลย', playFeatured: 'เล่นเกมแนะนำ {name}', play: 'เล่น {name}', gameCount: '{count} เกม', gamesTitle: 'เกม {brand}', games: 'เกม', loadingGames: 'กำลังโหลดเกม', providerUnavailable: 'ไม่สามารถโหลดข้อมูลผู้ให้บริการได้', tryAgain: 'ลองอีกครั้ง', gamesLoadFailed: 'ไม่สามารถโหลดเกมได้', noGames: 'ไม่พบเกม', noGamesHint: 'ลองค้นหาใหม่หรือเลือกผู้ให้บริการอื่น',
-    category: { slots: 'สล็อต', mini: 'มินิเกม', fishing: 'ตกปลา', poker: 'โป๊กเกอร์', sports: 'กีฬา' },
+    category: { slots: 'สล็อต', mini: 'มินิเกม', fishing: 'ตกปลา', poker: 'โป๊กเกอร์', sports: 'กีฬา', other: 'อื่นๆ' },
     theme: { label: 'ธีมสี', system: 'ตามการตั้งค่าระบบ', light: 'ธีมสว่าง', dark: 'ธีมมืด' },
     access: { title: 'ปลดล็อกเกม', hint: 'กรอกรหัสผ่านเพื่อเข้าเล่นเกมใดก็ได้', password: 'รหัสผ่านเข้าใช้งาน', wrong: 'รหัสผ่านไม่ถูกต้อง', cancel: 'ยกเลิก', unlock: 'ปลดล็อกและเล่น' },
     player: { label: 'หน้าต่างเกม', reload: 'รีเฟรช', fullscreen: 'เต็มจอ', newWindow: 'หน้าต่างใหม่', close: 'ออกจากเกม' },
@@ -49,7 +49,7 @@ const messages = {
   'id-ID': {
     step: 'Langkah {number}',
     home: 'Beranda MGames', categories: 'Kategori game', providers: 'Penyedia game', language: 'Bahasa', openTelegram: 'Buka Telegram', search: 'Cari game', featuredGames: 'Game unggulan', featured: 'UNGGULAN', playNow: 'Main sekarang', playFeatured: 'Mainkan game unggulan {name}', play: 'Mainkan {name}', gameCount: '{count} game', gamesTitle: 'Game {brand}', games: 'Game', loadingGames: 'Memuat game', providerUnavailable: 'Data penyedia tidak tersedia', tryAgain: 'Coba lagi', gamesLoadFailed: 'Game tidak dapat dimuat', noGames: 'Game tidak ditemukan', noGamesHint: 'Coba pencarian atau penyedia lain.',
-    category: { slots: 'Slot', mini: 'Game Mini', fishing: 'Memancing', poker: 'Poker', sports: 'Olahraga' },
+    category: { slots: 'Slot', mini: 'Game Mini', fishing: 'Memancing', poker: 'Poker', sports: 'Olahraga', other: 'Lainnya' },
     theme: { label: 'Tema warna', system: 'Ikuti tema sistem', light: 'Tema terang', dark: 'Tema gelap' },
     access: { title: 'Buka akses game', hint: 'Masukkan kata sandi akses untuk membuka game apa pun.', password: 'Kata sandi akses', wrong: 'Kata sandi akses salah', cancel: 'Batal', unlock: 'Buka dan mainkan' },
     player: { label: 'Pemutar game', reload: 'Muat ulang', fullscreen: 'Layar penuh', newWindow: 'Jendela baru', close: 'Keluar game' },
@@ -58,7 +58,7 @@ const messages = {
   'vi-VN': {
     step: 'Bước {number}',
     home: 'Trang chủ MGames', categories: 'Danh mục trò chơi', providers: 'Nhà cung cấp', language: 'Ngôn ngữ', openTelegram: 'Mở Telegram', search: 'Tìm trò chơi', featuredGames: 'Trò chơi nổi bật', featured: 'NỔI BẬT', playNow: 'Chơi ngay', playFeatured: 'Chơi trò chơi nổi bật {name}', play: 'Chơi {name}', gameCount: '{count} trò chơi', gamesTitle: 'Trò chơi {brand}', games: 'Trò chơi', loadingGames: 'Đang tải trò chơi', providerUnavailable: 'Không có dữ liệu nhà cung cấp', tryAgain: 'Thử lại', gamesLoadFailed: 'Không thể tải trò chơi', noGames: 'Không tìm thấy trò chơi', noGamesHint: 'Hãy thử từ khóa hoặc nhà cung cấp khác.',
-    category: { slots: 'Máy slot', mini: 'Trò chơi nhỏ', fishing: 'Bắn cá', poker: 'Poker', sports: 'Thể thao' },
+    category: { slots: 'Máy slot', mini: 'Trò chơi nhỏ', fishing: 'Bắn cá', poker: 'Poker', sports: 'Thể thao', other: 'Khác' },
     theme: { label: 'Giao diện màu', system: 'Theo hệ thống', light: 'Giao diện sáng', dark: 'Giao diện tối' },
     access: { title: 'Mở khóa trò chơi', hint: 'Nhập mật khẩu truy cập để mở bất kỳ trò chơi nào.', password: 'Mật khẩu truy cập', wrong: 'Mật khẩu truy cập không đúng', cancel: 'Hủy', unlock: 'Mở khóa và chơi' },
     player: { label: 'Trình chơi game', reload: 'Tải lại', fullscreen: 'Toàn màn hình', newWindow: 'Cửa sổ mới', close: 'Thoát game' },
@@ -67,7 +67,7 @@ const messages = {
   'my-MM': {
     step: 'အဆင့် {number}',
     home: 'MGames ပင်မစာမျက်နှာ', categories: 'ဂိမ်းအမျိုးအစားများ', providers: 'ဂိမ်းဝန်ဆောင်မှုပေးသူများ', language: 'ဘာသာစကား', openTelegram: 'Telegram ကိုဖွင့်ရန်', search: 'ဂိမ်းရှာရန်', featuredGames: 'အထူးရွေးချယ်ထားသောဂိမ်းများ', featured: 'အထူးရွေးချယ်', playNow: 'ယခုကစားရန်', playFeatured: '{name} ကိုကစားရန်', play: '{name} ကိုကစားရန်', gameCount: '{count} ဂိမ်း', gamesTitle: '{brand} ဂိမ်းများ', games: 'ဂိမ်းများ', loadingGames: 'ဂိမ်းများဖွင့်နေသည်', providerUnavailable: 'ဝန်ဆောင်မှုပေးသူဒေတာ မရနိုင်ပါ', tryAgain: 'ထပ်ကြိုးစားရန်', gamesLoadFailed: 'ဂိမ်းများကို ဖွင့်မရပါ', noGames: 'ဂိမ်းမတွေ့ပါ', noGamesHint: 'အခြားရှာဖွေမှု သို့မဟုတ် ဝန်ဆောင်မှုပေးသူကို စမ်းကြည့်ပါ။',
-    category: { slots: 'စလော့', mini: 'မီနီဂိမ်း', fishing: 'ငါးဖမ်း', poker: 'ပိုကာ', sports: 'အားကစား' },
+    category: { slots: 'စလော့', mini: 'မီနီဂိမ်း', fishing: 'ငါးဖမ်း', poker: 'ပိုကာ', sports: 'အားကစား', other: 'အခြား' },
     theme: { label: 'အရောင်အပြင်အဆင်', system: 'စနစ်အတိုင်း', light: 'အလင်းပုံစံ', dark: 'အမှောင်ပုံစံ' },
     access: { title: 'ဂိမ်းကိုဖွင့်ရန်', hint: 'မည်သည့်ဂိမ်းမဆို ကစားရန် စကားဝှက်ထည့်ပါ။', password: 'ဝင်ရောက်ရန် စကားဝှက်', wrong: 'စကားဝှက် မမှန်ပါ', cancel: 'ပယ်ဖျက်ရန်', unlock: 'ဖွင့်ပြီး ကစားရန်' },
     player: { label: 'ဂိမ်းဖွင့်စက်', reload: 'ပြန်ဖွင့်', fullscreen: 'မျက်နှာပြင်ပြည့်', newWindow: 'ဝင်းဒိုးအသစ်', close: 'ဂိမ်းထွက်' },
@@ -76,7 +76,7 @@ const messages = {
   'pt-BR': {
     step: 'Etapa {number}',
     home: 'Início do MGames', categories: 'Categorias de jogos', providers: 'Provedores de jogos', language: 'Idioma', openTelegram: 'Abrir Telegram', search: 'Buscar jogos', featuredGames: 'Jogos em destaque', featured: 'DESTAQUE', playNow: 'Jogar agora', playFeatured: 'Jogar o destaque {name}', play: 'Jogar {name}', gameCount: '{count} jogos', gamesTitle: 'Jogos {brand}', games: 'Jogos', loadingGames: 'Carregando jogos', providerUnavailable: 'Os dados dos provedores estão indisponíveis', tryAgain: 'Tentar novamente', gamesLoadFailed: 'Não foi possível carregar os jogos', noGames: 'Nenhum jogo encontrado', noGamesHint: 'Tente outra busca ou outro provedor.',
-    category: { slots: 'Slots', mini: 'Minijogos', fishing: 'Pesca', poker: 'Pôquer', sports: 'Esportes' },
+    category: { slots: 'Slots', mini: 'Minijogos', fishing: 'Pesca', poker: 'Pôquer', sports: 'Esportes', other: 'Outros' },
     theme: { label: 'Tema de cores', system: 'Seguir o sistema', light: 'Tema claro', dark: 'Tema escuro' },
     access: { title: 'Desbloquear jogos', hint: 'Digite a senha de acesso para abrir qualquer jogo.', password: 'Senha de acesso', wrong: 'Senha de acesso incorreta', cancel: 'Cancelar', unlock: 'Desbloquear e jogar' },
     player: { label: 'Jogador', reload: 'Recarregar', fullscreen: 'Tela cheia', newWindow: 'Nova janela', close: 'Sair do jogo' },
@@ -85,7 +85,7 @@ const messages = {
   'es-AR': {
     step: 'Paso {number}',
     home: 'Inicio de MGames', categories: 'Categorías de juegos', providers: 'Proveedores de juegos', language: 'Idioma', openTelegram: 'Abrir Telegram', search: 'Buscar juegos', featuredGames: 'Juegos destacados', featured: 'DESTACADO', playNow: 'Jugar ahora', playFeatured: 'Jugar el destacado {name}', play: 'Jugar {name}', gameCount: '{count} juegos', gamesTitle: 'Juegos {brand}', games: 'Juegos', loadingGames: 'Cargando juegos', providerUnavailable: 'Los datos de proveedores no están disponibles', tryAgain: 'Intentar de nuevo', gamesLoadFailed: 'No se pudieron cargar los juegos', noGames: 'No se encontraron juegos', noGamesHint: 'Probá otra búsqueda u otro proveedor.',
-    category: { slots: 'Tragamonedas', mini: 'Minijuegos', fishing: 'Pesca', poker: 'Póker', sports: 'Deportes' },
+    category: { slots: 'Tragamonedas', mini: 'Minijuegos', fishing: 'Pesca', poker: 'Póker', sports: 'Deportes', other: 'Otros' },
     theme: { label: 'Tema de color', system: 'Seguir el sistema', light: 'Tema claro', dark: 'Tema oscuro' },
     access: { title: 'Desbloquear juegos', hint: 'Ingresá la contraseña de acceso para abrir cualquier juego.', password: 'Contraseña de acceso', wrong: 'La contraseña de acceso es incorrecta', cancel: 'Cancelar', unlock: 'Desbloquear y jugar' },
     player: { label: 'Reproductor de juegos', reload: 'Recargar', fullscreen: 'Pantalla completa', newWindow: 'Nueva ventana', close: 'Salir del juego' },
@@ -94,7 +94,7 @@ const messages = {
   'bn-BD': {
     step: 'ধাপ {number}',
     home: 'MGames হোম', categories: 'গেম বিভাগ', providers: 'গেম প্রদানকারী', language: 'ভাষা', openTelegram: 'Telegram খুলুন', search: 'গেম খুঁজুন', featuredGames: 'নির্বাচিত গেম', featured: 'নির্বাচিত', playNow: 'এখন খেলুন', playFeatured: '{name} খেলুন', play: '{name} খেলুন', gameCount: '{count}টি গেম', gamesTitle: '{brand} গেম', games: 'গেম', loadingGames: 'গেম লোড হচ্ছে', providerUnavailable: 'প্রদানকারীর ডেটা পাওয়া যাচ্ছে না', tryAgain: 'আবার চেষ্টা করুন', gamesLoadFailed: 'গেম লোড করা যায়নি', noGames: 'কোনো গেম পাওয়া যায়নি', noGamesHint: 'অন্য সার্চ বা প্রদানকারী চেষ্টা করুন।',
-    category: { slots: 'স্লট', mini: 'মিনি গেম', fishing: 'ফিশিং', poker: 'পোকার', sports: 'খেলাধুলা' },
+    category: { slots: 'স্লট', mini: 'মিনি গেম', fishing: 'ফিশিং', poker: 'পোকার', sports: 'খেলাধুলা', other: 'অন্যান্য' },
     theme: { label: 'রঙের থিম', system: 'সিস্টেম অনুসরণ করুন', light: 'লাইট থিম', dark: 'ডার্ক থিম' },
     access: { title: 'গেম আনলক করুন', hint: 'যেকোনো গেম চালু করতে প্রবেশের পাসওয়ার্ড দিন।', password: 'প্রবেশের পাসওয়ার্ড', wrong: 'প্রবেশের পাসওয়ার্ড সঠিক নয়', cancel: 'বাতিল', unlock: 'আনলক করে খেলুন' },
     player: { label: 'গেম প্লেয়ার', reload: 'রিফ্রেশ', fullscreen: 'পূর্ণ পর্দা', newWindow: 'নতুন উইন্ডো', close: 'গেম থেকে বের হন' },
