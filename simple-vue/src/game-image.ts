@@ -1,4 +1,4 @@
-import gamePlaceholder from './assets/images/duozhi-game-placeholder.webp'
+import gamePlaceholder from './assets/images/game-placeholder.webp'
 
 export const GAME_PLACEHOLDER = gamePlaceholder
 

@@ -12,7 +12,7 @@ import {
   X,
 } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
-import logoImage from '../assets/images/duozhi-logo.webp'
+import logoImage from '../assets/images/logo.webp'
 import type { IosBrowser } from '../pwa'
 
 const props = defineProps<{ modelValue: boolean; browser: IosBrowser }>()

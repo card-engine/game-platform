@@ -16,7 +16,7 @@ describe('access store', () => {
 
   it('persists access after a successful verification', () => {
     const access = useAccessStore()
-    expect(access.verify('duozhigame')).toBe(true)
+    expect(access.verify('mgames')).toBe(true)
     expect(access.hasAccess()).toBe(true)
   })
 })

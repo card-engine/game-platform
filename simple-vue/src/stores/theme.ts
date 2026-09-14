@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 
 export type ThemePreference = 'system' | 'light' | 'dark'
 
-const STORAGE_KEY = 'duozhi-theme'
+const STORAGE_KEY = 'mgames-theme'
 const colorScheme = window.matchMedia('(prefers-color-scheme: dark)')
 
 export const useThemeStore = defineStore('theme', () => {

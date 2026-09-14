@@ -3,8 +3,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
-import bannerImage from '../assets/images/duozhi-banner.webp'
-import logoImage from '../assets/images/duozhi-logo.webp'
+import bannerImage from '../assets/images/banner.webp'
+import logoImage from '../assets/images/logo.webp'
 import {
   ChevronRight,
   Dices,
@@ -55,7 +55,7 @@ const languages = [
   ['bn-BD', 'বাংলা'],
 ]
 const brandOrder = ['jili', 'pg', 'pragmatic', 'inout', 'spribe', 'jdb', 'fachai', 'tada']
-const lobbyState = JSON.parse(localStorage.getItem('duozhi-lobby-state') || '{}') as {
+const lobbyState = JSON.parse(localStorage.getItem('mgames-lobby-state') || '{}') as {
   type?: GameType
   brand?: string
   visibleCount?: number
@@ -90,7 +90,7 @@ function saveLobbyState() {
     const anchor = [...document.querySelectorAll<HTMLElement>('.game-card')]
       .find((card) => card.getBoundingClientRect().top >= headerBottom)
     if (restoreScrollY && !anchor) return
-    localStorage.setItem('duozhi-lobby-state', JSON.stringify({
+    localStorage.setItem('mgames-lobby-state', JSON.stringify({
       type: selectedType.value,
       brand: selectedBrand.value,
       visibleCount: visibleCount.value,
@@ -282,8 +282,8 @@ function closePlayer() {
     <header class="site-header">
       <div class="site-header__inner">
         <a class="brand" href="/" :aria-label="t('home')">
-          <span class="brand__mark"><img :src="logoImage" alt="DuoZhiGame" /></span>
-          <span class="brand__name"><strong>DuoZhi</strong><small>Game</small></span>
+          <span class="brand__mark"><img :src="logoImage" alt="MGames" /></span>
+          <span class="brand__name"><strong>MGames</strong></span>
         </a>
 
         <nav ref="categoryStrip" class="category-strip" :aria-label="t('categories')">
@@ -361,8 +361,7 @@ function closePlayer() {
       <section class="promo-rail" :aria-label="t('featuredGames')">
         <article class="brand-promo">
           <div>
-            <span>DuoZhi</span>
-            <strong>Game</strong>
+            <span>MGames</span>
             <small>{{ t('gameCount', { count: totalGames }) }}</small>
           </div>
           <img class="brand-promo__bottom-art" :src="bannerImage" alt="" loading="lazy" decoding="async" />

@@ -6,7 +6,7 @@ import { useUserStore } from './user'
 describe('user store', () => {
   beforeEach(() => {
     localStorage.clear()
-    localStorage.setItem('duozhi-player-id', 'player')
+    localStorage.setItem('mgames-player-id', 'player')
     setActivePinia(createPinia())
   })
 

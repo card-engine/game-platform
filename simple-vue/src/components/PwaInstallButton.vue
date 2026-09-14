@@ -3,7 +3,7 @@ import { onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
 import { ArrowUp, Download } from '@lucide/vue'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
-import logoImage from '../assets/images/duozhi-logo.webp'
+import logoImage from '../assets/images/logo.webp'
 import { getIosBrowser, isPwaStandalone, type BeforeInstallPromptEvent } from '../pwa'
 import PwaIosInstallGuide from './PwaIosInstallGuide.vue'
 

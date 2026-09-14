@@ -7,6 +7,7 @@
     :show-close="false"
     :close-on-click-modal="false"
     :close-on-press-escape="true"
+    destroy-on-close
     append-to-body
   >
     <div class="game-trial-shell" @click="collapseControls">

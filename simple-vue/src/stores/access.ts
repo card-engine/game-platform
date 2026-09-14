@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 
-const STORAGE_KEY = 'duozhi-game-access-until'
-const PASSWORD = import.meta.env.VITE_GAME_ACCESS_PASSWORD || 'duozhigame'
+const STORAGE_KEY = 'mgames-game-access-until'
+const PASSWORD = import.meta.env.VITE_GAME_ACCESS_PASSWORD || 'mgames'
 const TTL = Number(import.meta.env.VITE_GAME_ACCESS_TTL_DAYS || 7) * 86400000
 
 export const useAccessStore = defineStore('access', () => {

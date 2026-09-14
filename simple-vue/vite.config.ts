@@ -16,8 +16,8 @@ export default defineConfig({
       includeAssets: ['favicon.png', 'icons/apple-touch-icon.png'],
       manifest: {
         id: '/',
-        name: 'DuoZhiGame',
-        short_name: 'DuoZhiGame',
+        name: 'MGames',
+        short_name: 'MGames',
         description: 'Responsive game lobby',
         start_url: '/',
         scope: '/',
