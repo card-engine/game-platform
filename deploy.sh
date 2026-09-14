@@ -31,6 +31,11 @@ cd "$PROJECT_DIR/saiadmin-artd"
 /usr/bin/corepack pnpm install --frozen-lockfile
 /usr/bin/corepack pnpm build
 
+echo '🎮 正在构建自营游戏大厅...'
+cd "$PROJECT_DIR/simple-vue"
+/usr/bin/corepack pnpm install --frozen-lockfile
+/usr/bin/corepack pnpm build
+
 echo '🗄️  正在升级数据库...'
 cd "$SERVER_DIR"
 /www/server/php/84/bin/php webman db:upgrade --dry-run
@@ -64,6 +69,7 @@ echo "🌿 分支: $BRANCH"
 echo "🔖 版本: $(/usr/bin/git rev-parse --short HEAD)"
 echo "👤 作者: $(/usr/bin/git log -1 --pretty='%an')"
 echo "📝 说明: $(/usr/bin/git log -1 --pretty='%s')"
+echo "🎮 自营大厅产物: $PROJECT_DIR/simple-vue/dist"
 echo "⏱️ 服务恢复: $((SECONDS - START_TIME)) 秒"
 echo "⚙️ 服务状态: $(/usr/bin/systemctl is-active mgames.service)"
 echo "🔄 开机启动: $(/usr/bin/systemctl is-enabled mgames.service)"

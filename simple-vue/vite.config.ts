@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 
 const proxy = {
-  target: 'https://demo.cpigame.com',
+  target: 'http://127.0.0.1:8787',
   changeOrigin: true,
   secure: true,
 }
