@@ -47,7 +47,9 @@ class IndexLogic extends BaseLogic
         $query = UniqueBrand::withCount('providerBrands')
             ->when($where['keyword'] ?? null, fn ($q, $value) => $q->whereAny(['code', 'name'], 'like', "%{$value}%"))
             ->where('status', 1)->orderBy('sort')->orderBy('name');
-        return $this->getList($query);
+        $result = $this->getList($query);
+        foreach ($result['data'] as &$game) $game['icon_url'] = $game['icon_url'] ?: $game['origin_icon_url'];
+        return $result;
     }
 
     public function lists(array $where): array

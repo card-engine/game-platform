@@ -34,6 +34,11 @@
         @pagination:size-change="handleSizeChange"
         @pagination:current-change="handleCurrentChange"
       >
+        <template #icon="{ row }">
+          <ElImage :src="row.icon_url" fit="contain" class="mgs-game-icon">
+            <template #error><span class="mgs-game-icon-placeholder">-</span></template>
+          </ElImage>
+        </template>
         <template #game="{ row }"
           ><div class="font-medium">{{ row.name }}</div
           ><div class="text-xs text-g-500">{{ row.platform_game_code }}</div></template
@@ -173,6 +178,7 @@
       apiFn: api.games,
       columnsFactory: () => [
         { prop: 'id', label: 'ID', width: 70 },
+        { prop: 'icon', label: t('game.image'), width: 80, useSlot: true },
         { prop: 'game', label: t('mgs.game'), minWidth: 190, useSlot: true },
         { prop: 'brand', label: t('mgs.brand'), minWidth: 150, useSlot: true },
         { prop: 'currencies', label: t('mgs.currency'), minWidth: 120, useSlot: true },
@@ -194,6 +200,14 @@
   .mgs-search-item {
     flex: 0 0 170px;
     max-width: 170px;
+  }
+  .mgs-game-icon {
+    width: 48px;
+    height: 36px;
+    border-radius: 6px;
+  }
+  .mgs-game-icon-placeholder {
+    color: var(--el-text-color-placeholder);
   }
   .mgs-search-keyword {
     flex-basis: 280px;
