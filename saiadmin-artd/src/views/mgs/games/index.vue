@@ -35,9 +35,10 @@
         @pagination:current-change="handleCurrentChange"
       >
         <template #icon="{ row }">
-          <ElImage :src="row.icon_url" fit="contain" class="mgs-game-icon">
-            <template #error><span class="mgs-game-icon-placeholder">-</span></template>
+          <ElImage v-if="row.icon_url" :src="row.icon_url" fit="contain" class="mgs-game-icon">
+            <template #error><GameDefaultIcon :id="row.id" class="mgs-game-icon" /></template>
           </ElImage>
+          <GameDefaultIcon v-else :id="row.id" class="mgs-game-icon" />
         </template>
         <template #game="{ row }"
           ><div class="font-medium">{{ row.name }}</div
@@ -111,6 +112,7 @@
   import TableSearch from '../modules/table-search.vue'
   import EditDialog from './modules/edit-dialog.vue'
   import TrialDialog from '@/views/game/list/modules/trial-dialog.vue'
+  import GameDefaultIcon from '@/views/game/list/modules/game-default-icon.vue'
   import { checkAuth } from '@/utils/tool'
 
   const { t, locale } = useI18n()
