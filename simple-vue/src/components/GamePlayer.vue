@@ -11,9 +11,6 @@ const orientation = ref<'portrait' | 'landscape'>(localStorage.getItem('mgames:g
 const isMobile = ref(false)
 const controlsExpanded = ref(false)
 const frameKey = ref(0)
-const handleTop = ref(30)
-const dragging = ref(false)
-let dragOffset = 0
 let collapseTimer: ReturnType<typeof setTimeout> | undefined
 
 const updateViewport = () => {
@@ -32,16 +29,6 @@ const toggleControls = () => {
   controlsExpanded.value = !controlsExpanded.value
   controlsExpanded.value ? scheduleCollapse() : clearTimeout(collapseTimer)
 }
-const startDrag = (event: PointerEvent) => {
-  if (!isMobile.value) return
-  dragging.value = true
-  dragOffset = event.clientY - (window.innerHeight * handleTop.value / 100)
-  ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
-}
-const drag = (event: PointerEvent) => {
-  if (dragging.value) handleTop.value = Math.min(92, Math.max(8, (event.clientY - dragOffset) / window.innerHeight * 100))
-}
-const endDrag = () => { dragging.value = false }
 const switchOrientation = () => {
   orientation.value = orientation.value === 'portrait' ? 'landscape' : 'portrait'
   localStorage.setItem('mgames:game-trial:orientation', orientation.value)
@@ -79,8 +66,8 @@ onBeforeUnmount(() => {
         <iframe :key="frameKey" class="game-player__frame" :src="url" :title="game.gameFullName || game.gameName" allow="autoplay; fullscreen" referrerpolicy="no-referrer" />
       </div>
       <div class="game-player__controls" :class="{ 'is-expanded': controlsExpanded }" @click.stop>
-        <button v-if="isMobile" class="game-player__handle" :style="{ top: `${handleTop}%` }" type="button" :aria-label="t('player.label')" @click="toggleControls" @pointerdown="startDrag" @pointermove="drag" @pointerup="endDrag" @pointercancel="endDrag"><span /></button>
-        <div class="game-player__actions" :style="isMobile ? { top: `${handleTop}%`, transform: 'translateY(-50%)' } : undefined">
+        <button v-if="isMobile" class="game-player__handle" type="button" :aria-label="t('player.label')" @click="toggleControls"><span /></button>
+        <div class="game-player__actions">
           <button v-if="!isMobile" class="game-player__action" type="button" :title="t('player.orientation')" :aria-label="t('player.orientation')" @click="switchOrientation"><RotateCw :size="18" /></button>
           <button class="game-player__action" type="button" :title="t('player.reload')" :aria-label="t('player.reload')" @click="refresh"><RefreshCw :size="18" /></button>
           <button v-if="!isMobile" class="game-player__action" type="button" :title="t('player.newWindow')" :aria-label="t('player.newWindow')" @click="openExternal"><ExternalLink :size="18" /></button>
@@ -109,8 +96,10 @@ onBeforeUnmount(() => {
 .is-mobile .game-player__stage { display: grid; place-items: center; }
 .is-mobile .game-player__frame { width: min(100vw, 177.78vh); height: auto; aspect-ratio: 16 / 9; max-height: 100%; }
 .is-mobile .is-portrait .game-player__frame { width: min(56.25vh, 100vw); aspect-ratio: 9 / 16; }
-.is-mobile .game-player__controls { top: 0; right: 0; left: auto; height: 100%; }
-.is-mobile .game-player__handle { position: absolute; right: 0; width: 24px; height: 64px; border-radius: 12px 0 0 12px; touch-action: none; }
-.is-mobile .game-player__actions { position: absolute; top: 0; right: 44px; display: none; }
-.is-mobile .game-player__controls.is-expanded .game-player__actions { display: flex; }
+.is-mobile .game-player__controls { top: auto; right: 0; bottom: 30%; left: auto; height: auto; transform: translateY(50%); display: flex; align-items: center; }
+.is-mobile .game-player__handle { position: static; width: 14px; height: 76px; border-right: 0; border-radius: 10px 0 0 10px; touch-action: none; }
+.is-mobile .game-player__actions { order: -1; gap: 10px; width: 0; overflow: hidden; opacity: 0; transform: translateX(12px); transition: width .2s ease, opacity .2s ease, transform .2s ease; }
+.is-mobile .game-player__controls.is-expanded .game-player__actions { width: 54px; margin-right: 8px; opacity: 1; transform: translateX(0); }
+.is-mobile .game-player__actions .game-player__action { width: 54px; height: 54px; border-radius: 50%; }
+@media (max-width: 767px) { .is-mobile .game-player__handle { width: 18px; height: 88px; } }
 </style>
