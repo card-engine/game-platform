@@ -16,19 +16,26 @@ class WxGameDemoImageService
         $client = new Client(['handler' => new StreamHandler(), 'base_uri' => $demo['url'], 'connect_timeout' => 5, 'timeout' => 20]);
         $matched = $downloaded = $skipped = $failed = 0;
         $lists = [];
+        $types = ['slot', 'table', 'fish', 'evo', 'poker'];
         foreach ($games as $game) {
-            $key = $game->brand->provider_brand_code . '|' . data_get($game->extra, 'game_type');
-            if (!array_key_exists($key, $lists)) {
+            $brand = $game->brand->provider_brand_code;
+            foreach ($types as $type) {
+                $key = $brand . '|' . $type;
+                if (array_key_exists($key, $lists)) continue;
                 try {
-                    $response = $client->post('/api/game_list', ['json' => ['appId' => $demo['app_id'], 'password' => $demo['password'], 'gameBrand' => $game->brand->provider_brand_code, 'gameType' => data_get($game->extra, 'game_type')]]);
+                    $response = $client->post('/api/game_list', ['json' => ['appId' => $demo['app_id'], 'password' => $demo['password'], 'gameBrand' => $brand, 'gameType' => $type]]);
                     $lists[$key] = collect(json_decode((string) $response->getBody(), true)['data'] ?? [])->keyBy(fn ($item) => (string) ($item['gameId'] ?? ''));
                 } catch (\Throwable) {
                     $lists[$key] = collect();
                 }
             }
-            $item = $lists[$key]->get((string) $game->provider_game_code);
-            if (!$item || empty($item['gameIcon'])) continue;
+            $item = collect($types)->map(fn ($type) => $lists[$brand . '|' . $type]->get((string) $game->provider_game_code))->filter()->first();
+            if (!$item) continue;
             $matched++;
+            $extra = $game->extra ?: [];
+            $extra['game_type'] = strtolower((string) ($item['gameType'] ?? data_get($extra, 'game_type')));
+            if ($extra !== ($game->extra ?: [])) $game->update(['extra' => $extra]);
+            if (empty($item['gameIcon'])) continue;
             $origin = (string) $item['gameIcon'];
             if ($game->origin_icon_url === $origin && $game->icon_url) { $skipped++; continue; }
             try {
