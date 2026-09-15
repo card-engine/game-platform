@@ -35,7 +35,6 @@ const categories = [
   { value: 'fish', label: 'category.fishing', icon: FishSymbol },
   { value: 'poker', label: 'category.poker', icon: Spade },
   { value: 'sport', label: 'category.sports', icon: Volleyball },
-  { value: 'other', label: 'category.other', icon: Gamepad2 },
 ] as const
 const themes = [
   { value: 'system', label: 'theme.system', icon: Monitor },
@@ -70,7 +69,7 @@ await user.ready
 const theme = useThemeStore()
 const queryClient = useQueryClient()
 const { t, locale } = useI18n()
-const selectedType = ref<GameType>(lobbyState.type || 'slot')
+const selectedType = ref<GameType>(lobbyState.type && lobbyState.type !== 'other' ? lobbyState.type : 'slot')
 const selectedBrand = ref(lobbyState.brand === 'yono' ? '' : lobbyState.brand || '')
 const search = ref('')
 const visibleCount = ref(lobbyState.visibleCount || 24)
