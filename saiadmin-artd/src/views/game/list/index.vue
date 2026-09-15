@@ -110,7 +110,17 @@
               </span>
             </template>
             <template #icon="{ row }">
-              <ElImage v-if="row.icon_url" :src="row.icon_url" fit="contain" class="game-icon" lazy>
+              <ElImage
+                v-if="row.icon_url || row.origin_icon_url"
+                :src="
+                  row.icon_url?.startsWith('http')
+                    ? row.icon_url
+                    : row.origin_icon_url || row.icon_url
+                "
+                fit="contain"
+                class="game-icon"
+                lazy
+              >
                 <template #error><GameDefaultIcon :id="row.id" class="game-icon" /></template>
               </ElImage>
               <GameDefaultIcon v-else :id="row.id" class="game-icon" />
