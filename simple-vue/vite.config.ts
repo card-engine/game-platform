@@ -2,8 +2,9 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const envTarget = (globalThis as typeof globalThis & { process?: { env?: Record<string, string> } }).process?.env?.VITE_API_PROXY_TARGET
 const proxy = {
-  target: 'http://127.0.0.1:8787',
+  target: envTarget || 'http://127.0.0.1:8787',
   changeOrigin: true,
   secure: true,
 }

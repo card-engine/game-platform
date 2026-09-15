@@ -19,7 +19,7 @@ class SyncService
         $defaultCurrency = strtoupper((string) ($config['default_currency'] ?? $config['currency'] ?? 'USD'));
         $now = gmdate('Y-m-d H:i:s.v');
 
-        return Db::transaction(function () use ($platform, $data, $defaultCurrency, $now) {
+        $result = Db::transaction(function () use ($platform, $data, $defaultCurrency, $now) {
             $brands = [];
             foreach ($data['brands'] as $item) {
                 $brand = GameBrand::withTrashed()->updateOrCreate(
@@ -69,5 +69,7 @@ class SyncService
 
             return ['platform' => $platform, 'brands' => count($brands), 'games' => count($seen), 'errors' => $data['errors'] ?? []];
         });
+        if ($platform === 'wxgame') $result['images'] = (new WxGameDemoImageService())->sync($config);
+        return $result;
     }
 }

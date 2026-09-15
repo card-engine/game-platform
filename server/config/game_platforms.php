@@ -8,6 +8,12 @@ return [
             'is_open' => filter_var(env('GAME_WXGAME_IS_OPEN', 'true'), FILTER_VALIDATE_BOOLEAN),
             'is_gc' => false,
             'default_currency' => (string) env('GAME_WXGAME_DEFAULT_CURRENCY', 'USD'),
+            'demo' => [
+                'enabled' => filter_var(env('WXGAME_DEMO_ENABLED', 'true'), FILTER_VALIDATE_BOOLEAN),
+                'url' => rtrim((string) env('WXGAME_DEMO_URL', 'https://demo.cpigame.com'), '/'),
+                'app_id' => (string) env('WXGAME_DEMO_APP_ID', '1001'),
+                'password' => (string) env('WXGAME_DEMO_PASSWORD', 'demo7788'),
+            ],
             'accounts' => [
                 'sc' => [
                     'url' => rtrim((string) env('GAME_WXGAME_URL', ''), '/'),

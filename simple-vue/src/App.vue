@@ -4,6 +4,8 @@ import LobbyView from './views/LobbyView.vue'
 </script>
 
 <template>
-  <LobbyView />
+  <Suspense>
+    <LobbyView />
+  </Suspense>
   <PwaInstallButton />
 </template>

@@ -236,6 +236,7 @@ CREATE TABLE `mg_games` (
   `name` varchar(150) NOT NULL COMMENT '游戏默认名称',
   `names` json DEFAULT NULL COMMENT '游戏多语言名称',
   `icon_url` varchar(500) DEFAULT NULL COMMENT '游戏图标地址',
+  `origin_icon_url` varchar(500) DEFAULT NULL COMMENT 'demo 站返回的原始游戏图标地址',
   `currency_codes` json NOT NULL COMMENT '上游支持的钱包编码',
   `support_demo` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '是否支持试玩',
   `support_rtp` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '是否支持设置 RTP',

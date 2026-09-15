@@ -19,7 +19,8 @@ import { isPwaStandalone } from './pwa'
 import './styles/main.css'
 
 document.documentElement.classList.toggle('pwa-standalone', isPwaStandalone())
-registerSW({ immediate: true })
+if (import.meta.env.PROD) registerSW({ immediate: true })
+else void navigator.serviceWorker?.getRegistrations().then((registrations) => registrations.forEach((registration) => registration.unregister()))
 
 const app = createApp(App).use(createPinia()).use(VueQueryPlugin).use(i18n)
 
