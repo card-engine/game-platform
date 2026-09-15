@@ -23,7 +23,7 @@ class MgsAuthService
         }
         if (!$user->unique_id) $user->update(['unique_id' => id2big((int) $user->id)]);
         if ((int) $user->status !== 1) throw new ApiException('MGS 用户已停用', 403);
-        $user->update(['last_login_time' => gmdate('Y-m-d H:i:s.v'), 'last_ip' => $request->getRealIp()]);
+        $user->update(['language' => (string) ($request->input('language') ?: $user->language), 'last_login_time' => gmdate('Y-m-d H:i:s.v'), 'last_ip' => $request->getRealIp()]);
         return ['token' => $token, 'user' => $user, 'wallets' => $user->wallets()->get(['id', 'currency_code', 'balance'])];
     }
 

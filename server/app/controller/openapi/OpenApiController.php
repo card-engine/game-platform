@@ -36,7 +36,7 @@ class OpenApiController extends OpenController
             $reason = (int) $game->upstream_status !== 1 ? 'upstream_unavailable' : ((int) $game->platform_status !== 1 ? 'platform_disabled' : (!$platformOpen ? 'platform_closed' : ($merchantStatus !== 1 ? 'merchant_disabled' : (!$currencyAvailable ? 'currency_unavailable' : ($brand?->unique_brand_id ? null : 'brand_unmapped')))));
             return [
                 'game_id' => (string) id2big((int) $game->id), 'game_code' => $game->game_code, 'platform_code' => $game->platform_code,
-                'provider_game_code' => $game->provider_game_code, 'name' => $game->names[$lang] ?? $game->name, 'icon_url' => $game->icon_url, 'origin_icon_url' => $game->origin_icon_url,
+                'provider_game_code' => $game->provider_game_code, 'name' => $game->names[$lang] ?? $game->name, 'icon_url' => $game->icon_url ?: $game->origin_icon_url,
                 'brand_code' => $unique?->code, 'brand_name' => $unique ? ($unique->names[$lang] ?? $unique->name) : $brand?->name,
                 'brand_mapping_status' => (int) ($brand?->mapping_status ?? 0), 'game_type' => data_get($game->extra, 'game_type'),
                 'currency_codes' => array_values($game->currency_codes ?: []), 'currencies' => array_values(array_intersect($game->currency_codes ?: [], $currencies)),
