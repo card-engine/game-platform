@@ -140,7 +140,7 @@ const selectedStats = computed(() => [...(brandStats.value?.[selectedType.value]
 watch(selectedStats, async (stats) => {
   if (!brandStats.value) return
   if (!stats.length) {
-    selectedType.value = (Object.entries(brandStats.value).find(([, items]) => items.length)?.[0] as GameType) || selectedType.value
+    selectedBrand.value = ''
     return
   }
   if (!stats.some(({ gameBrand }) => gameBrand.toLowerCase() === selectedBrand.value)) {
