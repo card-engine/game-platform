@@ -1184,7 +1184,7 @@ button {
     padding: 0 7px;
   }
 
-  .wallet svg {
+  .wallet > svg {
     display: none;
   }
 
