@@ -191,9 +191,9 @@ button {
 
 .wallet {
   display: flex;
-  width: 116px;
+  min-width: 116px;
   height: 40px;
-  flex: 0 0 116px;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   gap: 8px;
@@ -209,6 +209,7 @@ button {
 }
 
 .wallet span {
+  white-space: nowrap;
   font-size: 13px;
   font-weight: 750;
 }
@@ -1178,9 +1179,8 @@ button {
   }
 
   .wallet {
-    width: 94px;
+    min-width: 94px;
     height: 36px;
-    flex-basis: 94px;
     padding: 0 7px;
   }
 
