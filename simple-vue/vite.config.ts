@@ -33,6 +33,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        globPatterns: ['**/*.{js,css,html}', 'assets/currencies-*.svg'],
         navigateFallbackDenylist: [/^\/api(?:\/|$)/, /^\/operation(?:\/|$)/],
         runtimeCaching: [{
           urlPattern: ({ request }) => request.destination === 'image',

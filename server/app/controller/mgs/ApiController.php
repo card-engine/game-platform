@@ -93,10 +93,10 @@ class ApiController extends OpenController
         return $this->success(['order' => (new RechargeLogic())->current($user, $currency)]);
     }
 
-    public function recharge(Request $request, string $order_no): Response
+    public function recharge(Request $request, string $id): Response
     {
         $user = (new MgsAuthService())->browserUser($request);
-        return $this->success((new RechargeLogic())->order($user, $order_no));
+        return $this->success((new RechargeLogic())->order($user, $id));
     }
 
     private function available(Game $game): bool

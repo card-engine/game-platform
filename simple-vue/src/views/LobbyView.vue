@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
@@ -13,23 +13,24 @@ import {
   Globe2,
   Monitor,
   Moon,
-  Plus,
+  CirclePlus,
   RadioTower,
   Search,
   Send,
   Spade,
   Sun,
   Volleyball,
-  WalletCards,
 } from '@lucide/vue'
 import GameCard from '../components/GameCard.vue'
 import GamePlayer from '../components/GamePlayer.vue'
-import RechargeDialog from '../components/RechargeDialog.vue'
+import CurrencyIcon from '../components/CurrencyIcon.vue'
 import { getBalance, getBrandStats, getGameLink, getGames } from '../api/game'
 import { finishImageLoading, GAME_PLACEHOLDER, setGamePlaceholder } from '../game-image'
 import { useThemeStore } from '../stores/theme'
 import { useUserStore } from '../stores/user'
 import type { GameItem, GameType } from '../types/game'
+
+const RechargeDialog = defineAsyncComponent(() => import('../components/RechargeDialog.vue'))
 
 const categories = [
   { value: 'slot', label: 'category.slots', icon: Gamepad2 },
@@ -310,10 +311,10 @@ function closePlayer() {
 
         <div class="header-actions">
           <div class="wallet">
-            <WalletCards :size="18" />
+            <CurrencyIcon :code="balance?.currency || user.currencyCode" :size="18" />
             <span>{{ formattedBalance }}</span>
             <el-tooltip :content="t('recharge.title')" placement="bottom">
-              <button type="button" class="wallet-add" :aria-label="t('recharge.title')" :disabled="!balance" @click="rechargeVisible = true"><Plus :size="16" :stroke-width="2.5" /></button>
+              <button type="button" class="wallet-add" :aria-label="t('recharge.title')" :disabled="!balance" @click="rechargeVisible = true"><CirclePlus :size="18" /></button>
             </el-tooltip>
           </div>
 

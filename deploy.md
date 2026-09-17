@@ -33,6 +33,23 @@ cd /www/wwwroot/game-platform
 
 ## 服务管理
 
+### 首次切换充值新表
+
+发版脚本发现旧充值表会停止，避免创建空表后忽略旧数据。先备份数据库、停止服务和资金写入，再执行：
+
+```bash
+cd /www/wwwroot/game-platform/server
+systemctl stop mgames.service
+/www/server/php/84/bin/php webman mgs:recharge-schema --apply
+/www/server/php/84/bin/php webman db:upgrade --dry-run
+/www/server/php/84/bin/php webman db:upgrade
+systemctl start mgames.service
+```
+
+转换保留原 ID、业务单号及旧流水引用，旧表改名为 `_legacy_...` 备份，不删除。新旧表同时有数据或旧请求号不符合 UUID 时停止转换，先人工核实；此时服务仍处于停止状态。
+
+首次无资金记录可用 `php webman mgs:tron-scan --init` 初始化；已有历史必须提交 `--from=高度 --to=高度` 补扫，检查完整后显式执行 `--confirm-recovery`。不带参数只读扫描状态。所有命令使用线上 PHP 8.4 路径。不要仅打开充值开关就开始收款。
+
 ```bash
 systemctl status mgames.service
 systemctl restart mgames.service

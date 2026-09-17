@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>币种 SVG 验证</title>
+<style>
+body{margin:0;font:14px system-ui;background:#f5f1fa;color:#282336}main{padding:24px}.row{display:flex;flex-wrap:wrap;gap:20px;padding:24px;margin-bottom:12px;border-radius:12px;background:white}.dark{background:#24232b;color:#f8f7ff}.coin{display:grid;gap:8px;justify-items:center}.balance{display:flex;align-items:center;gap:8px}.balance button{display:flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:0;background:transparent;color:#7653a9}small{color:#766b82}
+</style>
+<main id="app"></main>
+<script type="module">
+import { createApp, h } from 'vue'
+import { CirclePlus } from '@lucide/vue'
+import CurrencyIcon from '../src/components/CurrencyIcon.vue'
+const codes=['USD','INR','EUR','GBP','JPY','CNY','USDT','TRX','BDT','IDR','SC','GC']
+createApp({render(){return [h('h2','自有币种 SVG · 小尺寸检查'), h('p','同一文件复用；其他币种用代码标记，不限制币种。'), ...[false,true].map(dark=>h('section',{class:['row',dark?'dark':'']},codes.map(code=>h('div',{class:'coin'},[h(CurrencyIcon,{code,size:24}),h(CurrencyIcon,{code,size:16}),h('span',code)])))),h('section',{class:'row'},[h('div',{class:'balance'},[h(CurrencyIcon,{code:'INR',size:18}),h('b','₹ 100.00'),h('button',{'aria-label':'充值'},[h(CirclePlus,{size:18})])])])]}}).mount('#app')
+</script>
+</html>

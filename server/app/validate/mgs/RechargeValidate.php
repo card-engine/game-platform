@@ -11,7 +11,7 @@ class RechargeValidate extends BaseValidate
         'currency_code' => 'require|regex:/^[A-Z]{3,16}$/D',
         'pay_currency_code' => 'require|in:USDT,TRX',
         'recharge_amount' => 'require|integer|checkAmount',
-        'request_id' => 'require|regex:/^[a-zA-Z0-9_-]{16,64}$/D',
+        'request_id' => 'require|regex:/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D',
         'quote_key' => 'require|regex:/^[a-f0-9]{64}$/D',
     ];
 

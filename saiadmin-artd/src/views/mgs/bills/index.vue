@@ -115,7 +115,8 @@
     win: t('mgs.winCredit'),
     cancel: t('mgs.betCancel'),
     rollback: t('mgs.winRollback'),
-    adjust: t('mgs.adjustment')
+    adjust: t('mgs.adjustment'),
+    recharge: t('mgsRecharge.title')
   }))
   const statuses = computed<Record<number, string>>(() => ({
     1: t('mgs.processing'),

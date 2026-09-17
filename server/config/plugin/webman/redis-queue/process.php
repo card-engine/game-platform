@@ -1,5 +1,11 @@
 <?php
 return [
+    'tron' => [
+        'handler' => Webman\RedisQueue\Process\Consumer::class,
+        'count' => 1,
+        'constructor' => ['consumer_dir' => app_path() . '/queue/redis/tron'],
+        'maxRequest' => 1000,
+    ],
     'serial' => [
         'handler'     => Webman\RedisQueue\Process\Consumer::class,
         'count'       => 1,

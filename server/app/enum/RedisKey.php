@@ -6,8 +6,10 @@ namespace app\enum;
 
 enum RedisKey: string
 {
+    public const EXPIRE_1_SECOND = 1;
     public const EXPIRE_5_SECONDS = 5;
     public const EXPIRE_1_MINUTE = 60;
+    public const EXPIRE_2_MINUTES = 120;
     public const EXPIRE_10_MINUTES = 600;
     public const EXPIRE_1_HOUR = 3600;
     public const EXPIRE_1_DAY = 86400;
@@ -25,11 +27,16 @@ enum RedisKey: string
     case LockMgsSync = 'lock:mgs:sync'; // string MGS 游戏同步锁
     case LockMgsUserWallet = 'lock:mgs:user_wallet:%d:%s'; // string MGS 用户资金锁，格式：user_id:currency_code
     case LockMgsStatsRefresh = 'lock:mgs:stats:refresh:%s'; // string MGS 统计时间桶锁，格式：日期或日期小时
+    case LockMgsTronScan = 'lock:{mgs:tron:mainnet}:scan'; // string 实时扫描Token，60秒租约
+    case LockMgsTronGap = 'lock:{mgs:tron:mainnet}:gap:%s'; // string 补扫Token，格式：任务ID，60秒租约
 
     /** Permanent caches. */
     case ForeverConfigs = 'forever:mg:configs'; // string 启用中的全局配置 JSON
     case ForeverMgsConfigs = 'forever:mgs:configs'; // string 启用中的 MGS 配置 JSON
     case ForeverMgsRechargeSuffix = 'forever:mgs:recharge:suffix'; // integer 充值尾号 1-99 循环
+    case ForeverMgsTronCheckpoint = 'forever:{mgs:tron:mainnet}:checkpoint'; // string JSON 实时断点与恢复标记，无TTL
+    case ForeverMgsTronGaps = 'forever:{mgs:tron:mainnet}:gaps'; // hash 任务ID=>JSON补扫范围和进度，完成删除字段
+    case ForeverMgsTronAddresses = 'forever:{mgs:tron:mainnet}:addresses'; // set 历史收款地址，改配置后仍监听
 
     /** Temporary caches. */
     case TempGoldenGateXToken = 'temp:mg:goldengatex:token'; // string GoldenGateX Bearer Token
@@ -37,6 +44,8 @@ enum RedisKey: string
     case TempPlatformStatsRebuild = 'temp:mg:platform_stats:rebuild'; // JSON 平台统计重建状态
     case TempMgsLaunch = 'temp:mgs:launch:%s'; // string MGS 进游短期幂等标记，格式：request_id
     case TempMgsTrxTicker = 'temp:mgs:trx_ticker'; // JSON TRX-USDT 报价；格式：price/source_time/fetch_time，显式TTL
+    case TempMgsTronHealth = 'temp:{mgs:tron:mainnet}:health'; // string JSON 固化头、心跳、错误，120秒TTL
+    case TempMgsTronRate = 'temp:mgs:tron:rate:%s'; // string 节点限速窗口计数，格式：密钥SHA256，1秒TTL
     case TempMgsStatsRefresh = 'temp:mgs:stats:refresh:%s'; // string MGS 统计待刷新标记，格式：日期或日期小时
 
     public function format(mixed ...$args): string

@@ -19,6 +19,10 @@ use app\process\Http;
 global $argv;
 
 return [
+    'mgs.tron-scan' => [
+        'handler' => app\process\TronScan::class,
+        'count' => 1,
+    ],
     'webman' => [
         'handler' => Http::class,
         'listen' => 'http://0.0.0.0:8787',

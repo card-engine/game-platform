@@ -56,7 +56,8 @@ export interface RechargeOptions {
 }
 
 export interface RechargeOrder {
-  order_no: string
+  mgs_recharge_id: string
+  recharge_no: string
   currency_code: string
   recharge_amount: string
   pay_currency_code: 'USDT' | 'TRX'
@@ -82,7 +83,7 @@ export async function getCurrentRecharge(currencyCode: string) {
   return result(data).order
 }
 
-export async function getRecharge(orderNo: string) {
-  const { data } = await api.get<ApiResponse<RechargeOrder>>(`/recharges/${encodeURIComponent(orderNo)}`)
+export async function getRecharge(id: string) {
+  const { data } = await api.get<ApiResponse<RechargeOrder>>(`/recharges/${encodeURIComponent(id)}`)
   return result(data)
 }

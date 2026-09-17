@@ -4,9 +4,11 @@ namespace app\logic\mgs;
 
 use app\enum\RedisKey;
 use app\model\ExchangeRate;
-use app\model\RechargeOrder;
+use app\model\Recharge;
 use app\model\mgs\User;
 use app\model\mgs\Wallet;
+use app\service\mgs\TronScanService;
+use app\service\mgs\TronClient;
 use DateTimeImmutable;
 use DateTimeZone;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -22,7 +24,7 @@ class RechargeLogic extends BaseLogic
 
     public function options(string $currency): array
     {
-        $reason = $this->unavailableReason($currency);
+        $reason = $this->unavailableReason();
         $payments = [];
         if (!$reason) {
             foreach (['USDT', 'TRX'] as $payCurrency) {
@@ -40,7 +42,7 @@ class RechargeLogic extends BaseLogic
             // 串行化同一玩家的新建和重试；唯一索引负责跨玩家的金额占用。
             $user = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
             if ((int) $user->status !== 1) throw new ApiException('MGS 用户已停用', 403);
-            $existing = RechargeOrder::where(['user_id' => $user->id, 'request_id' => $data['request_id']])->first();
+            $existing = Recharge::where(['user_id' => $user->id, 'request_id' => $data['request_id']])->first();
             if ($existing) {
                 if ($existing->currency_code !== $data['currency_code'] || $existing->pay_currency_code !== $data['pay_currency_code']
                     || bccomp((string) $existing->recharge_amount, (string) $data['recharge_amount'], 8) !== 0) {
@@ -48,37 +50,36 @@ class RechargeLogic extends BaseLogic
                 }
                 return $this->output($existing);
             }
-            $active = RechargeOrder::where(['user_id' => $user->id, 'currency_code' => $data['currency_code']])
+            $active = Recharge::where(['user_id' => $user->id, 'currency_code' => $data['currency_code']])
                 ->where('status', 'pending')->where('expire_time', '>', gmdate('Y-m-d H:i:s'))->first();
             if ($active) throw new ApiException('请先处理当前充值订单');
 
-            if ($reason = $this->unavailableReason($data['currency_code'])) throw new ApiException($reason);
+            if ($reason = $this->unavailableReason()) throw new ApiException($reason);
             $quote = $this->quote($data['currency_code'], $data['pay_currency_code']);
             if (!$quote || !hash_equals($quote['quote_key'], $data['quote_key'])) throw new ApiException('报价已过期，请刷新后重试');
             $base = $quote['amounts'][(string) $data['recharge_amount']];
             if (bccomp($base, '0', 2) <= 0) throw new ApiException('该档位换算后金额过小，请选择更高档位');
-            $wallet = Wallet::firstOrCreate(['user_id' => $user->id, 'currency_code' => $data['currency_code']], ['balance' => '0.00000000']);
+            Wallet::firstOrCreate(['user_id' => $user->id, 'currency_code' => $data['currency_code']], ['balance' => '0.00000000']);
             $address = (string) config('mgs.recharge_tron_receive_address');
-            $contract = $data['pay_currency_code'] === 'USDT' ? config('mgs.recharge_tron_usdt_contract') : null;
+            Redis::sAdd(RedisKey::ForeverMgsTronAddresses->value, TronClient::address($address));
             $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
             for ($attempt = 0; $attempt < 99; $attempt++) {
                 $suffix = (int) Redis::eval(self::SUFFIX_SCRIPT, 1, RedisKey::ForeverMgsRechargeSuffix->value);
                 $amount = bcadd($base, bcdiv((string) $suffix, '10000', 4), 4);
-                $key = hash('sha256', implode('|', ['tron_mainnet', $data['pay_currency_code'], $contract, $address, $amount]));
                 try {
-                    $order = RechargeOrder::create([
-                        'order_no' => mg_no('MR'), 'user_id' => $user->id, 'wallet_id' => $wallet->id,
+                    $order = Recharge::create([
+                        'recharge_no' => mg_no('MR'), 'user_id' => $user->id,
                         'request_id' => $data['request_id'], 'currency_code' => $data['currency_code'], 'recharge_amount' => $data['recharge_amount'],
-                        'pay_type' => 'crypto', 'provider_code' => 'tron', 'pay_method' => 'trc20', 'pay_currency_code' => $data['pay_currency_code'],
-                        'pay_base_amount' => $base, 'pay_amount' => $amount, 'amount_suffix' => $suffix,
-                        'exchange_rate_id' => $quote['exchange_rate_id'], 'exchange_rate_value' => $quote['pay_per_unit'], 'rate_snapshot' => $quote,
-                        'network_code' => 'tron_mainnet', 'token_address' => $contract, 'receive_address' => $address,
-                        'amount_match_key' => $key, 'status' => 'pending', 'expire_time' => $now->modify('+15 minutes')->format('Y-m-d H:i:s.v'),
+                        'pay_method' => 'trc20', 'pay_currency_code' => $data['pay_currency_code'],
+                        'pay_amount' => $amount, 'is_reserved' => 1,
+                        'rate_snapshot' => array_diff_key($quote, array_flip(['amounts', 'quote_key'])),
+                        'receive_address' => $address,
+                        'status' => 'pending', 'expire_time' => $now->modify('+15 minutes')->format('Y-m-d H:i:s.v'),
                         'create_time' => $now->format('Y-m-d H:i:s.v'),
                     ]);
                     return $this->output($order);
                 } catch (UniqueConstraintViolationException $e) {
-                    if (!str_contains($e->getMessage(), 'uk_mgs_recharge_amount')) throw $e;
+                    if (!str_contains($e->getMessage(), 'uk_recharge_reserved')) throw $e;
                 }
             }
             throw new ApiException('充值名额暂满，请稍后再试');
@@ -87,30 +88,25 @@ class RechargeLogic extends BaseLogic
 
     public function current(User $user, string $currency): ?array
     {
-        $order = RechargeOrder::where(['user_id' => $user->id, 'currency_code' => $currency])
+        $order = Recharge::where(['user_id' => $user->id, 'currency_code' => $currency])
             ->where(fn ($query) => $query->where('status', 'review')->orWhere(fn ($query) => $query
                 ->where('status', 'pending')->where('expire_time', '>', gmdate('Y-m-d H:i:s'))))->latest('id')->first();
         return $order ? $this->output($order) : null;
     }
 
-    public function order(User $user, string $orderNo): array
+    public function order(User $user, string $id): array
     {
-        $order = RechargeOrder::where(['user_id' => $user->id, 'order_no' => $orderNo])->first();
+        $order = Recharge::where(['user_id' => $user->id, 'id' => $id])->first();
         if (!$order) throw new ApiException('充值订单不存在', 404);
         return $this->output($order);
     }
 
-    private function unavailableReason(string $currency): ?string
+    private function unavailableReason(): ?string
     {
         if (!config('mgs.recharge_enabled')) return '充值暂未开放';
-        if (!in_array($currency, config('mgs.recharge_currencies'), true)) return '不支持该到账币种';
-        if (!preg_match('/^T[1-9A-HJ-NP-Za-km-z]{33}$/D', (string) config('mgs.recharge_tron_receive_address'))
-            || !preg_match('/^T[1-9A-HJ-NP-Za-km-z]{33}$/D', (string) config('mgs.recharge_tron_usdt_contract'))) return '充值收款配置未完成';
-        $scan = Db::table('mgs_chain_scan_states')->where('network_code', 'tron_mainnet')->first();
-        if (!$scan || !$scan->heartbeat_time || !$scan->solid_block_time || !$scan->last_block_time
-            || strtotime($scan->heartbeat_time . ' UTC') < time() - 120
-            || strtotime($scan->solid_block_time . ' UTC') < time() - 180
-            || strtotime($scan->solid_block_time . ' UTC') - strtotime($scan->last_block_time . ' UTC') > 120) return '充值确认服务未就绪';
+        if (!config('mgs.recharge_tron_receive_address')) return '充值收款配置未完成';
+        TronClient::address((string) config('mgs.recharge_tron_receive_address'));
+        if (!(new TronScanService())->status()['ready']) return '充值确认服务未就绪';
         return null;
     }
 
@@ -132,18 +128,18 @@ class RechargeLogic extends BaseLogic
         $quote = ['currency_code' => $currency, 'pay_currency_code' => $payCurrency, 'pay_per_unit' => $value,
             'exchange_rate_id' => $snapshot->id, 'rate_date' => $snapshot->rate_date,
             'source_update_time' => $snapshot->source_update_time, 'currency_per_usd' => $rate,
-            'pay_usd' => $payUsd, 'pricing_policy' => 'usd_parity', 'ticker' => $ticker];
+            'pay_usd' => $payUsd, 'token_address' => config('mgs.recharge_tron_usdt_contract'), 'pricing_policy' => 'usd_parity', 'ticker' => $ticker];
         $quote['quote_key'] = hash('sha256', json_encode([$quote, config('mgs.recharge_tron_receive_address'), config('mgs.recharge_tron_usdt_contract')]));
         $quote['amounts'] = [];
         foreach (self::AMOUNTS as $amount) $quote['amounts'][(string) $amount] = bcround(bcmul((string) $amount, $value, 18), 2, \RoundingMode::HalfAwayFromZero);
         return $quote;
     }
 
-    private function output(RechargeOrder $order): array
+    private function output(Recharge $order): array
     {
         $expire = new DateTimeImmutable($order->getRawOriginal('expire_time'), new DateTimeZone('UTC'));
         $status = $order->status === 'pending' && $expire->getTimestamp() <= time() ? 'expired' : $order->status;
-        return ['mgs_recharge_order_id' => $order->id, 'order_no' => $order->order_no,
+        return ['mgs_recharge_id' => (string) $order->id, 'recharge_no' => $order->recharge_no,
             'currency_code' => $order->currency_code, 'recharge_amount' => (string) $order->recharge_amount,
             'pay_currency_code' => $order->pay_currency_code, 'pay_amount' => bcadd((string) $order->pay_amount, '0', 4),
             'pay_method' => $order->pay_method, 'receive_address' => $order->receive_address, 'status' => $status,

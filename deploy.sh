@@ -38,6 +38,7 @@ cd "$PROJECT_DIR/simple-vue"
 
 echo '🗄️  正在升级数据库...'
 cd "$SERVER_DIR"
+/www/server/php/84/bin/php webman mgs:recharge-schema
 /www/server/php/84/bin/php webman db:upgrade --dry-run
 /www/server/php/84/bin/php webman db:upgrade
 /www/server/php/84/bin/php -r 'require "vendor/autoload.php"; require "support/bootstrap.php"; plugin\saiadmin\app\cache\ReflectionCache::clear();'
