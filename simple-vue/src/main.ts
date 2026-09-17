@@ -3,10 +3,13 @@ import { createPinia } from 'pinia'
 import { VueQueryPlugin } from '@tanstack/vue-query'
 import { registerSW } from 'virtual:pwa-register'
 import {
+  ElAlert,
   ElButton,
   ElDialog,
   ElInput,
   ElOption,
+  ElRadio,
+  ElRadioGroup,
   ElSelect,
   ElSkeleton,
   ElSkeletonItem,
@@ -24,7 +27,7 @@ else void navigator.serviceWorker?.getRegistrations().then((registrations) => re
 
 const app = createApp(App).use(createPinia()).use(VueQueryPlugin).use(i18n)
 
-for (const component of [ElButton, ElDialog, ElInput, ElOption, ElSelect, ElSkeleton, ElSkeletonItem, ElTooltip]) {
+for (const component of [ElAlert, ElButton, ElDialog, ElInput, ElOption, ElRadio, ElRadioGroup, ElSelect, ElSkeleton, ElSkeletonItem, ElTooltip]) {
   app.component(component.name!, component)
 }
 
