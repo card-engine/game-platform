@@ -9,7 +9,7 @@ return [
     'default_currency' => strtoupper((string) env('MGS_DEFAULT_CURRENCY', 'USD')),
     'default_language' => (string) env('MGS_DEFAULT_LANGUAGE', 'en'),
     'timezone' => (string) env('MGS_TIMEZONE', 'UTC'),
-    // 默认禁止新订单；开启后仍须初始化扫描并通过健康检查。
+    // 开启后，实时扫描健康且报价有效即可下单，无需人工初始化。
     'recharge_enabled' => filter_var(env('MGS_RECHARGE_ENABLED', false), FILTER_VALIDATE_BOOL),
     'recharge_tron_receive_address' => (string) env('MGS_RECHARGE_TRON_RECEIVE_ADDRESS', ''),
     'recharge_tron_usdt_contract' => (string) env('MGS_RECHARGE_TRON_USDT_CONTRACT', 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'),

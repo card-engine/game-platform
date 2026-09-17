@@ -100,13 +100,13 @@ try {
     fails(fn () => $processor->events($node->blocks[2], [], [$address]), '不完整');
     $scan = new TronScanService($node);
     Redis::set(RedisKey::ForeverMgsTronCheckpoint->value, json_encode(['start_block_number' => 1, 'next_block_number' => 1,
-        'last_block_hash' => $node->blocks[0]['blockID'], 'last_success_time' => 0, 'recovery_required' => false]));
+        'last_block_hash' => $node->blocks[0]['blockID'], 'last_success_time' => 0, 'recovery_required' => true]));
     $scan->start();
     $state = $scan->status();
     ensure($state['checkpoint']['next_block_number'] === 4 && count($state['gaps']) === 1, '重启没有先登记缺口再追最新');
     $gapId = array_key_first($state['gaps']);
     $scan->batch();
-    ensure(Transfer::count() === 1 && !$scan->status()['ready'], '主扫描未落库或补扫未完成却放行');
+    ensure(Transfer::count() === 1 && $scan->status()['ready'] && $scan->status()['gaps'], '实时扫描健康时，旧恢复标记或后台补扫阻断充值');
     $scan->batch($gapId);
     ensure(Transfer::count() === 4 && !$scan->status()['gaps'] && $scan->status()['ready'], '队列补扫未完成或主断点被覆盖');
     $scan->batch($gapId);
@@ -164,10 +164,10 @@ try {
     $scan->batch($gapId);
     ensure(!Redis::hExists(RedisKey::ForeverMgsTronGaps->value, $gapId) && Transfer::count() === 5, '重复补扫不幂等');
     Redis::del(RedisKey::ForeverMgsTronCheckpoint->value);
-    $scan->start(); $scan->batch();
-    ensure($scan->status()['checkpoint']['recovery_required'] && !$scan->status()['ready'], '丢失断点自动开放新单');
-    $scan->confirmRecovery();
-    ensure($scan->status()['ready'], '显式恢复确认未生效');
+    $scan->start();
+    ensure(!$scan->status()['ready'], '尚未扫描成功就标记健康');
+    $scan->batch();
+    ensure($scan->status()['ready'] && !isset($scan->status()['checkpoint']['recovery_required']), '重建断点后没有自动恢复');
 
     $trxEvent = ['transaction_id' => hash('sha256', 'native-credit'), 'event_index' => 0, 'currency_code' => 'TRX', 'amount' => '7.000100',
         'from_address' => TronClient::address('41' . str_repeat('22', 20)), 'receive_address' => $address, 'block_number' => 7,
@@ -192,7 +192,7 @@ try {
     $credit->credit($crossId); $credit->credit($crossId);
     ensure($wallet->fresh()->balance === '510.00000000' && $crossMonth->fresh()->status === 'paid', '迟发现但按时付款的跨月订单未正确入账');
     ensure(Db::table('mgs_bills_' . gmdate('ym'))->where('transaction_id', 'recharge:' . $crossMonth->id)->count() === 1, '跨月流水未记入实际入账月份');
-    echo "PASS: 地址/合约、完整回执、重启追最新、Redis缺口补扫、失锁重放、USDT/TRX事件、自动/人工入账、重复消费和丢断点门禁\n";
+    echo "PASS: 地址/合约、完整回执、重启追最新、Redis缺口补扫、失锁重放、USDT/TRX事件、自动/人工入账、重复消费和自动恢复\n";
 } finally {
     // 仅清理本次随机前缀，绝不FLUSHDB。
     $client = new \Redis(); $client->connect('127.0.0.1', $redisPort);

@@ -2996,8 +2996,8 @@ return array (
       'task_style' => 4,
       'rule' => '0 * * * * *',
       'singleton' => 1,
-      'status' => 2,
-      'remark' => '每分钟刷新 TRX-USDT 行情；充值上线时启用',
+      'status' => 1,
+      'remark' => '每分钟刷新 TRX-USDT 行情',
     ),
     13 =>
     array (

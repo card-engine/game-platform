@@ -22,14 +22,14 @@ class TronScanService
         $state = json_decode(Redis::get(RedisKey::ForeverMgsTronCheckpoint->value) ?: 'null', true);
         $health = json_decode(Redis::get(RedisKey::TempMgsTronHealth->value) ?: 'null', true);
         $gaps = array_map(fn ($value) => json_decode($value, true), Redis::hGetAll(RedisKey::ForeverMgsTronGaps->value));
-        $ready = $state && !$state['recovery_required'] && !$gaps && $health && !$health['error']
+        $ready = $state && $health && !$health['error']
             && $health['heartbeat_time'] >= time() - 120 && $health['solid_time'] >= time() - 180
             && $state['last_success_time'] >= time() - 120 && $state['next_block_number'] >= $health['solid_number'] - 40;
         return ['ready' => (bool) $ready, 'checkpoint' => $state, 'health' => $health, 'gaps' => $gaps];
     }
 
     /** 每次进程启动均切到最新固化块，旧范围先在同一Lua内登记，不能先跳后登记。 */
-    public function start(bool $firstUse = false): void
+    public function start(): void
     {
         $lock = RedisKey::LockMgsTronScan->value;
         $token = bin2hex(random_bytes(16));
@@ -40,9 +40,8 @@ class TronScanService
             $h = $head['block_header']['raw_data'];
             $number = (int) $h['number'];
             $old = Redis::get(RedisKey::ForeverMgsTronCheckpoint->value) ?: '';
-            if ($firstUse && $old !== '') throw new RuntimeException('扫描断点已存在，不允许重新初始化');
             $state = json_decode($old ?: 'null', true);
-            if (!is_array($state) || !isset($state['next_block_number'], $state['last_block_hash'], $state['recovery_required'])) $state = null;
+            if (!is_array($state) || !isset($state['next_block_number'], $state['last_block_hash'])) $state = null;
             if ($state && $state['next_block_number'] > $number + 1) throw new RuntimeException('TRON节点固化头落后于扫描断点');
             if ($state && $state['next_block_number'] === $number + 1 && $state['last_block_hash'] !== $head['blockID']) throw new RuntimeException('已扫描固化块哈希发生变化');
             $gap = null;
@@ -51,8 +50,7 @@ class TronScanService
                     'last_hash' => $state['last_block_hash'], 'end_hash' => $h['parentHash'], 'attempts' => 0, 'retry_time' => 0, 'error' => null];
             }
             $next = ['start_block_number' => $state['start_block_number'] ?? $number, 'next_block_number' => $number,
-                'last_block_hash' => $h['parentHash'], 'last_success_time' => 0,
-                'recovery_required' => $state['recovery_required'] ?? !$firstUse];
+                'last_block_hash' => $h['parentHash'], 'last_success_time' => 0];
             $gapId = bin2hex(random_bytes(12));
             $changed = Redis::eval(<<<'LUA'
 if redis.call('get',KEYS[1])~=ARGV[1] or (redis.call('get',KEYS[2]) or '')~=ARGV[2] then return 0 end
@@ -168,18 +166,5 @@ LUA, 2, $lock, $key, $token, $gapId ?? '', $raw, $encoded, $done ? '1' : '0');
             Redis::eval(self::RELEASE, 1, $lock, $token);
         }
         if ($gapId !== null && !$done) Queue::send('mgs_tron_backfill', ['gap_id' => $gapId], 3);
-    }
-
-    public function confirmRecovery(): void
-    {
-        // 仅管理命令显式调用。补扫清空并不自动解除未知历史范围的恢复标记。
-        $key = RedisKey::ForeverMgsTronCheckpoint->value;
-        $raw = Redis::get($key);
-        if (!$raw) throw new RuntimeException('未初始化扫描');
-        $state = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
-        $health = $this->status()['health'];
-        if (!$health || $health['error'] || $state['last_success_time'] < time() - 120) throw new RuntimeException('实时扫描尚未就绪');
-        $state['recovery_required'] = false;
-        if (!Redis::eval("if redis.call('get',KEYS[1])~=ARGV[1] or redis.call('hlen',KEYS[2])>0 then return 0 end redis.call('set',KEYS[1],ARGV[2]); return 1", 2, $key, RedisKey::ForeverMgsTronGaps->value, $raw, json_encode($state))) throw new RuntimeException('断点改变或补扫未完成');
     }
 }

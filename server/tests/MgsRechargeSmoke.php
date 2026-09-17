@@ -73,7 +73,7 @@ try {
         preg_match('/CREATE TABLE `' . $table . '` \(.*?;(?=\n)/s', $schema, $match);
         Db::statement($match[0]);
     }
-    Redis::set(RedisKey::ForeverMgsTronCheckpoint->value, json_encode(['next_block_number' => 2, 'last_success_time' => time(), 'recovery_required' => false]));
+    Redis::set(RedisKey::ForeverMgsTronCheckpoint->value, json_encode(['next_block_number' => 2, 'last_success_time' => time()]));
     Redis::setex(RedisKey::TempMgsTronHealth->value, 120, json_encode(['solid_number' => 1, 'solid_time' => time(), 'heartbeat_time' => time(), 'error' => null]));
     ExchangeRate::create(['rate_date' => gmdate('Y-m-d'), 'base_currency_code' => 'USD', 'source' => 'currencyapi',
         'rate_json' => ['INR' => '80', 'EUR' => '0.8'], 'source_update_time' => gmdate('Y-m-d H:i:s')]);
@@ -139,10 +139,14 @@ try {
     Redis::setex(RedisKey::TempMgsTrxTicker->value, 60, json_encode(['price' => '0.25', 'source_time' => time(), 'fetch_time' => time()]));
     $options = $logic->options('INR');
     check($options['payments'][1]['amounts'][100] === '5.00', 'TRX换算错误');
+    $trxOrder = $logic->create($other, array_replace($data, ['request_id' => '550e8400-e29b-41d4-a716-446655440004',
+        'pay_currency_code' => 'TRX', 'quote_key' => $options['payments'][1]['quote_key']]));
+    check($trxOrder['pay_currency_code'] === 'TRX' && str_starts_with($trxOrder['pay_amount'], '5.00'), 'TRX无法下单');
+    Recharge::findOrFail($trxOrder['mgs_recharge_id'])->update(['expire_time' => gmdate('Y-m-d H:i:s', time() - 1)]);
     Redis::setex(RedisKey::TempMgsTrxTicker->value, 60, json_encode(['price' => '0.25', 'source_time' => time() - 300]));
     check(count($logic->options('INR')['payments']) === 1, '过期行情未禁用TRX');
     // 同一支付数量最多99个槽位，全部用满后必须失败，不能丢掉唯一约束。
-    for ($i = Recharge::count(); $i < 99; $i++) $logic->create(User::create(['status' => 1]), $data);
+    for ($i = Recharge::where('pay_currency_code', 'USDT')->count(); $i < 99; $i++) $logic->create(User::create(['status' => 1]), $data);
     $count = Recharge::count();
     rejects(fn () => $logic->create($other, $data), '暂满');
     check(Recharge::count() === $count, '满额失败留下了订单');

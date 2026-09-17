@@ -34,7 +34,7 @@ enum RedisKey: string
     case ForeverConfigs = 'forever:mg:configs'; // string 启用中的全局配置 JSON
     case ForeverMgsConfigs = 'forever:mgs:configs'; // string 启用中的 MGS 配置 JSON
     case ForeverMgsRechargeSuffix = 'forever:mgs:recharge:suffix'; // integer 充值尾号 1-99 循环
-    case ForeverMgsTronCheckpoint = 'forever:{mgs:tron:mainnet}:checkpoint'; // string JSON 实时断点与恢复标记，无TTL
+    case ForeverMgsTronCheckpoint = 'forever:{mgs:tron:mainnet}:checkpoint'; // string JSON 实时扫描断点，无TTL
     case ForeverMgsTronGaps = 'forever:{mgs:tron:mainnet}:gaps'; // hash 任务ID=>JSON补扫范围和进度，完成删除字段
     case ForeverMgsTronAddresses = 'forever:{mgs:tron:mainnet}:addresses'; // set 历史收款地址，改配置后仍监听
 

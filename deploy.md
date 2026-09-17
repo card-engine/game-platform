@@ -54,7 +54,9 @@ systemctl start mgames.service
 
 转换保留原 ID、业务单号及旧流水引用，旧表改名为 `_legacy_...` 备份，不删除。新旧表同时有数据或旧请求号不符合 UUID 时停止转换，先人工核实；此时服务仍处于停止状态。
 
-首次无资金记录可用 `php webman mgs:tron-scan --init` 初始化；已有历史必须提交 `--from=高度 --to=高度` 补扫，检查完整后显式执行 `--confirm-recovery`。不带参数只读扫描状态。所有命令使用线上 PHP 8.4 路径。不要仅打开充值开关就开始收款。
+配置充值开关和收款地址后，服务启动自动扫描最新固化块；实时扫描健康即可接单，无需初始化或人工确认。重启缺口进入队列补扫，不阻断新充值；Redis 断点丢失时需按历史时间范围补扫，避免漏掉旧收款。
+
+`php webman mgs:tron-scan` 查看状态，`--from=高度 --to=高度` 提交补扫。`MGS 充值报价`任务默认启用，每分钟刷新 TRX-USDT 行情；升级保留已有任务启停状态，旧环境需在后台启用该任务。`php webman mgs:recharge-price` 可立即刷新报价。USDT 和 TRX 共用收款地址，TRX 报价失效时仅暂停 TRX。所有命令使用线上 PHP 8.4 路径。
 
 ```bash
 systemctl status mgames.service
