@@ -31,6 +31,12 @@ cd /www/wwwroot/game-platform
 
 `mgames.service` 已存在时，脚本不会覆盖它。
 
+### 大厅 PWA 缓存
+
+将 `simple-vue/nginx-cache.conf` 包含在大厅对应的 Nginx `server` 块内，检查 `nginx -t` 后 reload。仅入口 HTML、`sw.js` 和 manifest 不做长期缓存，带 hash 的 `/assets/` 资源继续缓存。
+
+若 CDN 已缓存旧 `sw.js`，还需失效该 URL 的旧缓存；改变源站响应头不会立即清除已存在的 CDN 缓存。发布验收应核对实际加载的 JS hash，不以页面刷新成功代替版本确认。
+
 ## 服务管理
 
 ### 首次切换充值新表
