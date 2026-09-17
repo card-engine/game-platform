@@ -13,6 +13,7 @@ import {
   Globe2,
   Monitor,
   Moon,
+  Plus,
   RadioTower,
   Search,
   Send,
@@ -312,7 +313,7 @@ function closePlayer() {
             <WalletCards :size="18" />
             <span>{{ formattedBalance }}</span>
             <el-tooltip :content="t('recharge.title')" placement="bottom">
-              <button type="button" class="wallet-add" :aria-label="t('recharge.title')" :disabled="!balance" @click="rechargeVisible = true">+</button>
+              <button type="button" class="wallet-add" :aria-label="t('recharge.title')" :disabled="!balance" @click="rechargeVisible = true"><Plus :size="16" :stroke-width="2.5" /></button>
             </el-tooltip>
           </div>
 
