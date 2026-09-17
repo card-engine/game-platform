@@ -4,6 +4,7 @@ namespace app\service\mgs;
 
 use app\enum\RedisKey;
 use GuzzleHttp\Client;
+use GuzzleHttp\Handler\StreamHandler;
 use RuntimeException;
 use support\Redis;
 
@@ -12,7 +13,7 @@ class TrxPriceService
     public function sync(): array
     {
         $ttl = (int) config('mgs.okx_ticker_ttl');
-        $response = (new Client(['base_uri' => config('mgs.okx_base_url'), 'connect_timeout' => 3, 'timeout' => 5]))
+        $response = (new Client(['handler' => new StreamHandler(), 'base_uri' => config('mgs.okx_base_url'), 'timeout' => 5]))
             ->get('/api/v5/market/ticker', ['query' => ['instId' => 'TRX-USDT']]);
         $body = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
         $row = $body['data'][0] ?? [];
