@@ -78,8 +78,8 @@ export async function createRecharge(payload: { currency_code: string; recharge_
 }
 
 export async function getCurrentRecharge(currencyCode: string) {
-  const { data } = await api.get<ApiResponse<RechargeOrder | null>>('/recharges/current', { params: { currency_code: currencyCode } })
-  return result(data)
+  const { data } = await api.get<ApiResponse<{ order: RechargeOrder | null }>>('/recharges/current', { params: { currency_code: currencyCode } })
+  return result(data).order
 }
 
 export async function getRecharge(orderNo: string) {

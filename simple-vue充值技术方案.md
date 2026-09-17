@@ -106,7 +106,7 @@ Redis 全局计数器 `ForeverMgsRechargeSuffix`，值按 `01 → … → 99 →
 |---|---|---|
 | GET | `/api/recharges/options` | 到账币种、默认档位、USDT/TRX 各档预估支付数量、报价日期、`quote_key`、支付方式、充值可用状态 |
 | POST | `/api/recharges` | 传 `request_id`、`currency_code`、`recharge_amount`、`pay_currency_code`、`quote_key` 创建订单 |
-| GET | `/api/recharges/current` | 当前待支付订单，没有则返回 null |
+| GET | `/api/recharges/current` | 返回 `data.order`，无当前订单时为 null |
 | GET | `/api/recharges/{order_no}` | 本人订单及关联收款处理状态，包含 `server_time` |
 
 `options/current` 传到账币种和支付类型，例如 `currency_code=INR&pay_currency_code=TRX`。服务端校验到账币种和支付币种是否开放；共用档位不代表开放所有组合。静态路由优先于 `{order_no}`。客户端不能指定用户、汇率、尾号、收款地址或最终支付数量。

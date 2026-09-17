@@ -90,7 +90,7 @@ class ApiController extends OpenController
         $user = (new MgsAuthService())->browserUser($request);
         $currency = strtoupper((string) $request->input('currency_code', config('mgs.default_currency')));
         (new RechargeValidate())->scene('options')->failException()->check(['currency_code' => $currency]);
-        return $this->success((new RechargeLogic())->current($user, $currency));
+        return $this->success(['order' => (new RechargeLogic())->current($user, $currency)]);
     }
 
     public function recharge(Request $request, string $order_no): Response
