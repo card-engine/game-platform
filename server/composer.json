@@ -30,7 +30,8 @@
     "monolog/monolog": "^2.0",
     "saithink/saiadmin": "^6.0",
     "saithink/saipackage": "^6.0",
-    "webman/redis-queue": "^2.1"
+    "webman/redis-queue": "^2.1",
+    "irazasyed/telegram-bot-sdk": "^3.15"
   },
   "suggest": {
     "ext-event": "For better performance. "

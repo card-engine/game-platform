@@ -23,6 +23,10 @@ return [
         'handler' => app\process\TronScan::class,
         'count' => 1,
     ],
+    'mgs.telegram' => [
+        'handler' => app\process\TelegramPolling::class,
+        'count' => 1,
+    ],
     'webman' => [
         'handler' => Http::class,
         'listen' => 'http://0.0.0.0:8787',

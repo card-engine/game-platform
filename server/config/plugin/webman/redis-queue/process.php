@@ -21,5 +21,11 @@ return [
             'consumer_dir' => app_path() . '/queue/redis/parallel'
         ],
         'maxRequest' => 1000,
-    ]
+    ],
+    'telegram' => [
+        'handler' => Webman\RedisQueue\Process\Consumer::class,
+        'count' => 1,
+        'constructor' => ['consumer_dir' => app_path() . '/queue/redis/telegram'],
+        'maxRequest' => 1000,
+    ],
 ];

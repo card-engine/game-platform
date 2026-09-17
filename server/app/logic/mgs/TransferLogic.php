@@ -15,6 +15,7 @@ use plugin\saiadmin\basic\eloquent\BaseLogic;
 use RuntimeException;
 use support\Db;
 use support\Redis;
+use Webman\Event\Event;
 
 class TransferLogic extends BaseLogic
 {
@@ -45,7 +46,7 @@ class TransferLogic extends BaseLogic
         try {
             $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
             $table = (new MgsTableService())->table('bills', $now->format('ym'));
-            $this->transaction(function () use ($transferId, $recharge, $adminId, $remark, $now, $table) {
+            $paid = $this->transaction(function () use ($transferId, $recharge, $adminId, $remark, $now, $table) {
                 $wallet = Wallet::where(['user_id' => $recharge->user_id, 'currency_code' => $recharge->currency_code])->lockForUpdate()->firstOrFail();
                 $order = Recharge::whereKey($recharge->id)->lockForUpdate()->firstOrFail();
                 $event = Transfer::whereKey($transferId)->lockForUpdate()->firstOrFail();
@@ -84,9 +85,12 @@ class TransferLogic extends BaseLogic
                 if ($adminId !== null) $evidence['reviews'][] = ['admin_id' => $adminId, 'time' => $time, 'action' => 'credit', 'recharge_id' => $order->id, 'remark' => $remark];
                 $order->update(['status' => 'paid', 'credited_time' => $time]);
                 $event->update(['status' => 'credited', 'recharge_id' => $order->id, 'remark' => $adminId === null ? null : $remark, 'data' => $evidence]);
+                return $order->only(['recharge_no', 'user_id', 'pay_amount', 'pay_currency_code', 'recharge_amount', 'currency_code', 'credited_time']);
             });
         } finally {
             Redis::eval(TronScanService::RELEASE, 1, $lock, $token);
         }
+        // 提交并释放资金锁后发布业务事件；通知失败不回滚或重做入账。
+        if ($paid) Event::emit('mgs.recharge.paid', $paid);
     }
 }

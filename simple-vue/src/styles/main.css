@@ -236,7 +236,6 @@ button {
   display: flex;
   height: 40px;
   align-items: center;
-  gap: 2px;
   padding: 3px;
   background: var(--surface-2);
   border: 1px solid var(--line);
@@ -252,7 +251,7 @@ button {
   color: var(--muted);
   background: transparent;
   border: 0;
-  border-radius: 5px;
+  border-radius: 50%;
   cursor: pointer;
 }
 
@@ -260,7 +259,8 @@ button {
   color: var(--text);
 }
 
-.theme-switcher button.active {
+.theme-switcher button:focus-visible,
+.theme-switcher button:hover {
   color: var(--accent-contrast);
   background: var(--accent);
 }

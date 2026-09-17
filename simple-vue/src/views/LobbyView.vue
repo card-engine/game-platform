@@ -39,11 +39,7 @@ const categories = [
   { value: 'poker', label: 'category.poker', icon: Spade },
   { value: 'sport', label: 'category.sports', icon: Volleyball },
 ] as const
-const themes = [
-  { value: 'system', label: 'theme.system', icon: Monitor },
-  { value: 'light', label: 'theme.light', icon: Sun },
-  { value: 'dark', label: 'theme.dark', icon: Moon },
-] as const
+const themeCycle = ['system', 'light', 'dark'] as const
 const languages = [
   ['en-US', 'English'],
   ['zh-CN', '中文'],
@@ -278,6 +274,11 @@ async function launchGame(game: GameItem) {
 
 function requestGame(game: GameItem) { void launchGame(game) }
 
+function cycleTheme() {
+  const index = themeCycle.indexOf(theme.preference)
+  theme.preference = themeCycle[(index + 1) % themeCycle.length]
+}
+
 function closePlayer() {
   player.value = undefined
   void queryClient.invalidateQueries({ queryKey: ['balance', user.uniqueId] })
@@ -318,16 +319,12 @@ function closePlayer() {
             </el-tooltip>
           </div>
 
-          <div class="theme-switcher" role="group" :aria-label="t('theme.label')">
-            <el-tooltip v-for="item in themes" :key="item.value" :content="t(item.label)" placement="bottom">
-              <button
-                type="button"
-                :aria-label="t(item.label)"
-                :aria-pressed="theme.preference === item.value"
-                :class="{ active: theme.preference === item.value }"
-                @click="theme.preference = item.value"
-              >
-                <component :is="item.icon" :size="17" />
+          <div class="theme-switcher">
+            <el-tooltip :content="t(`theme.${theme.preference}`)" placement="bottom">
+              <button type="button" :aria-label="t(`theme.${theme.preference}`)" @click="cycleTheme">
+                <Monitor v-if="theme.preference === 'system'" :size="17" />
+                <Sun v-else-if="theme.preference === 'light'" :size="17" />
+                <Moon v-else :size="17" />
               </button>
             </el-tooltip>
           </div>

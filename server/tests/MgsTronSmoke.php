@@ -15,6 +15,7 @@ use support\Db;
 use support\Redis;
 use Webman\Config;
 use Webman\Database\Initializer;
+use Webman\Event\Event;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 require dirname(__DIR__) . '/support/bootstrap.php';
@@ -55,6 +56,7 @@ $settings['database']['connections']['mysql'] = array_replace($settings['databas
 $settings['redis']['default'] = array_replace($settings['redis']['default'], ['host' => '127.0.0.1', 'port' => $redisPort, 'password' => '', 'prefix' => $prefix]);
 $settings['redis_queue'] = ['default' => ['host' => "redis://127.0.0.1:{$redisPort}", 'options' => ['db' => 0, 'prefix' => $prefix]]];
 $settings['mgs']['recharge_tron_receive_address'] = TronClient::address('41' . str_repeat('11', 20));
+$settings['telegram']['token'] = ''; // 资金回归不向真实机器人发送消息。
 (new ReflectionProperty(Config::class, 'config'))->setValue(null, $settings);
 (new ReflectionProperty(Config::class, 'flatCache'))->setValue(null, []);
 Webman\Context::destroy();
@@ -131,8 +133,18 @@ try {
     $recharge = Recharge::create($base);
     $transfer = Transfer::where('currency_code', 'USDT')->where('event_index', 1)->firstOrFail();
     $credit = new TransferLogic();
+    $paidEvents = [];
+    Event::on('mgs.recharge.paid', function (array $order) use (&$paidEvents) {
+        ensure(Db::connection()->transactionLevel() === 0, '充值通知早于事务提交');
+        ensure(Recharge::where('recharge_no', $order['recharge_no'])->value('status') === 'paid', '通知发出时订单未到账');
+        $paidEvents[] = $order;
+    });
+    // 模拟通知故障，余额提交仍必须成功；不写异常测试日志。
+    (new ReflectionProperty(Event::class, 'logger'))->setValue(null, new Psr\Log\NullLogger());
+    Event::on('mgs.recharge.paid', static function () { throw new RuntimeException('模拟通知队列不可用'); });
     $credit->credit($transfer->id);
     $credit->credit($transfer->id);
+    ensure(count($paidEvents) === 1 && $paidEvents[0]['pay_currency_code'] === 'USDT', '重复入账触发重复通知或币种错误');
     ensure($wallet->fresh()->balance === '110.00000000' && $recharge->fresh()->status === 'paid', '入账金额或幂等错误');
     ensure(Db::table('mgs_bills_' . gmdate('ym'))->count() === 1, '重复流水');
     $processor->store($events);
@@ -141,8 +153,10 @@ try {
     $late = Transfer::where('currency_code', 'USDT')->where('event_index', 2)->firstOrFail();
     $lateOrder = Recharge::create(array_replace($base, ['recharge_no' => mg_no('MR'), 'request_id' => '550e8400-e29b-41d4-a716-446655440002', 'pay_amount' => '3.4567', 'expire_time' => gmdate('Y-m-d H:i:s', $time - 1)]));
     $credit->credit($late->id);
+    ensure(count($paidEvents) === 1, '未入账的迟付触发到账通知');
     ensure($late->fresh()->status === 'review' && $wallet->fresh()->balance === '110.00000000', '迟付误加余额');
     $credit->credit($late->id, $lateOrder->id, 1, '测试核验凭证');
+    ensure(count($paidEvents) === 2, '人工确认没有通知');
     ensure($wallet->fresh()->balance === '210.00000000' && count($late->fresh()->data['reviews']) === 1, '人工入账或留痕错误');
 
     $trx = Transfer::where('currency_code', 'TRX')->firstOrFail();

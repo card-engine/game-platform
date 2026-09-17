@@ -29,6 +29,7 @@ enum RedisKey: string
     case LockMgsStatsRefresh = 'lock:mgs:stats:refresh:%s'; // string MGS 统计时间桶锁，格式：日期或日期小时
     case LockMgsTronScan = 'lock:{mgs:tron:mainnet}:scan'; // string 实时扫描Token，60秒租约
     case LockMgsTronGap = 'lock:{mgs:tron:mainnet}:gap:%s'; // string 补扫Token，格式：任务ID，60秒租约
+    case LockTelegramPolling = 'lock:{telegram:%d}:polling'; // string 长轮询Token锁，格式：bot_id，120秒租约
 
     /** Permanent caches. */
     case ForeverConfigs = 'forever:mg:configs'; // string 启用中的全局配置 JSON
@@ -37,6 +38,7 @@ enum RedisKey: string
     case ForeverMgsTronCheckpoint = 'forever:{mgs:tron:mainnet}:checkpoint'; // string JSON 实时扫描断点，无TTL
     case ForeverMgsTronGaps = 'forever:{mgs:tron:mainnet}:gaps'; // hash 任务ID=>JSON补扫范围和进度，完成删除字段
     case ForeverMgsTronAddresses = 'forever:{mgs:tron:mainnet}:addresses'; // set 历史收款地址，改配置后仍监听
+    case ForeverTelegramUpdateId = 'forever:{telegram:%d}:update_id'; // integer 最后已处理的更新编号，格式：bot_id，无TTL
 
     /** Temporary caches. */
     case TempGoldenGateXToken = 'temp:mg:goldengatex:token'; // string GoldenGateX Bearer Token
