@@ -6,6 +6,8 @@ use app\model\mgs\Game;
 use app\service\mgs\MgsAuthService;
 use app\service\mgs\MgsConfigService;
 use app\service\mgs\MgsGamePlatformClient;
+use app\logic\mgs\RechargeLogic;
+use app\validate\mgs\RechargeValidate;
 use app\model\mgs\Wallet;
 use plugin\saiadmin\basic\OpenController;
 use support\Request;
@@ -13,7 +15,7 @@ use support\Response;
 
 class ApiController extends OpenController
 {
-    protected array $noNeedLogin = ['session', 'brands', 'games', 'launch', 'user', 'wallet'];
+    protected array $noNeedLogin = ['session', 'brands', 'games', 'launch', 'user', 'wallet', 'rechargeOptions', 'createRecharge', 'currentRecharge', 'recharge'];
 
     public function session(Request $request): Response
     {
@@ -65,6 +67,36 @@ class ApiController extends OpenController
     {
         $user = (new MgsAuthService())->browserUser($request);
         return $this->success($user->wallets()->orderBy('currency_code')->get(['id', 'currency_code', 'balance'])->map(fn ($wallet) => ['mgs_wallet_id' => $wallet->id, 'currency_code' => $wallet->currency_code, 'balance' => (string) $wallet->balance])->all());
+    }
+
+    public function rechargeOptions(Request $request): Response
+    {
+        (new MgsAuthService())->browserUser($request);
+        $currency = strtoupper((string) $request->input('currency_code', config('mgs.default_currency')));
+        (new RechargeValidate())->scene('options')->failException()->check(['currency_code' => $currency]);
+        return $this->success((new RechargeLogic())->options($currency));
+    }
+
+    public function createRecharge(Request $request): Response
+    {
+        $user = (new MgsAuthService())->browserUser($request);
+        $data = $request->only(['currency_code', 'pay_currency_code', 'recharge_amount', 'request_id', 'quote_key']);
+        (new RechargeValidate())->scene('save')->failException()->check($data);
+        return $this->success((new RechargeLogic())->create($user, $data));
+    }
+
+    public function currentRecharge(Request $request): Response
+    {
+        $user = (new MgsAuthService())->browserUser($request);
+        $currency = strtoupper((string) $request->input('currency_code', config('mgs.default_currency')));
+        (new RechargeValidate())->scene('options')->failException()->check(['currency_code' => $currency]);
+        return $this->success((new RechargeLogic())->current($user, $currency));
+    }
+
+    public function recharge(Request $request, string $order_no): Response
+    {
+        $user = (new MgsAuthService())->browserUser($request);
+        return $this->success((new RechargeLogic())->order($user, $order_no));
     }
 
     private function available(Game $game): bool

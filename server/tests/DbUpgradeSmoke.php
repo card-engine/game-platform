@@ -19,6 +19,17 @@ putenv('MGS_DEFAULT_CURRENCY=USD');
 putenv('MGS_SYSTEM_BALANCE=1000000');
 require dirname(__DIR__) . '/vendor/autoload.php';
 require dirname(__DIR__) . '/support/bootstrap.php';
+// 可选隔离实例，不改本机 .env；配合临时 MySQL/Redis 运行。
+$isolated = getenv('MGS_TEST_MYSQL_PORT');
+if ($isolated) {
+    foreach (['DB_HOST' => '127.0.0.1', 'DB_PORT' => $isolated, 'DB_USER' => 'root', 'DB_PASSWORD' => '', 'DB_NAME' => 'mysql',
+        'REDIS_HOST' => '127.0.0.1', 'REDIS_PORT' => getenv('MGS_TEST_REDIS_PORT'), 'REDIS_PASSWORD' => ''] as $key => $value) {
+        putenv("{$key}={$value}");
+        $_ENV[$key] = $_SERVER[$key] = $value;
+    }
+    Config::clear();
+    support\App::loadAllConfig(['route']);
+}
 $system = require dirname(__DIR__) . '/database/system.php';
 
 function checkUpgrade(bool $result, string $message): void
@@ -32,6 +43,8 @@ function useUpgradeDatabase(string $database): void
     $_ENV['DB_NAME'] = $_SERVER['DB_NAME'] = $database;
     Config::clear();
     support\App::loadAllConfig(['route']);
+    Webman\Context::destroy();
+    (new ReflectionProperty(Webman\Database\DatabaseManager::class, 'pools'))->setValue(null, []);
     $property = new ReflectionProperty(Initializer::class, 'initialized');
     $property->setValue(null, false);
     Initializer::init(config('database', []));
@@ -57,6 +70,7 @@ try {
     useUpgradeDatabase($database);
 
     $upgrade = new CommandTester(new DbUpgradeCommand());
+    checkUpgrade($upgrade->execute(['--dry-run' => true]) === 0, $upgrade->getDisplay());
     checkUpgrade($upgrade->execute([]) === 0, $upgrade->getDisplay());
     $tableCount = support\Db::table('information_schema.tables')->where('table_schema', $database)->count();
     preg_match_all('/^CREATE TABLE `/m', file_get_contents(dirname(__DIR__) . '/database/schema.sql'), $schemaTables);
@@ -123,8 +137,10 @@ try {
     $_ENV['DB_NAME'] = $_SERVER['DB_NAME'] = $original['database'];
     Config::clear();
     support\App::loadAllConfig(['route']);
+    Webman\Context::destroy();
+    (new ReflectionProperty(Webman\Database\DatabaseManager::class, 'pools'))->setValue(null, []);
     $property = new ReflectionProperty(Initializer::class, 'initialized');
     $property->setValue(null, false);
     Initializer::init(config('database', []));
-    (new ConfigService())->rebuild();
+    if (!$isolated) (new ConfigService())->rebuild();
 }

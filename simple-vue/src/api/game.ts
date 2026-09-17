@@ -35,6 +35,54 @@ export async function getGameLink(payload: { gameId: string; language: string })
 
 export async function getBalance() {
   const { data } = await api.get<ApiResponse<Balance[]>>('/wallet')
-  const wallet = result(data)[0]
-  return wallet ? { balance: Number(wallet.balance), currency: wallet.currency_code || wallet.currency || 'INR' } : { balance: 0, currency: localStorage.getItem('mgs-currency-code') || 'INR' }
+  const currency = localStorage.getItem('mgs-currency-code') || 'INR'
+  const wallet = result(data).find((item) => item.currency_code === currency)
+  return { balance: Number(wallet?.balance || 0), currency }
+}
+
+export interface RechargePayment {
+  pay_currency_code: 'USDT' | 'TRX'
+  quote_key: string
+  amounts: Record<string, string>
+}
+
+export interface RechargeOptions {
+  currency_code: string
+  amounts: number[]
+  default_amount: number
+  available: boolean
+  unavailable_reason: string | null
+  payments: RechargePayment[]
+}
+
+export interface RechargeOrder {
+  order_no: string
+  currency_code: string
+  recharge_amount: string
+  pay_currency_code: 'USDT' | 'TRX'
+  pay_amount: string
+  receive_address: string
+  status: 'pending' | 'review' | 'expired' | 'closed' | 'paid'
+  expire_time: string
+  server_time: string
+}
+
+export async function getRechargeOptions(currencyCode: string) {
+  const { data } = await api.get<ApiResponse<RechargeOptions>>('/recharges/options', { params: { currency_code: currencyCode } })
+  return result(data)
+}
+
+export async function createRecharge(payload: { currency_code: string; recharge_amount: number; pay_currency_code: string; request_id: string; quote_key: string }) {
+  const { data } = await api.post<ApiResponse<RechargeOrder>>('/recharges', payload)
+  return result(data)
+}
+
+export async function getCurrentRecharge(currencyCode: string) {
+  const { data } = await api.get<ApiResponse<RechargeOrder | null>>('/recharges/current', { params: { currency_code: currencyCode } })
+  return result(data)
+}
+
+export async function getRecharge(orderNo: string) {
+  const { data } = await api.get<ApiResponse<RechargeOrder>>(`/recharges/${encodeURIComponent(orderNo)}`)
+  return result(data)
 }

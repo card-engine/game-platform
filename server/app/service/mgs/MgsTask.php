@@ -26,6 +26,7 @@ class MgsTask
                 'tables' => (new MgsTableService())->recent(),
                 'sync' => RedisQueue::send('mgs_game_sync', []),
                 'settlement' => (new MgsSettlementService())->generate($data['month'] ?? null),
+                'recharge_price' => (new TrxPriceService())->sync(),
                 default => throw new \InvalidArgumentException('MGS 任务动作无效'),
             };
             return json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

@@ -23,6 +23,7 @@ import {
 } from '@lucide/vue'
 import GameCard from '../components/GameCard.vue'
 import GamePlayer from '../components/GamePlayer.vue'
+import RechargeDialog from '../components/RechargeDialog.vue'
 import { getBalance, getBrandStats, getGameLink, getGames } from '../api/game'
 import { finishImageLoading, GAME_PLACEHOLDER, setGamePlaceholder } from '../game-image'
 import { useThemeStore } from '../stores/theme'
@@ -76,6 +77,7 @@ const visibleCount = ref(lobbyState.visibleCount || 24)
 const animatedBalance = ref(0)
 const player = ref<{ game: GameItem; url: string }>()
 const launchingId = ref('')
+const rechargeVisible = ref(false)
 const loadMoreTrigger = ref<HTMLElement>()
 const categoryStrip = ref<HTMLElement>()
 const providerStrip = ref<HTMLElement>()
@@ -309,6 +311,9 @@ function closePlayer() {
           <div class="wallet">
             <WalletCards :size="18" />
             <span>{{ formattedBalance }}</span>
+            <el-tooltip :content="t('recharge.title')" placement="bottom">
+              <button type="button" class="wallet-add" :aria-label="t('recharge.title')" :disabled="!balance" @click="rechargeVisible = true">+</button>
+            </el-tooltip>
           </div>
 
           <div class="theme-switcher" role="group" :aria-label="t('theme.label')">
@@ -459,6 +464,14 @@ function closePlayer() {
       :game="player.game"
       :url="player.url"
       @close="closePlayer"
+    />
+
+    <RechargeDialog
+      v-if="rechargeVisible && balance"
+      :currency="balance.currency"
+      :user-id="user.uniqueId"
+      @close="rechargeVisible = false"
+      @paid="queryClient.invalidateQueries({ queryKey: ['balance', user.uniqueId] })"
     />
   </div>
 </template>

@@ -213,6 +213,16 @@ button {
   font-weight: 750;
 }
 
+.wallet-add {
+  border: 0;
+  padding: 0;
+  color: var(--accent);
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
 .theme-switcher {
   display: flex;
   height: 40px;

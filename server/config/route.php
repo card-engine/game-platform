@@ -107,6 +107,10 @@ Route::group('/api', function () {
     Route::post('/games/launch', [app\controller\mgs\ApiController::class, 'launch']);
     Route::get('/user', [app\controller\mgs\ApiController::class, 'user']);
     Route::get('/wallet', [app\controller\mgs\ApiController::class, 'wallet']);
+    Route::get('/recharges/options', [app\controller\mgs\ApiController::class, 'rechargeOptions']);
+    Route::post('/recharges', [app\controller\mgs\ApiController::class, 'createRecharge']);
+    Route::get('/recharges/current', [app\controller\mgs\ApiController::class, 'currentRecharge']);
+    Route::get('/recharges/{order_no}', [app\controller\mgs\ApiController::class, 'recharge']);
     // MG -> MGS 钱包回调：由 MgsCallbackService 独立验签，不属于浏览器余额接口。
     Route::post('/mgames/{action:balance|bet|win|cancel}', [app\controller\mgs\CallbackController::class, 'callback']);
 });

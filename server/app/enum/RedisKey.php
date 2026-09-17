@@ -29,12 +29,14 @@ enum RedisKey: string
     /** Permanent caches. */
     case ForeverConfigs = 'forever:mg:configs'; // string 启用中的全局配置 JSON
     case ForeverMgsConfigs = 'forever:mgs:configs'; // string 启用中的 MGS 配置 JSON
+    case ForeverMgsRechargeSuffix = 'forever:mgs:recharge:suffix'; // integer 充值尾号 1-99 循环
 
     /** Temporary caches. */
     case TempGoldenGateXToken = 'temp:mg:goldengatex:token'; // string GoldenGateX Bearer Token
     case TempStatsRefresh = 'temp:mg:stats:refresh:%s'; // string 统计时间桶待刷新标记，格式：bucket_hash
     case TempPlatformStatsRebuild = 'temp:mg:platform_stats:rebuild'; // JSON 平台统计重建状态
     case TempMgsLaunch = 'temp:mgs:launch:%s'; // string MGS 进游短期幂等标记，格式：request_id
+    case TempMgsTrxTicker = 'temp:mgs:trx_ticker'; // JSON TRX-USDT 报价；格式：price/source_time/fetch_time，显式TTL
     case TempMgsStatsRefresh = 'temp:mgs:stats:refresh:%s'; // string MGS 统计待刷新标记，格式：日期或日期小时
 
     public function format(mixed ...$args): string
