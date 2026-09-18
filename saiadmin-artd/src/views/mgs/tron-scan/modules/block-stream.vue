@@ -92,14 +92,15 @@
   .block-stream {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(172px, 1.55fr);
+    grid-auto-rows: 1fr;
     gap: 10px;
-    align-items: center;
+    align-items: stretch;
   }
   .block-item {
     position: relative;
     min-width: 0;
     display: grid;
-    align-content: center;
+    align-content: start;
     gap: 4px;
     padding: 8px;
     border: 1px solid var(--el-border-color-light);
@@ -116,7 +117,6 @@
     white-space: nowrap;
   }
   .block-item.latest {
-    align-self: stretch;
     border-color: var(--el-color-primary);
     background: var(--el-color-primary-light-9);
   }
@@ -167,9 +167,6 @@
   @container (max-width: 720px) {
     .block-stream {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .block-item {
-      align-self: stretch;
     }
     .block-item:nth-child(odd)::before,
     .block-item:nth-child(odd)::after {
