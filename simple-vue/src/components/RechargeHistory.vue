@@ -6,6 +6,7 @@ import { ChevronDown, ReceiptText, RefreshCw } from '@lucide/vue'
 import { getRecharge, getRechargeHistory } from '../api/game'
 import { useUserStore } from '../stores/user'
 import CurrencyIcon from './CurrencyIcon.vue'
+import { formatAmount } from '../utils/amount'
 
 const user = useUserStore()
 const { t } = useI18n()
@@ -28,8 +29,6 @@ watch(detail, (order) => {
     void queryClient.invalidateQueries({ queryKey: ['recharge-history', user.uniqueId] })
   }
 })
-// 金额保持字符串，只去除小数部分末尾的零。
-const amount = (value: string) => value.replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1')
 const time = (value: string) => value.replace('T', ' ').slice(0, 19) + ' UTC'
 </script>
 
@@ -41,7 +40,7 @@ const time = (value: string) => value.replace('T', ' ').slice(0, 19) + ' UTC'
     <p v-else-if="!isPending && !orders.length" class="history-message">{{ t('rechargeHistory.empty') }}</p>
     <article v-for="order in orders" :key="order.mgs_recharge_id" class="history-row">
       <button type="button" class="history-summary" :aria-expanded="selected === order.mgs_recharge_id" @click="selected = selected === order.mgs_recharge_id ? '' : order.mgs_recharge_id">
-        <span class="history-main"><strong><CurrencyIcon :code="order.currency_code" :size="20" />{{ amount(order.recharge_amount) }} {{ order.currency_code }}</strong><small>{{ t(order.status === 'paid' ? 'rechargeHistory.paidAmount' : 'rechargeHistory.payable') }} {{ amount(order.pay_amount) }} {{ order.pay_currency_code }}</small><small>{{ time(order.create_time) }}</small></span>
+        <span class="history-main"><strong><CurrencyIcon :code="order.currency_code" :size="20" />{{ formatAmount(order.recharge_amount) }} {{ order.currency_code }}</strong><small>{{ t(order.status === 'paid' ? 'rechargeHistory.paidAmount' : 'rechargeHistory.payable') }} {{ formatAmount(order.pay_amount) }} {{ order.pay_currency_code }}</small><small>{{ time(order.create_time) }}</small></span>
         <span class="history-status" :class="order.status"><span>{{ t(`rechargeHistory.status.${order.status}`) }}</span><small>{{ t('rechargeHistory.details') }} <ChevronDown :size="13" /></small></span>
       </button>
       <div v-if="selected === order.mgs_recharge_id" class="history-detail">

@@ -36,3 +36,12 @@ export const percentToRate = (value?: string | number | null) => {
   const scaled = BigInt(`${integer || 0}${fraction.padEnd(10, '0').slice(0, 10)}`) / 100n
   return formatScaled(scaled, 10)
 }
+
+export const displayAmount = (value?: string | number | null) => {
+  const text = String(value ?? 0).trim()
+  const match = text.match(/^([+-]?)(\d+)(?:\.(\d+))?$/)
+  if (!match) return text
+  const fraction = (match[3] || '').replace(/0+$/, '')
+  const integer = match[2].replace(/^0+(?=\d)/, '')
+  return `${match[1] === '-' && integer !== '0' ? '-' : ''}${integer}.${(fraction || '').padEnd(2, '0')}`
+}

@@ -3,6 +3,7 @@
   import { useTable } from '@/hooks/core/useTable'
   import { useSaiAdmin } from '@/composables/useSaiAdmin'
   import api from '@/api/mgs/recharges'
+  import { displayAmount } from '@/utils/game/amount'
   import TableSearch from './modules/table-search.vue'
   const { t, locale } = useI18n()
   const route = useRoute()
@@ -85,9 +86,11 @@
           }}</ElButton></template
         >
         <template #recharge_amount="{ row }"
-          >{{ row.recharge_amount }} {{ row.currency_code }}</template
+          >{{ displayAmount(row.recharge_amount) }} {{ row.currency_code }}</template
         >
-        <template #pay_amount="{ row }">{{ row.pay_amount }} {{ row.pay_currency_code }}</template>
+        <template #pay_amount="{ row }"
+          >{{ displayAmount(row.pay_amount) }} {{ row.pay_currency_code }}</template
+        >
         <template #status="{ row }">{{ t(`mgsRecharge.${row.status}`) }}</template>
       </ArtTable>
     </ElCard>

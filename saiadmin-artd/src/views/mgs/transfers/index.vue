@@ -3,6 +3,7 @@
   import { useTable } from '@/hooks/core/useTable'
   import { useSaiAdmin } from '@/composables/useSaiAdmin'
   import api from '@/api/mgs/recharges'
+  import { displayAmount } from '@/utils/game/amount'
   import TableSearch from './modules/table-search.vue'
   import EditDialog from './modules/edit-dialog.vue'
   const { t, locale } = useI18n()
@@ -77,7 +78,9 @@
             >{{ row.transaction_id.slice(0, 20) }}…</ElButton
           ></template
         >
-        <template #amount="{ row }">{{ row.amount }} {{ row.currency_code }}</template>
+        <template #amount="{ row }"
+          >{{ displayAmount(row.amount) }} {{ row.currency_code }}</template
+        >
         <template #status="{ row }">{{ t(`mgsRecharge.${row.status}`) }}</template>
         <template #operation="{ row }">
           <ElButton

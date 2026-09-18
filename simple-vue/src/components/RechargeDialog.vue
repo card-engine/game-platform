@@ -5,6 +5,7 @@ import { createRecharge, getCurrentRecharge, getRecharge, getRechargeOptions } f
 import type { RechargeOptions, RechargeOrder } from '../api/game'
 import CurrencyIcon from './CurrencyIcon.vue'
 import { QrcodeSvg } from 'qrcode.vue'
+import { formatAmount } from '../utils/amount'
 
 const props = defineProps<{ currency: string; userId: string }>()
 const emit = defineEmits<{ close: []; paid: [] }>()
@@ -116,10 +117,10 @@ onBeforeUnmount(() => {
     <el-alert v-if="error" :title="error" type="error" :closable="false" />
     <template v-if="order">
       <p>{{ order.recharge_no }} <el-button link @click="copy(order.recharge_no)">{{ t('recharge.copy') }}</el-button></p>
-      <p>{{ t('recharge.credit') }}: {{ order.recharge_amount }} {{ order.currency_code }}</p>
+      <p>{{ t('recharge.credit') }}: {{ formatAmount(order.recharge_amount) }} {{ order.currency_code }}</p>
       <p>{{ t(`recharge.${order.status === 'pending' && !canPay ? 'expired' : order.status}`) }}</p>
       <template v-if="canPay">
-        <p>{{ t('recharge.pay') }}: <CurrencyIcon :code="order.pay_currency_code" /> <strong>{{ order.pay_amount }} {{ order.pay_currency_code }}</strong></p>
+        <p>{{ t('recharge.pay') }}: <CurrencyIcon :code="order.pay_currency_code" /> <strong>{{ formatAmount(order.pay_amount) }} {{ order.pay_currency_code }}</strong></p>
         <QrcodeSvg class="recharge-qr" :value="order.receive_address" :size="176" :margin="4" level="M" role="img" :aria-label="t('recharge.copyAddress')" />
         <p class="recharge-address">{{ order.receive_address }}</p>
         <el-button @click="copy(order.receive_address)">{{ t('recharge.copyAddress') }}</el-button>
@@ -141,8 +142,8 @@ onBeforeUnmount(() => {
       <el-radio-group v-model="payCurrency" :disabled="busy">
         <el-radio v-for="item in options?.payments" :key="item.pay_currency_code" :value="item.pay_currency_code"><CurrencyIcon :code="item.pay_currency_code" /> {{ item.pay_currency_code }}</el-radio>
       </el-radio-group>
-      <p>{{ t('recharge.credit') }}: <CurrencyIcon :code="currency" /> {{ amount }} {{ currency }}</p>
-      <p v-if="payment">{{ t('recharge.estimate') }}: {{ payment.amounts[String(amount)] }} {{ payCurrency }}</p>
+      <p>{{ t('recharge.credit') }}: <CurrencyIcon :code="currency" /> {{ formatAmount(amount) }} {{ currency }}</p>
+      <p v-if="payment">{{ t('recharge.estimate') }}: {{ formatAmount(payment.amounts[String(amount)]) }} {{ payCurrency }}</p>
       <el-button type="primary" :loading="busy" :disabled="!options?.available || !payment" @click="submit">{{ t('recharge.create') }}</el-button>
       <el-button :disabled="busy" @click="load()">{{ t('recharge.refresh') }}</el-button>
       <el-button v-if="error" :disabled="busy" @click="load(true)">{{ t('recharge.newOrder') }}</el-button>

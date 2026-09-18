@@ -10,6 +10,7 @@ import CurrencyIcon from '../components/CurrencyIcon.vue'
 import { getUser, getUserGames, updateUser } from '../api/game'
 import { useUserStore } from '../stores/user'
 import type { Balance, GameItem } from '../types/game'
+import { formatAmount } from '../utils/amount'
 
 const props = defineProps<{ balance?: Balance; launchingId: string }>()
 const emit = defineEmits<{ play: [game: GameItem]; recharge: [] }>()
@@ -37,9 +38,7 @@ watch(profile, (value) => {
 
 const displayName = computed(() => profile.value?.nickname || t('me.player', { id: profile.value?.unique_id || user.uniqueId }))
 const avatarStyle = computed(() => ({ background: `linear-gradient(145deg, hsl(${Number(user.uniqueId || 0) % 360} 62% 58%), var(--accent))` }))
-const formattedBalance = computed(() => new Intl.NumberFormat(user.language, {
-  style: 'currency', currency: props.balance?.currency || user.currencyCode,
-}).format(Number(props.balance?.balance || 0)))
+const formattedBalance = computed(() => `${formatAmount(props.balance?.balance)} ${props.balance?.currency || user.currencyCode}`)
 const groups = computed(() => [
   { key: 'recent', title: t('me.recent'), games: recommendations.value?.recent || [] },
   { key: 'hot', title: t('me.hot'), games: recommendations.value?.hot || [] },

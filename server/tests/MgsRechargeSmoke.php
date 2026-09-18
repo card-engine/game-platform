@@ -102,6 +102,8 @@ try {
     Redis::set(RedisKey::ForeverMgsRechargeSuffix->value, 0);
     $order = $logic->create($user, $data);
     check($order['pay_amount'] === '1.2501', '支付数量错误');
+    $formatted = $logic->order($user, $order['mgs_recharge_id']);
+    check($formatted['recharge_amount'] === '100.00' && $formatted['pay_amount'] === '1.2501', '充值订单金额展示格式错误');
     check(Wallet::where('user_id', $user->id)->value('balance') === '0.00000000', '下单误加余额');
     $stored = Recharge::first();
     check($stored->rate_snapshot['exchange_rate_id'] !== null && (int) $stored->is_reserved === 1, '报价或金额占用未保存');

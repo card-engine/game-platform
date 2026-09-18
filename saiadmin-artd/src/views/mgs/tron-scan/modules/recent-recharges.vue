@@ -1,10 +1,10 @@
 <script setup lang="ts">
   import { useI18n } from 'vue-i18n'
   import type { RecentRecharge } from '@/api/mgs/recharges'
+  import { displayAmount } from '@/utils/game/amount'
 
   defineProps<{ rows: RecentRecharge[] }>()
   const { t } = useI18n()
-  const amount = (value: string) => value.replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1')
 </script>
 
 <template>
@@ -40,10 +40,10 @@
             </td>
             <td :data-label="t('mgs.user')">{{ row.user_id }}</td>
             <td class="numeric" :data-label="t('mgsRecharge.creditAmount')"
-              >{{ amount(row.recharge_amount) }} {{ row.currency_code }}</td
+              >{{ displayAmount(row.recharge_amount) }} {{ row.currency_code }}</td
             >
             <td class="numeric" :data-label="t('mgsRecharge.payAmount')"
-              >{{ amount(row.pay_amount) }} {{ row.pay_currency_code }}</td
+              >{{ displayAmount(row.pay_amount) }} {{ row.pay_currency_code }}</td
             >
             <td
               :title="row.credited_time + ' UTC'"

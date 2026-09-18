@@ -42,3 +42,15 @@ if (!function_exists('mg_no')) {
         return strtoupper($prefix) . ($month ?? gmdate('ym')) . gmdate('dHis') . bin2hex(random_bytes(6));
     }
 }
+
+if (!function_exists('format_amount')) {
+    function format_amount(string|int $value): string
+    {
+        $text = trim((string) $value);
+        if (!preg_match('/^([+-]?)(\d+)(?:\.(\d+))?$/D', $text, $match)) return $text;
+        $fraction = rtrim($match[3] ?? '', '0');
+        $sign = $match[1] === '-' && ltrim($match[2], '0') !== '' ? '-' : '';
+        $integer = ltrim($match[2], '0') ?: '0';
+        return $sign . $integer . ($fraction === '' ? '.00' : '.' . str_pad($fraction, 2, '0'));
+    }
+}

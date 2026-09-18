@@ -25,7 +25,7 @@ class RechargeAdminLogic extends BaseLogic
                 $recent = Recharge::where('status', 'paid')->orderByDesc('credited_time')->orderByDesc('id')->limit(10)
                     ->with(['transfers' => fn ($query) => $query->where('status', 'credited')
                         ->select(['id', 'recharge_id', 'transaction_id', 'block_number'])])
-                    ->get(['id', 'recharge_no', 'user_id', 'currency_code', 'recharge_amount', 'pay_currency_code', 'pay_amount', 'credited_time'])->toArray();
+                    ->get(['id', 'recharge_no', 'user_id', 'currency_code', 'recharge_amount', 'pay_currency_code', 'pay_amount', 'credited_time'])->map(fn ($row) => array_merge($row->toArray(), ['recharge_amount' => format_amount((string) $row->recharge_amount), 'pay_amount' => format_amount((string) $row->pay_amount)]))->all();
                 Redis::setex(RedisKey::TempMgsRecentRecharges->value, RedisKey::EXPIRE_1_SECOND, json_encode($recent));
             }
         }
@@ -42,22 +42,40 @@ class RechargeAdminLogic extends BaseLogic
 
     public function recharges(array $filters): array
     {
-        return $this->getList(Recharge::query()->when($filters['keyword'] ?? '', fn ($q, $v) => $q->where('recharge_no', $v))
+        $result = $this->getList(Recharge::query()->when($filters['keyword'] ?? '', fn ($q, $v) => $q->where('recharge_no', $v))
             ->when($filters['status'] ?? '', fn ($q, $v) => $q->where('status', $v))
             ->when($filters['currency_code'] ?? '', fn ($q, $v) => $q->where('currency_code', $v)));
+        $rows = $result['data'] ?? $result;
+        foreach ($rows as &$row) {
+            $row['recharge_amount'] = format_amount((string) $row['recharge_amount']);
+            $row['pay_amount'] = format_amount((string) $row['pay_amount']);
+        }
+        unset($row);
+        if (isset($result['data'])) $result['data'] = $rows;
+        return $result;
     }
 
     public function transfers(array $filters): array
     {
-        return $this->getList(Transfer::query()->with('recharge:id,recharge_no')
+        $result = $this->getList(Transfer::query()->with('recharge:id,recharge_no')
             ->when($filters['keyword'] ?? '', fn ($q, $v) => $q->where('transaction_id', $v))
             ->when($filters['status'] ?? '', fn ($q, $v) => $q->where('status', $v))
             ->when($filters['currency_code'] ?? '', fn ($q, $v) => $q->where('currency_code', $v)));
+        $rows = $result['data'] ?? $result;
+        foreach ($rows as &$row) $row['amount'] = format_amount((string) $row['amount']);
+        unset($row);
+        if (isset($result['data'])) $result['data'] = $rows;
+        return $result;
     }
 
     public function detail(string $type, string $id): array
     {
-        return $type === 'recharge' ? Recharge::with('transfers')->findOrFail($id)->toArray() : Transfer::with('recharge')->findOrFail($id)->toArray();
+        $data = $type === 'recharge' ? Recharge::with('transfers')->findOrFail($id)->toArray() : Transfer::with('recharge')->findOrFail($id)->toArray();
+        foreach (['recharge_amount', 'pay_amount', 'amount'] as $field) if (isset($data[$field])) $data[$field] = format_amount((string) $data[$field]);
+        foreach ($data['transfers'] ?? [] as &$transfer) if (isset($transfer['amount'])) $transfer['amount'] = format_amount((string) $transfer['amount']);
+        if (isset($data['recharge']['recharge_amount'])) $data['recharge']['recharge_amount'] = format_amount((string) $data['recharge']['recharge_amount']);
+        if (isset($data['recharge']['pay_amount'])) $data['recharge']['pay_amount'] = format_amount((string) $data['recharge']['pay_amount']);
+        return $data;
     }
 
     public function review(int $id, string $status, string $remark, int $adminId): void

@@ -43,7 +43,7 @@ describe('recharge history', () => {
     mount()
     await vi.waitFor(() => expect(root.querySelectorAll('.history-row')).toHaveLength(1))
     expect(getRecharge).not.toHaveBeenCalled()
-    expect(root.textContent).toContain('100 INR')
+    expect(root.textContent).toContain('100.00 INR')
     expect(root.textContent).toContain('3.1102 TRX')
     root.querySelector<HTMLButtonElement>('.history-summary')!.click()
     await vi.waitFor(() => expect(root.querySelector('.history-status')?.textContent).toContain('rechargeHistory.status.paid'))

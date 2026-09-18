@@ -148,8 +148,8 @@ class RechargeLogic extends BaseLogic
         $expire = new DateTimeImmutable($order->getRawOriginal('expire_time'), new DateTimeZone('UTC'));
         $status = $order->status === 'pending' && $expire->getTimestamp() <= time() ? 'expired' : $order->status;
         return ['mgs_recharge_id' => (string) $order->id, 'recharge_no' => $order->recharge_no,
-            'currency_code' => $order->currency_code, 'recharge_amount' => (string) $order->recharge_amount,
-            'pay_currency_code' => $order->pay_currency_code, 'pay_amount' => bcadd((string) $order->pay_amount, '0', 4),
+            'currency_code' => $order->currency_code, 'recharge_amount' => format_amount((string) $order->recharge_amount),
+            'pay_currency_code' => $order->pay_currency_code, 'pay_amount' => format_amount((string) $order->pay_amount),
             'pay_method' => $order->pay_method, 'receive_address' => $order->receive_address, 'status' => $status,
             'create_time' => str_replace(' ', 'T', $order->getRawOriginal('create_time')) . 'Z',
             'credited_time' => $order->credited_time ? str_replace(' ', 'T', $order->credited_time) . 'Z' : null,
