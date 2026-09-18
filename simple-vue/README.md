@@ -55,6 +55,7 @@ cp .env.example .env.local
 | --- | --- |
 | `VITE_GAME_ACCESS_PASSWORD` | 用户点击游戏时需要输入的访问密码 |
 | `VITE_GAME_ACCESS_TTL_DAYS` | 密码验证状态在当前浏览器中的有效天数 |
+| `VITE_TELEGRAM_URL` | “我的”页面和桌面导航中的 Telegram 地址；为空时隐藏入口 |
 
 `.env.local` 仅用于本机，不应提交到 Git。需要新增公共配置项时，请同步更新 `.env.example`。
 

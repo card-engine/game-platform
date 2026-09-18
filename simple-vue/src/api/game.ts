@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { ApiResponse, Balance, BrandStat, GameType } from '../types/game'
+import type { ApiResponse, Balance, BrandStat, GameItem, GameRecommendations, GameType, UserProfile } from '../types/game'
 
 const api = axios.create({ baseURL: '/api', timeout: 15000 })
 api.interceptors.request.use((config) => {
@@ -14,7 +14,7 @@ const result = <T>(response: ApiResponse<T>) => {
 }
 
 export async function createSession(token: string, language: string) {
-  const { data } = await api.post<ApiResponse<{ token: string; default_currency_code: string; user: { mgs_user_id: number; unique_id: number; language: string }; wallets: Balance[] }>>('/session', { language }, { headers: { Authorization: `Bearer ${token}` } })
+  const { data } = await api.post<ApiResponse<{ token: string; default_currency_code: string; user: UserProfile; wallets: Balance[] }>>('/session', { language }, { headers: { Authorization: `Bearer ${token}` } })
   return result(data)
 }
 
@@ -23,9 +23,41 @@ export async function getBrandStats() {
   return Object.fromEntries(result(data).categories.map((category) => [category.code, category.brands.map((item) => ({ gameBrand: item.code, gameType: category.code as GameType, count: item.count }))])) as Record<GameType, BrandStat[]>
 }
 
+interface ApiGame {
+  mgs_game_id: number
+  name: string
+  icon_url: string
+  game_type: string
+  brand_code: string
+  currency_codes: string[]
+  status: number
+}
+
+const mapGame = (game: ApiGame): GameItem => ({
+  gameId: String(game.mgs_game_id), gameName: game.name, gameFullName: game.name,
+  gameType: game.game_type as GameType, gameBrand: game.brand_code, gameIcon: game.icon_url,
+  proxyModel: 'mgs', currencyCodes: game.currency_codes, status: game.status,
+})
+
 export async function getGames(gameBrand: string, gameType: GameType) {
-  const { data } = await api.get<ApiResponse<{ list: Array<{ mgs_game_id: number; name: string; icon_url: string; game_type: string; brand_code: string; currency_codes: string[]; status: number }> }>>('/games', { params: { brand_code: gameBrand, game_type: gameType, currency_code: localStorage.getItem('mgs-currency-code') || 'INR', page: 1, limit: 500 } })
-  return result(data).list.map((game) => ({ gameId: String(game.mgs_game_id), gameName: game.name, gameFullName: game.name, gameType: game.game_type as GameType, gameBrand: game.brand_code, gameIcon: game.icon_url, proxyModel: 'mgs', currencyCodes: game.currency_codes, status: game.status }))
+  const { data } = await api.get<ApiResponse<{ list: ApiGame[] }>>('/games', { params: { brand_code: gameBrand, game_type: gameType, currency_code: localStorage.getItem('mgs-currency-code') || 'INR', page: 1, limit: 500 } })
+  return result(data).list.map(mapGame)
+}
+
+export async function getUser() {
+  const { data } = await api.get<ApiResponse<UserProfile>>('/user')
+  return result(data)
+}
+
+export async function updateUser(nickname: string) {
+  const { data } = await api.put<ApiResponse<UserProfile>>('/user', { nickname })
+  return result(data)
+}
+
+export async function getUserGames(seed: number): Promise<GameRecommendations> {
+  const { data } = await api.get<ApiResponse<{ recent: ApiGame[]; hot: ApiGame[]; discover: ApiGame[] }>>('/user/games', { params: { currency_code: localStorage.getItem('mgs-currency-code') || 'INR', seed } })
+  const groups = result(data)
+  return { recent: groups.recent.map(mapGame), hot: groups.hot.map(mapGame), discover: groups.discover.map(mapGame) }
 }
 
 export async function getGameLink(payload: { gameId: string; language: string }) {

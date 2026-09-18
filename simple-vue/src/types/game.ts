@@ -24,6 +24,19 @@ export interface Balance {
   currency_code?: string
 }
 
+export interface UserProfile {
+  mgs_user_id: number
+  unique_id: number
+  nickname: string | null
+  language: string
+}
+
+export interface GameRecommendations {
+  recent: GameItem[]
+  hot: GameItem[]
+  discover: GameItem[]
+}
+
 export interface ApiResponse<T> {
   code: number
   data: T

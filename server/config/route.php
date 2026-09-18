@@ -112,7 +112,9 @@ Route::group('/api', function () {
     Route::get('/brands', [app\controller\mgs\ApiController::class, 'brands']);
     Route::get('/games', [app\controller\mgs\ApiController::class, 'games']);
     Route::post('/games/launch', [app\controller\mgs\ApiController::class, 'launch']);
+    Route::get('/user/games', [app\controller\mgs\ApiController::class, 'userGames']);
     Route::get('/user', [app\controller\mgs\ApiController::class, 'user']);
+    Route::put('/user', [app\controller\mgs\ApiController::class, 'updateUser']);
     Route::get('/wallet', [app\controller\mgs\ApiController::class, 'wallet']);
     Route::get('/recharges/options', [app\controller\mgs\ApiController::class, 'rechargeOptions']);
     Route::post('/recharges', [app\controller\mgs\ApiController::class, 'createRecharge']);

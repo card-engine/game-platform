@@ -3,6 +3,7 @@ import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, r
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
 import bannerImage from '../assets/images/banner.webp'
 import logoImage from '../assets/images/logo.webp'
 import {
@@ -19,6 +20,7 @@ import {
   Send,
   Spade,
   Sun,
+  UserRound,
   Volleyball,
 } from '@lucide/vue'
 import GameCard from '../components/GameCard.vue'
@@ -31,6 +33,8 @@ import { useUserStore } from '../stores/user'
 import type { GameItem, GameType } from '../types/game'
 
 const RechargeDialog = defineAsyncComponent(() => import('../components/RechargeDialog.vue'))
+const LegalView = defineAsyncComponent(() => import('./LegalView.vue'))
+const MeView = defineAsyncComponent(() => import('./MeView.vue'))
 
 const categories = [
   { value: 'slot', label: 'category.slots', icon: Gamepad2 },
@@ -68,7 +72,12 @@ await user.ready
 const theme = useThemeStore()
 const queryClient = useQueryClient()
 const { t, locale } = useI18n()
-const selectedType = ref<GameType>(lobbyState.type && lobbyState.type !== 'other' ? lobbyState.type : 'slot')
+const route = useRoute()
+const router = useRouter()
+const page = computed(() => String(route.name || 'games'))
+const meActive = computed(() => ['me', 'privacy', 'terms'].includes(page.value))
+const telegramUrl = import.meta.env.VITE_TELEGRAM_URL as string | undefined
+const selectedType = ref<GameType>(categories.some(({ value }) => value === route.params.type) ? route.params.type as GameType : lobbyState.type && lobbyState.type !== 'other' ? lobbyState.type : 'slot')
 const selectedBrand = ref(lobbyState.brand === 'yono' ? '' : lobbyState.brand || '')
 const search = ref('')
 const visibleCount = ref(lobbyState.visibleCount || 24)
@@ -84,6 +93,7 @@ let balanceFrame = 0
 let restoreScrollY = lobbyState.scrollY || 0
 
 function saveLobbyState() {
+  if (page.value !== 'games') return
   cancelAnimationFrame(saveFrame)
   saveFrame = requestAnimationFrame(() => {
     const headerBottom = document.querySelector('.site-header')?.getBoundingClientRect().bottom || 0
@@ -130,6 +140,7 @@ const { data: brandStats, isLoading: statsLoading, isError: statsError, refetch:
 const totalGames = computed(() => Object.values(brandStats.value || {})
   .flat()
   .reduce((total, item) => total + item.count, 0))
+const visibleCategories = computed(() => brandStats.value ? categories.filter(({ value }) => categoryCount(value) > 0) : categories)
 const selectedStats = computed(() => [...(brandStats.value?.[selectedType.value] || [])].sort((a, b) => {
   const aIndex = brandOrder.indexOf(a.gameBrand.toLowerCase())
   const bIndex = brandOrder.indexOf(b.gameBrand.toLowerCase())
@@ -150,6 +161,19 @@ watch(selectedStats, async (stats) => {
   const active = strip?.querySelector<HTMLElement>('.active')
   if (strip && active) strip.scrollLeft = active.offsetLeft - strip.offsetLeft - (strip.clientWidth - active.offsetWidth) / 2
 }, { immediate: true })
+watch(() => route.params.type, (value) => {
+  if (categories.some((category) => category.value === value)) selectedType.value = value as GameType
+}, { immediate: true })
+watch(page, async (current, previous) => {
+  if (current !== 'games' || previous === 'games') return
+  const state = JSON.parse(localStorage.getItem('mgames-lobby-state') || '{}') as { scrollY?: number }
+  await nextTick()
+  requestAnimationFrame(() => window.scrollTo(0, state.scrollY || 0))
+})
+watch([visibleCategories, page], ([items, currentPage]) => {
+  if (currentPage !== 'games' || !brandStats.value || items.some(({ value }) => value === route.params.type)) return
+  void router.replace(items[0] ? { name: 'games', params: { type: items[0].value } } : { name: 'me' })
+}, { immediate: true })
 watch([selectedType, selectedBrand], () => {
   restoreScrollY = 0
   search.value = ''
@@ -166,7 +190,7 @@ watch(() => user.language, (value) => {
 const { data: games, isLoading: gamesLoading, isError: gamesError, refetch: refetchGames } = useQuery({
   queryKey: computed(() => ['games', selectedType.value, selectedBrand.value]),
   queryFn: () => getGames(selectedBrand.value, selectedType.value),
-  enabled: computed(() => Boolean(selectedBrand.value)),
+  enabled: computed(() => page.value === 'games' && Boolean(selectedBrand.value)),
   staleTime: 300000,
 })
 const filteredGames = computed(() => {
@@ -243,8 +267,14 @@ function selectCategory(type: GameType, event: MouseEvent) {
   const movingLeft = active ? button.offsetLeft < active.offsetLeft : false
   const neighbor = movingLeft ? button.previousElementSibling : button.nextElementSibling
   selectedType.value = type
+  void router.push({ name: 'games', params: { type } })
   providerStrip.value?.scrollTo({ left: 0 })
   void nextTick(() => neighbor?.scrollIntoView({ block: 'nearest', inline: movingLeft ? 'start' : 'end' }))
+}
+
+function selectMe() {
+  saveLobbyState()
+  void router.push({ name: 'me' })
 }
 
 function brandLabel(brand: string) {
@@ -290,25 +320,32 @@ function closePlayer() {
   <div class="lobby-shell">
     <header class="site-header">
       <div class="site-header__inner">
-        <a class="brand" href="/" :aria-label="t('home')">
+        <RouterLink class="brand" :to="{ name: 'games', params: { type: selectedType } }" :aria-label="t('home')">
           <span class="brand__mark"><img :src="logoImage" alt="MGames" /></span>
           <span class="brand__name"><strong>MGames</strong></span>
-        </a>
+        </RouterLink>
 
-        <nav ref="categoryStrip" class="category-strip" :aria-label="t('categories')">
-          <button
-            v-for="category in categories"
-            :key="category.value"
-            type="button"
-            :class="{ active: selectedType === category.value }"
-            :aria-pressed="selectedType === category.value"
-            @click="selectCategory(category.value, $event)"
-          >
-            <span><component :is="category.icon" :size="21" /></span>
-            <strong>{{ t(category.label) }}</strong>
-            <small>{{ categoryCount(category.value) }}</small>
+        <div class="site-navigation">
+          <nav ref="categoryStrip" class="category-strip" :aria-label="t('categories')">
+            <button
+              v-for="category in visibleCategories"
+              :key="category.value"
+              type="button"
+              :class="{ active: page === 'games' && selectedType === category.value }"
+              :aria-pressed="page === 'games' && selectedType === category.value"
+              @click="selectCategory(category.value, $event)"
+            >
+              <span><component :is="category.icon" :size="21" /></span>
+              <strong>{{ t(category.label) }}</strong>
+              <small>{{ categoryCount(category.value) }}</small>
+            </button>
+          </nav>
+          <button type="button" class="me-tab" :class="{ active: meActive }" :aria-pressed="meActive" @click="selectMe">
+            <span><UserRound :size="21" /></span>
+            <strong>{{ t('me.tab') }}</strong>
+            <small aria-hidden="true">&nbsp;</small>
           </button>
-        </nav>
+        </div>
 
         <div class="header-actions">
           <div class="wallet">
@@ -334,14 +371,17 @@ function closePlayer() {
             <el-option v-for="language in languages" :key="language[0]" :label="`${language[1]} · ${language[0]}`" :value="language[0]" />
           </el-select>
 
-          <el-tooltip content="Telegram" placement="bottom">
-            <a class="icon-button telegram-button" href="#" :aria-label="t('openTelegram')"><Send :size="19" /></a>
+          <el-tooltip v-if="telegramUrl" content="Telegram" placement="bottom">
+            <a class="icon-button telegram-button" :href="telegramUrl" target="_blank" rel="noopener" :aria-label="t('openTelegram')"><Send :size="19" /></a>
           </el-tooltip>
         </div>
       </div>
     </header>
 
     <main class="page-content">
+      <MeView v-if="page === 'me'" :balance="balance" :launching-id="launchingId" @play="requestGame" @recharge="rechargeVisible = true" />
+      <LegalView v-else-if="page === 'privacy' || page === 'terms'" :type="page === 'privacy' ? 'privacy' : 'terms'" />
+      <template v-else>
       <section v-if="!statsError" class="provider-navigation">
         <div ref="providerStrip" class="provider-strip" role="group" :aria-label="t('providers')">
           <div v-if="statsLoading" class="provider-loading">
@@ -455,6 +495,7 @@ function closePlayer() {
 
           <div v-if="displayedGames.length < filteredGames.length" ref="loadMoreTrigger" class="load-more-trigger" />
         </section>
+      </template>
       </template>
     </main>
 

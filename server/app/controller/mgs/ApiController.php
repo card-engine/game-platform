@@ -2,20 +2,22 @@
 
 namespace app\controller\mgs;
 
+use app\logic\mgs\PlayerLogic;
+use app\logic\mgs\RechargeLogic;
 use app\model\mgs\Game;
+use app\model\mgs\Wallet;
 use app\service\mgs\MgsAuthService;
 use app\service\mgs\MgsConfigService;
 use app\service\mgs\MgsGamePlatformClient;
-use app\logic\mgs\RechargeLogic;
 use app\validate\mgs\RechargeValidate;
-use app\model\mgs\Wallet;
+use app\validate\mgs\UserValidate;
 use plugin\saiadmin\basic\OpenController;
 use support\Request;
 use support\Response;
 
 class ApiController extends OpenController
 {
-    protected array $noNeedLogin = ['session', 'brands', 'games', 'launch', 'user', 'wallet', 'rechargeOptions', 'createRecharge', 'currentRecharge', 'recharge'];
+    protected array $noNeedLogin = ['session', 'brands', 'games', 'launch', 'userGames', 'user', 'updateUser', 'wallet', 'rechargeOptions', 'createRecharge', 'currentRecharge', 'recharge'];
 
     public function session(Request $request): Response
     {
@@ -23,7 +25,7 @@ class ApiController extends OpenController
         $user = $data['user'];
         $currency = strtoupper((string) (new MgsConfigService())->get('default_currency', config('mgs.default_currency', 'USD')));
         Wallet::firstOrCreate(['user_id' => $user->id, 'currency_code' => $currency], ['balance' => '0.00000000']);
-        return $this->success(['token' => $data['token'], 'default_currency_code' => $currency, 'user' => ['mgs_user_id' => $user->id, 'unique_id' => $user->unique_id, 'nickname' => $user->nickname, 'language' => $user->language], 'wallets' => $user->wallets()->get(['id', 'currency_code', 'balance'])]);
+        return $this->success(['token' => $data['token'], 'default_currency_code' => $currency, 'user' => (new PlayerLogic())->profile($user), 'wallets' => $user->wallets()->get(['id', 'currency_code', 'balance'])]);
     }
 
     public function brands(Request $request): Response
@@ -60,7 +62,22 @@ class ApiController extends OpenController
     public function user(Request $request): Response
     {
         $user = (new MgsAuthService())->browserUser($request);
-        return $this->success(['mgs_user_id' => $user->id, 'unique_id' => $user->unique_id, 'nickname' => $user->nickname, 'language' => $user->language]);
+        return $this->success((new PlayerLogic())->profile($user));
+    }
+
+    public function updateUser(Request $request): Response
+    {
+        $user = (new MgsAuthService())->browserUser($request);
+        $data = ['nickname' => trim((string) $request->input('nickname'))];
+        (new UserValidate())->scene('update')->failException()->check($data);
+        return $this->success((new PlayerLogic())->update($user, $data));
+    }
+
+    public function userGames(Request $request): Response
+    {
+        $user = (new MgsAuthService())->browserUser($request);
+        $currency = strtoupper((string) $request->input('currency_code', (new MgsConfigService())->get('default_currency', config('mgs.default_currency', 'USD'))));
+        return $this->success((new PlayerLogic())->games($user, $currency, (int) $request->input('seed', 0)));
     }
 
     public function wallet(Request $request): Response

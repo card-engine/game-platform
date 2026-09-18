@@ -1,6 +1,7 @@
 <?php
 
 use app\command\DbUpgradeCommand;
+use app\logic\mgs\PlayerLogic;
 use app\model\mgs\Game;
 use app\model\mgs\User;
 use app\model\mgs\Wallet;
@@ -105,6 +106,9 @@ try {
     $service->handle('bet', ['user_id' => (string) $user2->unique_id, 'currency' => 'USD', 'game_id' => 'smoke-game', 'transaction_id' => 'tx-bet-1', 'bet_amount' => '2']);
     $service->handle('bet', ['user_id' => (string) $user2->unique_id, 'currency' => 'USD', 'game_id' => 'smoke-game', 'transaction_id' => 'tx-bet-2', 'bet_amount' => '3']);
     if ((string) $wallet2->fresh()->balance !== '95.00000000' || Db::table('mgs_bets_' . gmdate('ym'))->where('user_id', $user2->id)->count() !== 2) throw new RuntimeException('无局号交易被丢弃或错误合并');
+    $player = new PlayerLogic();
+    if (($player->games($user2, 'USD', 0)['recent'][0]['mgs_game_id'] ?? null) !== $game->id) throw new RuntimeException('玩家最近游戏推荐错误');
+    if ($player->update($user2, ['nickname' => 'Smoke Player'])['nickname'] !== 'Smoke Player') throw new RuntimeException('玩家资料更新错误');
     echo "MGS smoke test passed\n";
 } finally {
     Db::statement("USE `{$original['database']}`");
