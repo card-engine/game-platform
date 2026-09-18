@@ -69,7 +69,7 @@ if ($worker) {
 
 try {
     $schema = file_get_contents(dirname(__DIR__) . '/database/schema.sql');
-    foreach (['mgs_users', 'mgs_wallets', 'mg_exchange_rates', 'mgs_recharges'] as $table) {
+    foreach (['mgs_users', 'mgs_wallets', 'mg_exchange_rates', 'mgs_recharges', 'mgs_transfers'] as $table) {
         preg_match('/CREATE TABLE `' . $table . '` \(.*?;(?=\n)/s', $schema, $match);
         Db::statement($match[0]);
     }
@@ -83,6 +83,9 @@ try {
     $response = (new app\controller\mgs\ApiController())->currentRecharge($request);
     $body = json_decode($response->rawBody(), true, 512, JSON_THROW_ON_ERROR);
     check($body['code'] === 200 && $body['data']['order'] === null, '空订单接口响应错误');
+    $historyRequest = new support\Request("GET /api/recharges?page=1 HTTP/1.1\r\nHost: localhost\r\nAuthorization: Bearer recharge-test-browser\r\n\r\n");
+    $historyResponse = json_decode((new app\controller\mgs\ApiController())->recharges($historyRequest)->rawBody(), true);
+    check($historyResponse['code'] === 200 && $historyResponse['data']['list'] === [] && !$historyResponse['data']['has_more'], '个人记录空列表响应错误');
     $logic = new RechargeLogic();
     $options = $logic->options('INR');
     check(count($options['amounts']) === 13 && count($options['payments']) === 1, '档位或无行情降级错误');

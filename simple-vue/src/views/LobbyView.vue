@@ -511,7 +511,7 @@ function closePlayer() {
       :currency="balance.currency"
       :user-id="user.uniqueId"
       @close="rechargeVisible = false"
-      @paid="queryClient.invalidateQueries({ queryKey: ['balance', user.uniqueId] })"
+      @paid="queryClient.invalidateQueries({ queryKey: ['balance', user.uniqueId] }); queryClient.invalidateQueries({ queryKey: ['recharge-history', user.uniqueId] }); queryClient.invalidateQueries({ queryKey: ['recharge-detail', user.uniqueId] })"
     />
   </div>
 </template>

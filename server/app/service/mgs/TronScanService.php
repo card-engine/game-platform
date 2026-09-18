@@ -5,6 +5,7 @@ namespace app\service\mgs;
 use app\enum\RedisKey;
 use RuntimeException;
 use support\Redis;
+use support\Log;
 use Webman\RedisQueue\Redis as Queue;
 
 class TronScanService
@@ -107,6 +108,7 @@ LUA, 3, $lock, RedisKey::ForeverMgsTronCheckpoint->value, RedisKey::ForeverMgsTr
                 $number = $gapId === null ? $state['next_block_number'] : $state['next'];
                 if ($number > $solid || ($gapId !== null && $number > $state['to'])) break;
                 if (!Redis::eval("if redis.call('get',KEYS[1])==ARGV[1] then return redis.call('expire',KEYS[1],ARGV[2]) end return 0", 1, $lock, $token, RedisKey::EXPIRE_1_MINUTE)) throw new RuntimeException('扫描锁已失效');
+                $blockStarted = microtime(true);
                 $block = $number === $solid ? $head : $this->client->request('getblockbynum', ['num' => $number]);
                 $h = $block['block_header']['raw_data'];
                 $lastHash = $gapId === null ? $state['last_block_hash'] : $state['last_hash'];
@@ -115,7 +117,8 @@ LUA, 3, $lock, RedisKey::ForeverMgsTronCheckpoint->value, RedisKey::ForeverMgsTr
                 if ($gapId !== null && $number === $state['to'] && !hash_equals($state['end_hash'], $block['blockID'])) throw new RuntimeException('补扫终点哈希不一致');
                 $receipts = empty($block['transactions']) ? [] : $this->client->request('gettransactioninfobyblocknum', ['num' => $number]);
                 $processor = new TronBlockService();
-                $pending = $processor->store($processor->events($block, $receipts, $addresses));
+                $events = $processor->events($block, $receipts, $addresses);
+                $pending = $processor->store($events);
                 $next = $state;
                 if ($gapId === null) {
                     $next['next_block_number'] = $number + 1;
@@ -143,6 +146,23 @@ LUA, 2, $lock, $key, $token, $gapId ?? '', $raw, $encoded, $done ? '1' : '0');
                 $state = $next;
                 $raw = $encoded;
                 foreach ($pending as $id) Queue::send('mgs_recharge_credit', ['transfer_id' => $id]);
+                // 展示摘要不参与断点和入账；补扫不写入实时区块流。
+                if ($gapId === null) {
+                    try {
+                        $summary = ['height' => $number, 'hash' => $block['blockID'], 'parent_hash' => $h['parentHash'],
+                            'block_time' => TronClient::time((int) $h['timestamp']), 'transactions' => count($block['transactions'] ?? []),
+                            'transfers' => count($events), 'duration_ms' => (int) round((microtime(true) - $blockStarted) * 1000)];
+                        Redis::eval(<<<'LUA'
+local latest=redis.call('lindex',KEYS[1],0)
+if latest and cjson.decode(latest).height==tonumber(ARGV[3]) then redis.call('lpop',KEYS[1]) end
+redis.call('lpush',KEYS[1],ARGV[1]); redis.call('ltrim',KEYS[1],0,11)
+return redis.call('expire',KEYS[1],ARGV[2])
+LUA,
+                            1, RedisKey::TempMgsTronBlocks->value, json_encode($summary), RedisKey::EXPIRE_1_HOUR, $number);
+                    } catch (\Throwable $error) {
+                        Log::warning('TRON区块展示缓存写入失败', ['block_number' => $number, 'error_type' => $error::class]);
+                    }
+                }
                 if ($done) break;
             }
             if ($gapId === null) {

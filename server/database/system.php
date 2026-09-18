@@ -1607,12 +1607,12 @@ return array (
     146 => array ('key' => 'app:mgs:settlement:update', 'parent' => 'MgsSettlements', 'name' => '生成部门结算', 'slug' => 'app:mgs:settlement:update', 'type' => 3),
     147 => array ('key' => 'MgsRecharges', 'parent' => 'MgsPlatform', 'name' => '充值记录', 'code' => 'MgsRecharges', 'type' => 2, 'path' => 'recharges', 'component' => '/mgs/recharges', 'icon' => 'ri:wallet-3-line', 'sort' => 35),
     148 => array ('key' => 'MgsTransfers', 'parent' => 'MgsPlatform', 'name' => '链上收款', 'code' => 'MgsTransfers', 'type' => 2, 'path' => 'transfers', 'component' => '/mgs/transfers', 'icon' => 'ri:exchange-funds-line', 'sort' => 34),
-    149 => array ('key' => 'MgsRechargeScan', 'parent' => 'MgsPlatform', 'name' => '扫描状态', 'code' => 'MgsRechargeScan', 'type' => 2, 'path' => 'recharge-scan', 'component' => '/mgs/recharge-scan', 'icon' => 'ri:radar-line', 'sort' => 33),
+    149 => array ('key' => 'MgsRechargeScan', 'parent' => 'MgsPlatform', 'name' => '区块状态', 'code' => 'MgsRechargeScan', 'type' => 2, 'path' => 'tron-scan', 'component' => '/mgs/tron-scan', 'icon' => 'ri:radar-line', 'sort' => 33),
     150 => array ('key' => 'app:mgs:recharge:index', 'parent' => 'MgsRecharges', 'name' => '查看充值', 'slug' => 'app:mgs:recharge:index', 'type' => 3),
     151 => array ('key' => 'app:mgs:transfer:index', 'parent' => 'MgsTransfers', 'name' => '查看收款', 'slug' => 'app:mgs:transfer:index', 'type' => 3),
     152 => array ('key' => 'app:mgs:recharge:credit', 'parent' => 'MgsTransfers', 'name' => '核验入账', 'slug' => 'app:mgs:recharge:credit', 'type' => 3),
     153 => array ('key' => 'app:mgs:recharge:review', 'parent' => 'MgsTransfers', 'name' => '处理核验', 'slug' => 'app:mgs:recharge:review', 'type' => 3),
-    154 => array ('key' => 'app:mgs:scan:index', 'parent' => 'MgsRechargeScan', 'name' => '查看扫描', 'slug' => 'app:mgs:scan:index', 'type' => 3),
+    154 => array ('key' => 'app:mgs:scan:index', 'parent' => 'MgsRechargeScan', 'name' => '查看区块', 'slug' => 'app:mgs:scan:index', 'type' => 3),
   ),
   'roles' =>
   array (

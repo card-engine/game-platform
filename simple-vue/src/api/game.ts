@@ -98,6 +98,9 @@ export interface RechargeOrder {
   status: 'pending' | 'review' | 'expired' | 'closed' | 'paid'
   expire_time: string
   server_time: string
+  create_time: string
+  credited_time: string | null
+  transfers?: { transaction_id: string; block_number: number; block_time: string }[]
 }
 
 export async function getRechargeOptions(currencyCode: string) {
@@ -117,5 +120,10 @@ export async function getCurrentRecharge(currencyCode: string) {
 
 export async function getRecharge(id: string) {
   const { data } = await api.get<ApiResponse<RechargeOrder>>(`/recharges/${encodeURIComponent(id)}`)
+  return result(data)
+}
+
+export async function getRechargeHistory(page: number) {
+  const { data } = await api.get<ApiResponse<{ list: RechargeOrder[]; page: number; has_more: boolean }>>('/recharges', { params: { page } })
   return result(data)
 }

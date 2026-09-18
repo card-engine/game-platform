@@ -8,6 +8,7 @@ use plugin\saiadmin\basic\BaseValidate;
 class RechargeValidate extends BaseValidate
 {
     protected $rule = [
+        'page' => 'require|integer|between:1,100000',
         'currency_code' => 'require|regex:/^[A-Z]{3,16}$/D',
         'pay_currency_code' => 'require|in:USDT,TRX',
         'recharge_amount' => 'require|integer|checkAmount',
@@ -16,6 +17,7 @@ class RechargeValidate extends BaseValidate
     ];
 
     protected $scene = [
+        'history' => ['page'],
         'options' => ['currency_code'],
         'save' => ['currency_code', 'pay_currency_code', 'recharge_amount', 'request_id', 'quote_key'],
     ];

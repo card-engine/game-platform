@@ -94,11 +94,19 @@ class RechargeLogic extends BaseLogic
         return $order ? $this->output($order) : null;
     }
 
+    public function history(User $user, int $page): array
+    {
+        $orders = Recharge::where('user_id', $user->id)->orderByDesc('id')->simplePaginate(10, ['*'], 'page', $page);
+        return ['list' => array_map(fn ($order) => $this->output($order), $orders->items()),
+            'page' => $orders->currentPage(), 'has_more' => $orders->hasMorePages()];
+    }
+
     public function order(User $user, string $id): array
     {
         $order = Recharge::where(['user_id' => $user->id, 'id' => $id])->first();
         if (!$order) throw new ApiException('充值订单不存在', 404);
-        return $this->output($order);
+        return $this->output($order) + ['transfers' => $order->transfers()->where('status', 'credited')
+            ->get(['transaction_id', 'block_number', 'block_time'])->toArray()];
     }
 
     private function unavailableReason(): ?string
@@ -143,6 +151,8 @@ class RechargeLogic extends BaseLogic
             'currency_code' => $order->currency_code, 'recharge_amount' => (string) $order->recharge_amount,
             'pay_currency_code' => $order->pay_currency_code, 'pay_amount' => bcadd((string) $order->pay_amount, '0', 4),
             'pay_method' => $order->pay_method, 'receive_address' => $order->receive_address, 'status' => $status,
+            'create_time' => str_replace(' ', 'T', $order->getRawOriginal('create_time')) . 'Z',
+            'credited_time' => $order->credited_time ? str_replace(' ', 'T', $order->credited_time) . 'Z' : null,
             'expire_time' => $expire->format('Y-m-d\TH:i:s.v\Z'), 'server_time' => gmdate('Y-m-d\TH:i:s\Z')];
     }
 }

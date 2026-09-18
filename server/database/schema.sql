@@ -1065,6 +1065,8 @@ CREATE TABLE `mgs_recharges` (
   UNIQUE KEY `uk_recharge_request` (`user_id`,`request_id`),
   UNIQUE KEY `uk_recharge_reserved` (`pay_method`,`pay_currency_code`,`receive_address`,`pay_amount`,`is_reserved`),
   KEY `idx_recharge_user` (`user_id`,`currency_code`,`status`,`id`),
+  KEY `idx_recharge_user_id` (`user_id`,`id`),
+  KEY `idx_recharge_credited` (`status`,`credited_time`,`id`),
   KEY `idx_recharge_expire` (`status`,`expire_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='MGS充值';
 

@@ -106,10 +106,17 @@ try {
     $scan->start();
     $state = $scan->status();
     ensure($state['checkpoint']['next_block_number'] === 4 && count($state['gaps']) === 1, '重启没有先登记缺口再追最新');
+    $admin = new app\logic\mgs\RechargeAdminLogic();
+    $admin->init(['id' => 0]);
+    ensure($admin->scan()['scanned_number'] === null && $admin->scan()['lag_blocks'] === null, '刚启动的扫描断点被误报为已扫描');
     $gapId = array_key_first($state['gaps']);
     $scan->batch();
     ensure(Transfer::count() === 1 && $scan->status()['ready'] && $scan->status()['gaps'], '实时扫描健康时，旧恢复标记或后台补扫阻断充值');
+    $liveBlocks = Redis::lRange(RedisKey::TempMgsTronBlocks->value, 0, -1);
+    ensure(count($liveBlocks) === 1 && json_decode($liveBlocks[0], true)['height'] === 4, '实时区块摘要缺失');
+    ensure(Redis::ttl(RedisKey::TempMgsTronBlocks->value) > 0, '区块摘要没有过期时间');
     $scan->batch($gapId);
+    ensure(Redis::lRange(RedisKey::TempMgsTronBlocks->value, 0, -1) === $liveBlocks, '补扫污染实时区块流');
     ensure(Transfer::count() === 4 && !$scan->status()['gaps'] && $scan->status()['ready'], '队列补扫未完成或主断点被覆盖');
     $scan->batch($gapId);
     ensure(Transfer::count() === 4, '迟到补扫任务重复落库');
@@ -206,6 +213,37 @@ try {
     $credit->credit($crossId); $credit->credit($crossId);
     ensure($wallet->fresh()->balance === '510.00000000' && $crossMonth->fresh()->status === 'paid', '迟发现但按时付款的跨月订单未正确入账');
     ensure(Db::table('mgs_bills_' . gmdate('ym'))->where('transaction_id', 'recharge:' . $crossMonth->id)->count() === 1, '跨月流水未记入实际入账月份');
+    $blocks = array_map(fn ($json) => json_decode($json, true), Redis::lRange(RedisKey::TempMgsTronBlocks->value, 0, -1));
+    ensure(count($blocks) === count(array_unique(array_column($blocks, 'height'))), '重启重复显示同一高度');
+    $admin->init(['id' => 1]);
+    $dashboard = $admin->scan();
+    ensure($dashboard['scanned_number'] === 5 && $dashboard['lag_blocks'] === 0, '已扫描高度或落后计算错误');
+    ensure(count($dashboard['recent_recharges']) === Recharge::where('status', 'paid')->count(), '面板成功订单包含未到账数据');
+    ensure($dashboard['recent_recharges'][0]['transfers'][0]['transaction_id'] !== '', '面板遗漏链上证据');
+    $admin->init(['id' => 0]);
+    ensure($admin->scan()['recent_recharges'] === null, '无充值权限仍泄漏缓存中的订单');
+    $history = new app\logic\mgs\RechargeLogic();
+    $other = User::create(['status' => 1]);
+    ensure($history->history($other, 1)['list'] === [], '个人充值记录越权');
+    $page = $history->history($user, 1);
+    ensure(count($page['list']) === Recharge::where('user_id', $user->id)->count(), '个人充值记录遗漏订单');
+    ensure($page['list'][0]['credited_time'] !== null && str_ends_with($page['list'][0]['create_time'], 'Z'), '订单时间缺失UTC口径');
+    ensure($history->order($user, (string) $recharge->id)['transfers'][0]['transaction_id'] === $transfer->transaction_id, '本人订单详情遗漏链上证据');
+    fails(fn () => $history->order($other, (string) $recharge->id), '不存在');
+    for ($i = 0; $i < 5; $i++) Recharge::create(array_replace($base, ['recharge_no' => mg_no('MR'),
+        'request_id' => sprintf('550e8400-e29b-41d4-a716-%012d', 100 + $i), 'is_reserved' => null]));
+    $first = $history->history($user, 1);
+    $second = $history->history($user, 2);
+    ensure(count($first['list']) === 10 && $first['has_more'] && !$second['has_more'], '个人记录分页边界错误');
+    $ids = array_column(array_merge($first['list'], $second['list']), 'mgs_recharge_id');
+    ensure(count(array_unique($ids)) === Recharge::where('user_id', $user->id)->count(), '个人记录分页重复或遗漏');
+    // 展示缓存损坏时扫描仍需正常推进，不改变资金处理。
+    Redis::del(RedisKey::TempMgsTronBlocks->value);
+    Redis::set(RedisKey::TempMgsTronBlocks->value, 'wrong-type');
+    $node->head = 6;
+    $scan->batch();
+    ensure($scan->status()['checkpoint']['next_block_number'] === 7 && $scan->status()['ready'], '展示缓存失败阻断扫描');
+    echo "PASS: 区块面板、个人记录权限与时间、展示缓存隔离\n";
     echo "PASS: 地址/合约、完整回执、重启追最新、Redis缺口补扫、失锁重放、USDT/TRX事件、自动/人工入账、重复消费和自动恢复\n";
 } finally {
     // 仅清理本次随机前缀，绝不FLUSHDB。

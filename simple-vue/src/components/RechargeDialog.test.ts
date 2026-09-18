@@ -9,7 +9,7 @@ vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 const options = { currency_code: 'INR', amounts: [10, 20, 50, 100, 200, 300, 500, 1000, 2000, 5000, 10000, 50000, 100000],
   default_amount: 100, available: true, unavailable_reason: null,
   payments: [{ pay_currency_code: 'USDT' as const, quote_key: 'quote', amounts: { '100': '1.25' } }] }
-const order = { mgs_recharge_id: '1', recharge_no: 'MR-test', currency_code: 'INR', recharge_amount: '100.00000000', pay_currency_code: 'USDT' as const,
+const order = { mgs_recharge_id: '1', recharge_no: 'MR-test', create_time: '2026-09-18T05:00:00.000Z', credited_time: null, currency_code: 'INR', recharge_amount: '100.00000000', pay_currency_code: 'USDT' as const,
   pay_amount: '1.2501', receive_address: 'test-only-address', status: 'pending' as const,
   expire_time: '2026-09-17T01:15:00.000Z', server_time: '2026-09-17T01:00:00.000Z' }
 let app: ReturnType<typeof createApp>

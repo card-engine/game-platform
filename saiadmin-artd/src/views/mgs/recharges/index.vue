@@ -5,7 +5,12 @@
   import api from '@/api/mgs/recharges'
   import TableSearch from './modules/table-search.vue'
   const { t, locale } = useI18n()
-  const filters = ref({ keyword: '', status: '', currency_code: '' })
+  const route = useRoute()
+  const filters = ref({
+    keyword: typeof route.query.keyword === 'string' ? route.query.keyword : '',
+    status: '',
+    currency_code: ''
+  })
   const { dialogVisible, dialogData, showDialog } = useSaiAdmin()
   const {
     data,
@@ -22,6 +27,7 @@
   } = useTable({
     core: {
       apiFn: api.list,
+      apiParams: filters.value,
       columnsFactory: () => [
         { prop: 'recharge_no', label: t('mgsRecharge.rechargeNo'), minWidth: 240, useSlot: true },
         { prop: 'user_id', label: t('mgs.user'), width: 110 },
@@ -48,6 +54,14 @@
   async function detail(id: string) {
     showDialog('view', await api.read(id))
   }
+  watch(
+    () => route.query.keyword,
+    (keyword) => {
+      if (route.path !== '/mgs/recharges') return
+      filters.value.keyword = typeof keyword === 'string' ? keyword : ''
+      search()
+    }
+  )
   watch(locale, () => resetColumns?.())
 </script>
 

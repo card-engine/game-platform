@@ -17,7 +17,7 @@ use support\Response;
 
 class ApiController extends OpenController
 {
-    protected array $noNeedLogin = ['session', 'brands', 'games', 'launch', 'userGames', 'user', 'updateUser', 'wallet', 'rechargeOptions', 'createRecharge', 'currentRecharge', 'recharge'];
+    protected array $noNeedLogin = ['session', 'brands', 'games', 'launch', 'userGames', 'user', 'updateUser', 'wallet', 'rechargeOptions', 'createRecharge', 'currentRecharge', 'recharge', 'recharges'];
 
     public function session(Request $request): Response
     {
@@ -108,6 +108,14 @@ class ApiController extends OpenController
         $currency = strtoupper((string) $request->input('currency_code', config('mgs.default_currency')));
         (new RechargeValidate())->scene('options')->failException()->check(['currency_code' => $currency]);
         return $this->success(['order' => (new RechargeLogic())->current($user, $currency)]);
+    }
+
+    public function recharges(Request $request): Response
+    {
+        $user = (new MgsAuthService())->browserUser($request);
+        $data = ['page' => $request->input('page', 1)];
+        (new RechargeValidate())->scene('history')->failException()->check($data);
+        return $this->success((new RechargeLogic())->history($user, (int) $data['page']));
     }
 
     public function recharge(Request $request, string $id): Response

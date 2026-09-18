@@ -4,7 +4,6 @@ namespace app\controller\mgs;
 
 use app\logic\mgs\RechargeAdminLogic;
 use app\logic\mgs\TransferLogic;
-use app\service\mgs\TronScanService;
 use app\validate\mgs\TransferValidate;
 use plugin\saiadmin\basic\BaseController;
 use plugin\saiadmin\service\Permission;
@@ -62,9 +61,9 @@ class RechargeController extends BaseController
         return $this->success();
     }
 
-    #[Permission('扫描状态', 'app:mgs:scan:index')]
+    #[Permission('区块状态', 'app:mgs:scan:index')]
     public function scan(): Response
     {
-        return $this->success((new TronScanService())->status());
+        return $this->success($this->logic->scan());
     }
 }

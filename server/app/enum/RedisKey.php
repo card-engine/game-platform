@@ -46,6 +46,8 @@ enum RedisKey: string
     case TempPlatformStatsRebuild = 'temp:mg:platform_stats:rebuild'; // JSON 平台统计重建状态
     case TempMgsLaunch = 'temp:mgs:launch:%s'; // string MGS 进游短期幂等标记，格式：request_id
     case TempMgsTrxTicker = 'temp:mgs:trx_ticker'; // JSON TRX-USDT 报价；格式：price/source_time/fetch_time，显式TTL
+    case TempMgsTronBlocks = 'temp:{mgs:tron:mainnet}:blocks'; // list 最近12个实时扫描成功区块摘要，1小时TTL
+    case TempMgsRecentRecharges = 'temp:mgs:recharges:recent'; // string JSON 最近10笔到账记录，1秒TTL
     case TempMgsTronHealth = 'temp:{mgs:tron:mainnet}:health'; // string JSON 固化头、心跳、错误，120秒TTL
     case TempMgsTronRate = 'temp:mgs:tron:rate:%s'; // string 节点限速窗口计数，格式：密钥SHA256，1秒TTL
     case TempMgsStatsRefresh = 'temp:mgs:stats:refresh:%s'; // string MGS 统计待刷新标记，格式：日期或日期小时

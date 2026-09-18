@@ -3,6 +3,10 @@
 namespace app\logic\mgs;
 
 use app\model\Recharge;
+use app\enum\RedisKey;
+use app\service\mgs\TronScanService;
+use plugin\saiadmin\app\cache\UserAuthCache;
+use support\Redis;
 use app\model\Transfer;
 use plugin\saiadmin\basic\eloquent\BaseLogic;
 use plugin\saiadmin\exception\ApiException;
@@ -10,6 +14,31 @@ use plugin\saiadmin\exception\ApiException;
 class RechargeAdminLogic extends BaseLogic
 {
     public function __construct() { $this->model = new Recharge(); }
+
+    public function scan(): array
+    {
+        $status = (new TronScanService())->status();
+        $recent = null;
+        if ((int) $this->adminInfo['id'] === 1 || in_array('app:mgs:recharge:index', UserAuthCache::getUserAuth($this->adminInfo['id']), true)) {
+            $recent = json_decode(Redis::get(RedisKey::TempMgsRecentRecharges->value) ?: 'null', true);
+            if ($recent === null) {
+                $recent = Recharge::where('status', 'paid')->orderByDesc('credited_time')->orderByDesc('id')->limit(10)
+                    ->with(['transfers' => fn ($query) => $query->where('status', 'credited')
+                        ->select(['id', 'recharge_id', 'transaction_id', 'block_number'])])
+                    ->get(['id', 'recharge_no', 'user_id', 'currency_code', 'recharge_amount', 'pay_currency_code', 'pay_amount', 'credited_time'])->toArray();
+                Redis::setex(RedisKey::TempMgsRecentRecharges->value, RedisKey::EXPIRE_1_SECOND, json_encode($recent));
+            }
+        }
+        $scanned = ($status['checkpoint']['last_success_time'] ?? 0) ? $status['checkpoint']['next_block_number'] - 1 : null;
+        return $status + [
+            'scanned_number' => $scanned,
+            'lag_blocks' => $scanned !== null && ($status['health']['solid_number'] ?? 0) ? max(0, $status['health']['solid_number'] - $scanned) : null,
+            'gap_blocks' => array_sum(array_map(fn ($gap) => max(0, $gap['to'] - $gap['next'] + 1), $status['gaps'])),
+            'recent_blocks' => array_map(fn ($block) => json_decode($block, true), Redis::lRange(RedisKey::TempMgsTronBlocks->value, 0, 11)),
+            'recent_recharges' => $recent,
+            'server_time' => time(),
+        ];
+    }
 
     public function recharges(array $filters): array
     {

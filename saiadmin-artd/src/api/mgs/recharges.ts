@@ -24,6 +24,54 @@ export interface TransferRow {
   remark: string | null
 }
 
+export interface TronBlock {
+  height: number
+  hash: string
+  parent_hash: string
+  block_time: string
+  transactions: number
+  transfers: number
+  duration_ms: number
+}
+
+export interface RecentRecharge extends Omit<RechargeRow, 'status' | 'create_time'> {
+  credited_time: string
+  transfers: { transaction_id: string; block_number: number }[]
+}
+
+export interface TronStatus {
+  ready: boolean
+  checkpoint: {
+    next_block_number: number
+    last_success_time: number
+    last_block_hash: string
+    start_block_number: number
+  } | null
+  health: {
+    solid_number: number
+    solid_time: number
+    heartbeat_time: number
+    error: string | null
+  } | null
+  gaps: Record<
+    string,
+    {
+      from: number
+      to: number
+      next: number
+      attempts: number
+      retry_time: number
+      error: string | null
+    }
+  >
+  scanned_number: number | null
+  lag_blocks: number | null
+  gap_blocks: number
+  recent_blocks: TronBlock[]
+  recent_recharges: RecentRecharge[] | null
+  server_time: number
+}
+
 export default {
   list: (params: Record<string, unknown>) =>
     request.get<Api.Common.ApiPage<RechargeRow>>({ url: '/mgs/recharges', params }),
@@ -35,11 +83,6 @@ export default {
     request.post({ url: `/mgs/transfers/${id}/credit`, data }),
   review: (id: string, data: { status: string; remark: string }) =>
     request.put({ url: `/mgs/transfers/${id}/review`, data }),
-  scan: () =>
-    request.get<{
-      ready: boolean
-      checkpoint: Record<string, unknown> | null
-      health: Record<string, unknown> | null
-      gaps: Record<string, unknown>
-    }>({ url: '/mgs/recharge-scan' })
+  scan: (signal?: AbortSignal) =>
+    request.get<TronStatus>({ url: '/mgs/tron-scan', signal, showErrorMessage: false })
 }

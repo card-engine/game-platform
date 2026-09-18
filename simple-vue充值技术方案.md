@@ -1,6 +1,6 @@
 # simple-vue 充值技术方案
 
-> 开发版：已实现新表结构、下单、Redis实时扫描/队列补扫、USDT/TRX收款解析、自动入账、后台核验、自有币种SVG及二维码支付层。真实链上小额充值验收尚未完成。未发布、未迁移线上数据；不能仅打开开关就认定生产收款已就绪。
+> 已实现下单、Redis实时扫描/队列补扫、USDT/TRX收款解析、自动入账、后台核验、二维码支付，以及区块状态和个人充值记录。现有线上充值已完成单笔链上交易、收款、订单和资金流水核对；部署时通过 `db:upgrade` 同步菜单和索引，并重启扫描进程、构建两端页面。通知送达不作为入账依据。
 
 ## 1. 功能
 
@@ -119,6 +119,7 @@ Redis 全局计数器 `ForeverMgsRechargeSuffix`，值按 `01 → … → 99 →
 
 | 方法 | 路径 | 内容 |
 |---|---|---|
+| GET | `/api/recharges` | 本人全部币种充值记录，按 ID 倒序，每页 10 条；返回 `list/page/has_more`，使用现有浏览器用户认证 |
 | GET | `/api/recharges/options` | 到账币种、默认档位、USDT/TRX 各档预估支付数量、报价日期、`quote_key`、支付方式、充值可用状态 |
 | POST | `/api/recharges` | 传 `request_id`、`currency_code`、`recharge_amount`、`pay_currency_code`、`quote_key` 创建订单 |
 | GET | `/api/recharges/current` | 返回 `data.order`，无当前订单时为 null |
@@ -450,7 +451,7 @@ API 主键分别叫 `mgs_recharge_id`、`mgs_transfer_id`，均直接对应数�
 | GET | `/mgs/transfers`、`/mgs/transfers/{id}` | 链上收款及待核验列表、证据详情 |
 | POST | `/mgs/transfers/{id}/credit` | 核验后关联订单并入账，传 `mgs_recharge_id` 和处理依据 |
 | PUT | `/mgs/transfers/{id}/review` | 保存核验备注或标记非充值收款，不修改金额和余额 |
-| GET | `/mgs/recharge-scan` | 只读 Redis：实时高度、固化高度、心跳、未完成补扫进度及错误；Redis 不可用时明确报错 |
+| GET | `/mgs/tron-scan` | 区块状态：固化高度、已扫描高度、心跳、实时区块流、补扫进度；具备充值查看权限时附带最近 10 笔已到账订单 |
 
 列表支持 `recharge_no`、用户、状态、币种、日期及交易哈希等相关筛选。人工按业务单号找到订单后，核验接口仍提交其 `mgs_recharge_id`，不接受两种可冲突的关联参数。分别提供查看权限和 `app:mgs:recharge:credit`、`app:mgs:recharge:review` 操作权限；普通 MGS 运营角色默认只读，资金操作单独授予。
 
@@ -537,3 +538,13 @@ API 主键分别叫 `mgs_recharge_id`、`mgs_transfer_id`，均直接对应数�
 - `DbUpgradeSmoke`：空库安装和重复升级。测试均使用隔离MySQL/Redis，不修改生产数据。
 - 图标通过XML、浏览器明暗主题16/24px检查；前端通过类型检查和构建。
 - 真实节点只读探测可返回并解析固化块及完整回执；这不等于真实钱包充值到账验收。
+
+
+## 区块状态与个人充值记录
+
+- 管理页改为 `/#/mgs/tron-scan`，目录为 `src/views/mgs/tron-scan/`。菜单名称为“区块状态”，稳定菜单 code 和权限码保持不变。
+- 页面每秒轮询一个接口，已有请求时跳过；标签隐藏、页面停用或卸载时停止，恢复后立即更新。失败保留上一份数据并显示过期提示，不连续弹出消息。
+- 扫描器在断点推进成功后缓存最近 12 个实时区块，保留一小时。补扫不写入实时区块流；展示缓存异常不影响扫描推进。卡片显示实际交易数量和识别收款数量，不把识别收款当成到账。
+- 最近成功充值从 `mgs_recharges.status=paid` 查询，按 `credited_time/id` 倒序，关联已入账收款，缓存一秒。数据组装放在管理 Logic，不扩展接单判断使用的扫描 `status()`，也不修改到账事件。
+- 本人记录放在个人中心游戏推荐之前，使用现有 Vue Query 分页及到账后的缓存失效。订单详情仅返回该用户订单的已入账链上交易；创建/入账时间返回明确 UTC 字符串。
+- 新索引为 `(user_id,id)` 与 `(status,credited_time,id)`，通过 `db:upgrade` 同步；不新增表。

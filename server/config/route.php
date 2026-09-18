@@ -91,7 +91,7 @@ Route::group('/mgs', function () {
     Route::get('/transfers/{id:\d+}', [app\controller\mgs\RechargeController::class, 'transfer']);
     Route::post('/transfers/{id:\d+}/credit', [app\controller\mgs\RechargeController::class, 'credit']);
     Route::put('/transfers/{id:\d+}/review', [app\controller\mgs\RechargeController::class, 'review']);
-    Route::get('/recharge-scan', [app\controller\mgs\RechargeController::class, 'scan']);
+    Route::get('/tron-scan', [app\controller\mgs\RechargeController::class, 'scan']);
     Route::get('/overview', [app\controller\mgs\AdminController::class, 'overview']);
     Route::get('/games', [app\controller\mgs\AdminController::class, 'games']);
     Route::post('/games/sync', [app\controller\mgs\AdminController::class, 'sync']);
@@ -117,6 +117,7 @@ Route::group('/api', function () {
     Route::put('/user', [app\controller\mgs\ApiController::class, 'updateUser']);
     Route::get('/wallet', [app\controller\mgs\ApiController::class, 'wallet']);
     Route::get('/recharges/options', [app\controller\mgs\ApiController::class, 'rechargeOptions']);
+    Route::get('/recharges', [app\controller\mgs\ApiController::class, 'recharges']);
     Route::post('/recharges', [app\controller\mgs\ApiController::class, 'createRecharge']);
     Route::get('/recharges/current', [app\controller\mgs\ApiController::class, 'currentRecharge']);
     Route::get('/recharges/{id:\d+}', [app\controller\mgs\ApiController::class, 'recharge']);

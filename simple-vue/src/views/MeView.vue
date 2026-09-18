@@ -5,6 +5,7 @@ import { Check, Copy, CreditCard, FileText, Pencil, RefreshCw, Send, ShieldCheck
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import GameCard from '../components/GameCard.vue'
+import RechargeHistory from '../components/RechargeHistory.vue'
 import CurrencyIcon from '../components/CurrencyIcon.vue'
 import { getUser, getUserGames, updateUser } from '../api/game'
 import { useUserStore } from '../stores/user'
@@ -105,6 +106,7 @@ async function saveNickname() {
     </aside>
 
     <div class="me-games">
+      <RechargeHistory />
       <div v-if="isLoading" class="recommendation-loading">
         <div v-for="item in 12" :key="item" class="game-skeleton"><el-skeleton animated><template #template><el-skeleton-item variant="image" /><el-skeleton-item variant="text" /></template></el-skeleton></div>
       </div>
