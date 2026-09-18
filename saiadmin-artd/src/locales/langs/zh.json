@@ -25,6 +25,8 @@
     "recentBlocks": "最近区块",
     "blockOrder": "旧 → 新 · 点击查看详情",
     "waitingBlocks": "等待新的已扫描区块",
+    "txShort": "笔交易",
+    "transferShort": "收款",
     "transactions": "{count} 笔交易",
     "transfers": "收款 {count} 笔",
     "latest": "最新",

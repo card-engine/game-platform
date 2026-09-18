@@ -2,6 +2,7 @@
   import { useClipboard } from '@vueuse/core'
   import { useI18n } from 'vue-i18n'
   import type { TronBlock } from '@/api/mgs/recharges'
+
   const props = defineProps<{ blocks: TronBlock[] }>()
   const { t } = useI18n()
   const { copy, copied } = useClipboard()
@@ -13,14 +14,14 @@
 </script>
 
 <template>
-  <ElCard shadow="never">
-    <template #header
-      ><div class="block-heading"
-        ><strong>{{ t('tronScan.recentBlocks') }}</strong
-        ><span>{{ t('tronScan.blockOrder') }}</span></div
-      ></template
-    >
-    <ElEmpty v-if="!blocks.length" :description="t('tronScan.waitingBlocks')" :image-size="64" />
+  <ElCard class="block-card" shadow="never">
+    <template #header>
+      <div class="block-heading">
+        <strong>{{ t('tronScan.recentBlocks') }}</strong>
+        <span>{{ t('tronScan.blockOrder') }}</span>
+      </div>
+    </template>
+    <ElEmpty v-if="!blocks.length" :description="t('tronScan.waitingBlocks')" :image-size="48" />
     <template v-else>
       <div class="block-stream">
         <button
@@ -38,63 +39,61 @@
           :aria-pressed="current?.height === block.height"
           @click="selected = block.height"
         >
-          <small>{{ block.block_time.slice(11, 19) }} UTC</small>
+          <span class="block-time">{{ block.block_time.slice(11, 19) }}</span>
           <strong>#{{ block.height }}</strong>
-          <span>{{ t('tronScan.transactions', { count: block.transactions }) }}</span>
-          <small :class="{ matched: block.transfers > 0 }">{{
-            t('tronScan.transfers', { count: block.transfers })
-          }}</small>
-          <small v-if="block.height === blocks[0].height">{{ t('tronScan.latest') }}</small>
+          <span>{{ block.transactions }} {{ t('tronScan.txShort') }}</span>
+          <span :class="{ matched: block.transfers > 0 }"
+            >{{ block.transfers }} {{ t('tronScan.transferShort') }}</span
+          >
         </button>
       </div>
       <div v-if="current" class="block-detail">
-        <div class="block-heading"
-          ><ElLink
-            :href="`https://tronscan.org/#/block/${current.height}`"
-            target="_blank"
-            rel="noopener noreferrer"
-            type="primary"
-            >#{{ current.height }} ↗</ElLink
-          ><span>{{ t('tronScan.processed') }} · {{ current.duration_ms }} ms</span></div
+        <ElLink
+          :href="`https://tronscan.org/#/block/${current.height}`"
+          target="_blank"
+          rel="noopener noreferrer"
+          type="primary"
+          >#{{ current.height }} ↗</ElLink
         >
-        <div class="block-hash"
-          ><code>{{ current.hash }}</code
-          ><ElButton size="small" text @click="copy(current.hash)">{{
-            copied ? t('tronScan.copied') : t('tronScan.copy')
-          }}</ElButton></div
-        >
-        <small>{{ t('tronScan.transferHint') }}</small>
+        <span>{{ current.duration_ms }} ms</span>
+        <code>{{ current.hash.slice(0, 10) }}…{{ current.hash.slice(-8) }}</code>
+        <ElButton size="small" text @click="copy(current.hash)">{{
+          copied ? t('tronScan.copied') : t('tronScan.copy')
+        }}</ElButton>
       </div>
     </template>
   </ElCard>
 </template>
 
 <style scoped>
-  .block-heading {
+  .block-heading,
+  .block-detail {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 8px;
   }
   .block-heading span,
-  small {
+  .block-time,
+  .block-detail > span,
+  .block-detail code {
     color: var(--el-text-color-secondary);
     font-size: 12px;
   }
   .block-stream {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 20px;
+    gap: 12px;
   }
   .block-item {
     position: relative;
     display: grid;
-    align-content: start;
-    gap: 7px;
-    padding: 14px 10px;
+    gap: 3px;
+    min-width: 0;
+    padding: 8px 10px;
     border: 1px solid var(--el-border-color-lighter);
-    border-radius: 8px;
+    border-radius: 6px;
     background: var(--el-bg-color);
     color: var(--el-text-color-primary);
     text-align: left;
@@ -115,7 +114,7 @@
   @keyframes block-arrive {
     from {
       opacity: 0.6;
-      transform: translateY(4px);
+      transform: translateY(3px);
     }
     to {
       opacity: 1;
@@ -127,14 +126,15 @@
       animation: none;
     }
   }
-  .block-item.latest strong {
+  .block-item.latest strong,
+  .matched {
     color: var(--el-color-primary);
   }
   .block-item.connected::before {
     position: absolute;
     top: 50%;
-    left: -21px;
-    width: 20px;
+    left: -13px;
+    width: 12px;
     height: 1px;
     content: '';
     background: var(--el-border-color);
@@ -142,51 +142,40 @@
   .block-item.connected::after {
     position: absolute;
     top: calc(50% - 2px);
-    left: -13px;
-    width: 5px;
-    height: 5px;
+    left: -8px;
+    width: 4px;
+    height: 4px;
     content: '';
     border-radius: 50%;
     background: var(--el-text-color-placeholder);
   }
-  .matched {
-    color: var(--el-color-success);
-  }
   .block-detail {
-    display: grid;
-    gap: 8px;
-    margin-top: 20px;
-    padding-top: 16px;
+    justify-content: flex-start;
+    margin-top: 10px;
+    padding-top: 8px;
     border-top: 1px solid var(--el-border-color-lighter);
   }
-  .block-hash {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  code {
-    font-size: 12px;
+  .block-detail code {
     overflow-wrap: anywhere;
-    min-width: 0;
   }
   @media (max-width: 900px) {
     .block-stream {
-      grid-template-columns: 1fr;
-      gap: 14px;
-    }
-    .block-item {
-      grid-template-columns: 1fr 1fr;
-      padding: 12px 16px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
     }
     .block-item.connected::before {
-      top: -15px;
-      left: 28px;
-      width: 1px;
-      height: 14px;
+      top: 50%;
+      left: -9px;
+      width: 8px;
     }
     .block-item.connected::after {
-      top: -10px;
-      left: 26px;
+      top: calc(50% - 2px);
+      left: -6px;
+    }
+  }
+  @media (max-width: 520px) {
+    .block-stream {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 </style>

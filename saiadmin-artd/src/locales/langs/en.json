@@ -25,6 +25,8 @@
     "recentBlocks": "Recent blocks",
     "blockOrder": "Old → new · Select for details",
     "waitingBlocks": "Waiting for newly scanned blocks",
+    "txShort": "tx",
+    "transferShort": "transfers",
     "transactions": "{count} transactions",
     "transfers": "{count} incoming transfers",
     "latest": "Latest",

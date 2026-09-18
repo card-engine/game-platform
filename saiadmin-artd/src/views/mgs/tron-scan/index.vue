@@ -161,7 +161,7 @@
 <style scoped>
   .tron-page {
     display: grid;
-    gap: 20px;
+    gap: 12px;
   }
   .tron-heading,
   .tron-footer {
@@ -172,24 +172,28 @@
     gap: 12px;
   }
   h2 {
-    font-size: 22px;
+    margin: 0;
+    font-size: 20px;
     font-weight: 600;
   }
   .tron-heading p,
   .tron-muted,
   .tron-footer {
     color: var(--el-text-color-secondary);
-    font-size: 13px;
+    font-size: 12px;
+  }
+  .tron-heading p {
+    margin: 2px 0 0;
   }
   .tron-metrics {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 20px;
+    gap: 0;
   }
   .tron-metrics > div {
     display: grid;
-    gap: 6px;
-    padding-left: 20px;
+    gap: 2px;
+    padding: 0 14px;
     border-left: 1px solid var(--el-border-color-lighter);
   }
   .tron-metrics > div:first-child {
@@ -202,17 +206,23 @@
     color: var(--el-text-color-secondary);
   }
   .tron-metrics strong {
-    font-size: clamp(18px, 2vw, 28px);
+    font-size: clamp(17px, 1.8vw, 24px);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
   .tron-gap {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px 24px;
-    padding: 12px 0;
+    gap: 8px 18px;
+    padding: 8px 0;
     font-size: 13px;
     overflow-wrap: anywhere;
+  }
+  :deep(.el-card__header) {
+    padding: 10px 14px;
+  }
+  :deep(.el-card__body) {
+    padding: 12px 14px;
   }
   details {
     max-width: 100%;
@@ -228,7 +238,7 @@
     .tron-metrics {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-    .tron-metrics > div:nth-child(3) {
+    .tron-metrics > div:nth-child(odd) {
       padding-left: 0;
       border-left: 0;
     }
