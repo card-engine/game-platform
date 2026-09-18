@@ -52,8 +52,8 @@ onBeforeUnmount(() => {
         <iframe :key="frameKey" class="game-player__frame" :src="url" :title="game.gameFullName || game.gameName" allow="autoplay; fullscreen" referrerpolicy="no-referrer" />
       </div>
       <div class="game-player__controls" :class="{ 'is-expanded': controlsExpanded }" @click.stop>
-        <button v-if="isMobile" class="game-player__handle" type="button" :aria-label="t('player.label')" @click="toggleControls"><span /></button>
-        <div class="game-player__actions">
+        <button v-if="isMobile" class="game-player__handle" type="button" :aria-label="t('player.label')" :aria-expanded="controlsExpanded" @click="toggleControls"><span /></button>
+        <div class="game-player__actions" :inert="isMobile && !controlsExpanded ? true : undefined">
           <button v-if="!isMobile" class="game-player__action" type="button" :title="t('player.orientation')" :aria-label="t('player.orientation')" @click="switchOrientation">
             <RectangleVertical v-if="orientation === 'landscape'" :size="18" />
             <RectangleHorizontal v-else :size="18" />
@@ -78,7 +78,7 @@ onBeforeUnmount(() => {
 .game-player__controls { position: absolute; top: 10px; left: calc(100% + 10px); z-index: 2; }
 .game-player__actions { display: flex; flex-direction: column; gap: 8px; }
 .game-player__action,
-.game-player__handle { position: static; top: auto; left: auto; z-index: auto; display: grid; width: 38px; height: 38px; place-items: center; padding: 0; color: #fff; background: rgb(20 24 28 / 88%); border: 1px solid rgb(255 255 255 / 22%); border-radius: 50%; cursor: pointer; transform: none; transition: none; }
+.game-player__handle { display: grid; width: 38px; height: 38px; place-items: center; padding: 0; color: #fff; background: rgb(20 24 28 / 88%); border: 1px solid rgb(255 255 255 / 22%); border-radius: 50%; cursor: pointer; }
 .game-player__action:hover,
 .game-player__handle:hover { background: #277b54; }
 .game-player__action--close { color: #ffd0c8; }
@@ -86,13 +86,13 @@ onBeforeUnmount(() => {
 .is-mobile .game-player__stage-wrap { width: 100vw; height: 100dvh; }
 .is-mobile .game-player__stage { width: 100%; height: 100%; }
 .is-mobile .game-player__frame { width: 100%; height: 100%; }
-.is-mobile .game-player__controls { top: auto; right: 0; bottom: 30%; left: auto; display: flex; align-items: center; transform: translateY(50%); }
-.is-mobile .game-player__handle { width: 16px; height: 82px; border-right: 0; border-radius: 12px 0 0 12px; touch-action: none; }
-.is-mobile .game-player__actions { order: -1; width: 0; overflow: hidden; gap: 10px; opacity: 0; transform: translateX(12px); transition: width .2s ease, opacity .2s ease, transform .2s ease; }
-.is-mobile .game-player__controls.is-expanded .game-player__actions { width: 54px; margin-right: 8px; opacity: 1; transform: translateX(0); }
+.is-mobile .game-player__controls { top: auto; right: 0; bottom: 30%; left: auto; transform: translateY(50%); }
+.is-mobile .game-player__handle { width: 18px; height: 88px; border-right: 0; border-radius: 12px 0 0 12px; touch-action: manipulation; }
+.is-mobile .game-player__handle span { width: 3px; height: 26px; border-radius: 2px; background: rgb(255 255 255 / 60%); }
+.is-mobile .game-player__actions { position: absolute; top: 50%; right: calc(100% + 8px); gap: 10px; visibility: hidden; opacity: 0; pointer-events: none; transform: translate(12px, -50%); transition: opacity .2s ease, transform .2s ease, visibility .2s; }
+.is-mobile .game-player__controls.is-expanded .game-player__actions { visibility: visible; opacity: 1; pointer-events: auto; transform: translate(0, -50%); }
 .is-mobile .game-player__actions .game-player__action { width: 50px; height: 50px; }
 @media (display-mode: standalone) {
   .game-player__safe-area { position: absolute; inset: 0 0 auto; z-index: 1; display: block; width: 100%; height: max(24px, env(safe-area-inset-top)); pointer-events: none; background: linear-gradient(110deg, #7557c7 0%, #3d9668 100%); }
 }
-@media (max-width: 767px) { .is-mobile .game-player__handle { width: 18px; height: 88px; } }
 </style>
