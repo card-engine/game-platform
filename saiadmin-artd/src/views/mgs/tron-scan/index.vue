@@ -10,6 +10,7 @@
   const busy = ref(false)
   const failed = ref(false)
   const active = ref(true)
+  const detailsVisible = ref(false)
   const visibility = useDocumentVisibility()
   let request: AbortController | undefined
   const { pause, resume } = useIntervalFn(load, 1000, { immediate: false })
@@ -43,6 +44,7 @@
         : '—'
     },
     {
+      details: true,
       label: t('tronScan.gapBlocks'),
       value: state.value?.gap_blocks,
       hint: t('tronScan.gapTasks', { count: Object.keys(state.value?.gaps ?? {}).length })
@@ -90,17 +92,25 @@
 <template>
   <div class="tron-page">
     <header class="tron-heading">
-      <div
-        ><h2>{{ t('tronScan.title') }}</h2
-        ><p>TRON MAINNET · {{ t('tronScan.subtitle') }}</p></div
-      >
+      <div>
+        <h2>{{ t('tronScan.title') }}</h2>
+        <p
+          >TRON MAINNET · {{ t('tronScan.subtitle')
+          }}<span v-if="state">
+            · {{ t('tronScan.updated') }}
+            {{ new Date(state.server_time * 1000).toISOString().slice(11, 19) }} UTC</span
+          ></p
+        >
+      </div>
       <ElSpace wrap>
         <ElTag
           :type="failed || state?.health?.error ? 'danger' : state?.ready ? 'success' : 'warning'"
           >{{ statusText }}</ElTag
         >
         <span class="tron-muted">{{ t('tronScan.polling') }}</span>
-        <ElButton :loading="busy && !state" @click="load">{{ t('mgsRecharge.refresh') }}</ElButton>
+        <ElButton size="small" :loading="busy && !state" @click="load">{{
+          t('mgsRecharge.refresh')
+        }}</ElButton>
       </ElSpace>
     </header>
     <ElAlert
@@ -112,19 +122,24 @@
     />
     <ElSkeleton v-if="!state && !failed" :rows="6" animated />
     <template v-if="state">
-      <ElCard shadow="never">
-        <div class="tron-metrics"
-          ><div v-for="metric in metrics" :key="metric.label"
-            ><span>{{ metric.label }}</span
-            ><strong>{{ metric.value?.toLocaleString() ?? '—' }}</strong
-            ><small>{{ metric.hint }}</small></div
-          ></div
-        >
-      </ElCard>
-      <BlockStream :blocks="state.recent_blocks" />
+      <div class="tron-overview">
+        <section class="tron-metrics" :aria-label="t('tronScan.title')">
+          <div v-for="metric in metrics" :key="metric.label" class="tron-metric">
+            <ElButton v-if="metric.details" link type="primary" @click="detailsVisible = true"
+              >{{ metric.label }} ↗</ElButton
+            >
+            <span v-else>{{ metric.label }}</span>
+            <strong :class="{ 'text-warning': metric.details && state.gap_blocks }">{{
+              metric.value?.toLocaleString() ?? '—'
+            }}</strong>
+            <small>{{ metric.hint }}</small>
+          </div>
+        </section>
+        <BlockStream :blocks="state.recent_blocks" />
+      </div>
       <RecentRecharges v-if="state.recent_recharges !== null" :rows="state.recent_recharges" />
-      <ElCard v-if="Object.keys(state.gaps).length" shadow="never">
-        <template #header>{{ t('tronScan.backfill') }}</template>
+      <ElDialog v-model="detailsVisible" :title="t('tronScan.technical')" width="min(92vw, 720px)">
+        <p v-if="!Object.keys(state.gaps).length">{{ t('tronScan.noGaps') }}</p>
         <div v-for="(gap, id) in state.gaps" :key="id" class="tron-gap">
           <strong>#{{ gap.from }} – #{{ gap.to }}</strong>
           <span>{{ t('tronScan.nextBlock') }} #{{ gap.next }}</span>
@@ -136,24 +151,14 @@
           >
           <span v-if="gap.error" class="text-danger">{{ gap.error }}</span>
         </div>
-      </ElCard>
-      <footer class="tron-footer">
-        <span v-if="!Object.keys(state.gaps).length">{{ t('tronScan.noGaps') }}</span>
-        <details
-          ><summary>{{ t('tronScan.technical') }}</summary
-          ><pre>{{
-            JSON.stringify(
-              { checkpoint: state.checkpoint, health: state.health, gaps: state.gaps },
-              null,
-              2
-            )
-          }}</pre>
-        </details>
-        <span
-          >{{ t('tronScan.updated') }}
-          {{ new Date(state.server_time * 1000).toISOString().slice(11, 19) }} UTC</span
-        >
-      </footer>
+        <pre>{{
+          JSON.stringify(
+            { checkpoint: state.checkpoint, health: state.health, gaps: state.gaps },
+            null,
+            2
+          )
+        }}</pre>
+      </ElDialog>
     </template>
   </div>
 </template>
@@ -161,15 +166,16 @@
 <style scoped>
   .tron-page {
     display: grid;
+    align-content: start;
     gap: 12px;
+    min-width: 0;
   }
-  .tron-heading,
-  .tron-footer {
+  .tron-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 8px;
   }
   h2 {
     margin: 0;
@@ -177,36 +183,53 @@
     font-weight: 600;
   }
   .tron-heading p,
-  .tron-muted,
-  .tron-footer {
+  .tron-muted {
     color: var(--el-text-color-secondary);
     font-size: 12px;
   }
   .tron-heading p {
     margin: 2px 0 0;
   }
+  .tron-overview {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 12px;
+    align-items: stretch;
+  }
   .tron-metrics {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: hidden;
+    border: 1px solid var(--el-border-color-light);
+    border-radius: 6px;
+    background: var(--el-bg-color-overlay);
   }
-  .tron-metrics > div {
+  .tron-metric {
     display: grid;
+    align-content: center;
+    justify-items: start;
     gap: 2px;
-    padding: 0 14px;
+    padding: 8px;
+  }
+  .tron-metric:nth-child(even) {
     border-left: 1px solid var(--el-border-color-lighter);
   }
-  .tron-metrics > div:first-child {
-    padding-left: 0;
-    border-left: 0;
+  .tron-metric:nth-child(n + 3) {
+    border-top: 1px solid var(--el-border-color-lighter);
   }
-  .tron-metrics span,
-  .tron-metrics small {
+  .tron-metric > span,
+  .tron-metric small,
+  .tron-metric :deep(.el-button) {
     font-size: 12px;
+    line-height: 16px;
+  }
+  .tron-metric > span,
+  .tron-metric small {
     color: var(--el-text-color-secondary);
   }
-  .tron-metrics strong {
-    font-size: clamp(17px, 1.8vw, 24px);
+  .tron-metric strong {
+    font-size: 19px;
+    line-height: 22px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
@@ -218,29 +241,16 @@
     font-size: 13px;
     overflow-wrap: anywhere;
   }
-  :deep(.el-card__header) {
-    padding: 10px 14px;
-  }
-  :deep(.el-card__body) {
-    padding: 12px 14px;
-  }
-  details {
-    max-width: 100%;
-  }
-  summary {
-    cursor: pointer;
-  }
   pre {
+    max-height: 50vh;
+    overflow: auto;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+    font-size: 12px;
   }
-  @media (max-width: 640px) {
-    .tron-metrics {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .tron-metrics > div:nth-child(odd) {
-      padding-left: 0;
-      border-left: 0;
+  @media (max-width: 1250px) {
+    .tron-overview {
+      grid-template-columns: 1fr;
     }
   }
 </style>
