@@ -653,7 +653,8 @@
     "registerPayment": "登记付款",
     "reopen": "撤回确认",
 
-    "estimatedPlatformFee": "预估平台服务费",
+    "estimatedPlatformFee": "预估平台费",
+    "businessDate": "业务日",
     "disableUser": "禁用",
     "enableUser": "启用",
     "reasonRequired": "请填写操作原因",

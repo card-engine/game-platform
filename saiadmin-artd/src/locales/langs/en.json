@@ -654,6 +654,7 @@
     "reopen": "Reopen",
 
     "estimatedPlatformFee": "Estimated platform fee",
+    "businessDate": "Business date",
     "disableUser": "Disable",
     "enableUser": "Enable",
     "reasonRequired": "Enter a reason",
