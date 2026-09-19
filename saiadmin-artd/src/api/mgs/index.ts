@@ -1,6 +1,8 @@
 import request from '@/utils/http'
 
 export default {
+  userStatus: (data: { id: number; status: number; remark: string }) =>
+    request.put({ url: '/mgs/users/status', data }),
   overview: () => request.get<any>({ url: '/mgs/overview' }),
   games: (params: Record<string, any>) =>
     request.get<Api.Common.ApiPage>({ url: '/mgs/games', params }),

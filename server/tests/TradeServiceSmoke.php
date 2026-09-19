@@ -42,6 +42,7 @@ try {
     $debit = $base + ['action' => 'debit', 'source_no' => "debit_{$suffix}", 'round_id' => "round_{$suffix}", 'amount' => '10', 'finished' => false];
     check($trade->handle('wxgame', $debit)['status'] === 2, '扣款失败');
     $billTable = 'mg_bills_' . gmdate('ym');
+    $eventTable = 'mg_trade_events_' . gmdate('ym');
     check(Db::table($billTable)->where('merchant_id', $merchant->id)->count() === 1, '扣款 Bill 未写入');
     check($trade->handle('wxgame', $debit)['status'] === 2, '重复扣款未返回原结果');
     check(Db::table($billTable)->where('merchant_id', $merchant->id)->count() === 1, '重复扣款生成了新 Bill');
@@ -96,9 +97,11 @@ try {
     Db::table($betTable)->where('id', $autoBet['id'])->update(['update_time' => date('Y-m-d H:i:s.v', time() - 601)]);
     (new GameBetClose())->consume(['bet_no' => $autoBet['bet_no'], 'month' => gmdate('ym')]);
     $autoBet = (array) Db::table($betTable)->where('id', $autoBet['id'])->first();
-    check((int) $autoBet['status'] === 2 && $autoBet['win_amount'] === '1.00000000' && (int) $autoBet['credit_count'] === 2, '零派奖自动结单失败');
+    check((int) $autoBet['status'] === 2 && $autoBet['win_amount'] === '1.00000000' && (int) $autoBet['credit_count'] === 1, '零派奖自动结单失败');
     (new GameBetClose())->consume(['bet_no' => $autoBet['bet_no'], 'month' => gmdate('ym')]);
-    check(Db::table($billTable)->where('source_no', 'auto_close_' . $autoBet['bet_no'])->count() === 1, '自动结单重复通知');
+    check(Db::table($eventTable)->where('source_no', 'auto_close_' . $autoBet['bet_no'])->count() === 1, '自动结单重复通知');
+    check(!Db::table($billTable)->where('source_no', 'auto_close_' . $autoBet['bet_no'])->exists(), '自动结单生成零资金流水');
+    check(!Db::table($billTable)->where('merchant_id', $merchant->id)->where('amount', 0)->exists(), '零金额进入资金流水');
     $walletState = json_decode(file_get_contents($wallet['state']), true);
     $autoEvent = current(array_filter($walletState['events'], fn ($event) => ($event['request']['transaction_id'] ?? '') === 'auto_close_' . $autoBet['bet_no']));
     check(($autoEvent['request']['win_amount'] ?? '') === '0.00000000' && (int) ($autoEvent['request']['is_end'] ?? 0) === 1, '自动结单通知参数错误');
@@ -109,8 +112,20 @@ try {
     (new DailyStatService())->rebuild($bet['business_date']);
     check(Db::table('mg_daily_stats')->where('merchant_id', $merchant->id)->exists(), '每日统计未生成');
 
+    $zero = $base + ['action' => 'credit', 'source_no' => "unknown_zero_{$suffix}", 'round_id' => "zero_round_{$suffix}", 'amount' => '0', 'finished' => true];
+    check($trade->handle('wxgame', $zero)['status'] === 4, '零派奖未知结果未保存');
+    check(!Db::table($billTable)->where('source_no', $zero['source_no'])->exists(), '未知零派奖进入资金流水');
+    check($trade->handle('wxgame', $zero)['status'] === 2, '零派奖重试未结单');
+    $zeroBet = Db::table($betTable)->where('provider_round_id', $zero['round_id'])->where('merchant_id', $merchant->id)->first();
+    check((int) $zeroBet->status === 2 && (int) $zeroBet->credit_count === 0, '零派奖结单状态/流水计数错误');
+    check($trade->handle('wxgame', $zero)['status'] === 2 && Db::table($eventTable)->where('source_no', $zero['source_no'])->count() === 1, '零派奖重试重复事件');
+    check($trade->handle('wxgame', array_replace($zero, ['amount' => '1']))['status'] === 3, '零交易参数变更未拒绝');
+    $openZero = array_replace($zero, ['source_no' => "zero_open_{$suffix}", 'round_id' => "zero_open_round_{$suffix}", 'finished' => false]);
+    check($trade->handle('wxgame', $openZero)['status'] === 2, '零金额中间事件失败');
+    check((int) Db::table($betTable)->where('provider_round_id', $openZero['round_id'])->where('merchant_id', $merchant->id)->value('status') === 1, '零金额但未结束的局被提前结单');
     echo "TradeService smoke test passed\n";
 } finally {
+    Db::table('mg_trade_events_' . gmdate('ym'))->where('merchant_id', $merchant->id)->delete();
     Db::statement('DROP TABLE IF EXISTS `mg_bets_9912`');
     $businessNos = [];
     foreach (Db::table('information_schema.tables')->selectRaw('TABLE_NAME as name')->where('table_schema', config('database.connections.mysql.database'))->where('table_name', 'like', 'mg_b%_' . gmdate('ym'))->pluck('name') as $table) {

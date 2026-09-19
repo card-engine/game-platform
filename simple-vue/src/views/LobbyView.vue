@@ -302,7 +302,10 @@ async function launchGame(game: GameItem) {
   }
 }
 
-function requestGame(game: GameItem) { void launchGame(game) }
+function requestGame(game: GameItem) {
+  if (user.status === 0) { ElMessage.warning(t('accountDisabled')); return }
+  void launchGame(game)
+}
 
 function cycleTheme() {
   const index = themeCycle.indexOf(theme.preference)
@@ -352,7 +355,7 @@ function closePlayer() {
             <CurrencyIcon :code="balance?.currency || user.currencyCode" :size="18" />
             <span>{{ formattedBalance }}</span>
             <el-tooltip :content="t('recharge.title')" placement="bottom">
-              <button type="button" class="wallet-add" :aria-label="t('recharge.title')" :disabled="!balance" @click="rechargeVisible = true"><CirclePlus :size="18" /></button>
+              <button type="button" class="wallet-add" :aria-label="t('recharge.title')" :disabled="!balance || user.status === 0" @click="rechargeVisible = true"><CirclePlus :size="18" /></button>
             </el-tooltip>
           </div>
 

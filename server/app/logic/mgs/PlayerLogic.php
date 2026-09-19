@@ -19,6 +19,7 @@ class PlayerLogic extends BaseLogic
             'mgs_user_id' => $user->id,
             'unique_id' => $user->unique_id,
             'nickname' => $user->nickname,
+            'status' => (int) $user->status,
             'language' => $user->language,
         ];
     }

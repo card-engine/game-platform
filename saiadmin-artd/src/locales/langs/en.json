@@ -101,6 +101,7 @@
     "logOutTips": "Do you want to log out?"
   },
   "game": {
+    "installOnlySettings": "Statistics timezone and currency are set at installation and are read-only. Environment changes and upgrades do not replace them.",
     "superAdmin": "Super",
     "platformSuperAdmin": "Platform Admin",
     "newPlatformAccount": "New Platform Account",
@@ -640,6 +641,24 @@
     }
   },
   "mgs": {
+    "billingTimezone": "Billing timezone",
+    "confirmSettlement": "Confirm settlement",
+    "close": "Close",
+    "submit": "Confirm action",
+    "actions": "Actions",
+    "sourceBill": "Source monthly bill",
+    "rateDetails": "Rate details",
+    "paymentReference": "Payment reference",
+    "settlementActionHint": "Use the official monthly bill. Payment registration records a completed settlement and does not transfer money. Zero-fee bills settle on confirmation.",
+    "registerPayment": "Register payment",
+    "reopen": "Reopen",
+
+    "estimatedPlatformFee": "Estimated platform fee",
+    "disableUser": "Disable",
+    "enableUser": "Enable",
+    "reasonRequired": "Enter a reason",
+    "userStatusHint": "Enter a reason. Disabled players may browse and finish their current session, but cannot launch again, create recharges or edit their profile.",
+
     "overview": "Platform Overview",
     "overviewHint": "Monitor self-operated performance and settlement data",
     "currency": "Currency",

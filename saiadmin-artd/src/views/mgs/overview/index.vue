@@ -5,7 +5,7 @@
         <h2>{{ $t('mgs.overview') }}</h2>
         <p>{{ $t('mgs.overviewHint') }}</p>
       </div>
-      <ElSelect v-model="currency" class="w-28" :placeholder="$t('mgs.currency')">
+      <ElSelect v-model="currency" class="overview-currency" :placeholder="$t('mgs.currency')">
         <ElOption v-for="item in currencies" :key="item" :label="item" :value="item" />
       </ElSelect>
     </div>
@@ -196,7 +196,7 @@
     },
     {
       prop: 'platform_fee',
-      label: t('mgs.platformFee'),
+      label: t('mgs.estimatedPlatformFee'),
       minWidth: 130,
       formatter: (row: any) => money(row.platform_fee)
     }
@@ -225,6 +225,11 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+  }
+  .overview-toolbar .overview-currency {
+    width: 112px;
+    flex: 0 0 112px;
+    margin-left: auto;
   }
   .overview-toolbar h2 {
     margin: 0;

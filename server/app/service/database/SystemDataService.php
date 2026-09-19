@@ -129,6 +129,10 @@ class SystemDataService
     private function gameConfigs(array $configs): void
     {
         foreach ($configs as $config) {
+            if (!Db::table('mg_configs')->where('code', $config['code'])->exists()) {
+                if ($config['code'] === 'platform_timezone' && !in_array($config['value'], \DateTimeZone::listIdentifiers(), true)) throw new RuntimeException('INITIAL_PLATFORM_TIMEZONE 无效');
+                if ($config['code'] === 'platform_currency_code' && !preg_match('/^[A-Z]{3,16}$/D', $config['value'])) throw new RuntimeException('INITIAL_PLATFORM_CURRENCY_CODE 无效');
+            }
             $value = json_encode($config['value'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             $status = $config['status'];
             unset($config['value'], $config['status']);

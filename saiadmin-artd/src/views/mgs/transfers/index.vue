@@ -7,6 +7,15 @@
   import TableSearch from './modules/table-search.vue'
   import EditDialog from './modules/edit-dialog.vue'
   const { t, locale } = useI18n()
+  const statusTypes = {
+    pending: 'primary',
+    paid: 'success',
+    credited: 'success',
+    review: 'warning',
+    expired: 'info',
+    closed: 'info',
+    ignored: 'info'
+  } as const
   const filters = ref({ keyword: '', status: '', currency_code: '' })
   const { dialogVisible, dialogData, showDialog } = useSaiAdmin()
   const detailVisible = ref(false)
@@ -81,7 +90,11 @@
         <template #amount="{ row }"
           >{{ displayAmount(row.amount) }} {{ row.currency_code }}</template
         >
-        <template #status="{ row }">{{ t(`mgsRecharge.${row.status}`) }}</template>
+        <template #status="{ row }"
+          ><ElTag :type="statusTypes[row.status as keyof typeof statusTypes]">{{
+            t(`mgsRecharge.${row.status}`)
+          }}</ElTag></template
+        >
         <template #operation="{ row }">
           <ElButton
             v-if="['review', 'ignored'].includes(row.status)"

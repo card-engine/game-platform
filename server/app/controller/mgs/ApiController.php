@@ -24,7 +24,7 @@ class ApiController extends OpenController
         $data = (new MgsAuthService())->session($request);
         $user = $data['user'];
         $currency = strtoupper((string) (new MgsConfigService())->get('default_currency', config('mgs.default_currency', 'USD')));
-        Wallet::firstOrCreate(['user_id' => $user->id, 'currency_code' => $currency], ['balance' => '0.00000000']);
+        if ((int) $user->status === 1) Wallet::firstOrCreate(['user_id' => $user->id, 'currency_code' => $currency], ['balance' => '0.00000000']);
         return $this->success(['token' => $data['token'], 'default_currency_code' => $currency, 'user' => (new PlayerLogic())->profile($user), 'wallets' => $user->wallets()->get(['id', 'currency_code', 'balance'])]);
     }
 
@@ -47,7 +47,7 @@ class ApiController extends OpenController
 
     public function launch(Request $request): Response
     {
-        $user = (new MgsAuthService())->browserUser($request);
+        $user = (new MgsAuthService())->browserUser($request, true);
         $game = Game::find((int) $request->input('mgs_game_id'));
         if (!$game || !$this->available($game)) return $this->fail('游戏不存在或已停用');
         $currency = strtoupper((string) $request->input('currency_code', (new MgsConfigService())->get('default_currency', config('mgs.default_currency', 'USD'))));
@@ -67,7 +67,7 @@ class ApiController extends OpenController
 
     public function updateUser(Request $request): Response
     {
-        $user = (new MgsAuthService())->browserUser($request);
+        $user = (new MgsAuthService())->browserUser($request, true);
         $data = ['nickname' => trim((string) $request->input('nickname'))];
         (new UserValidate())->scene('update')->failException()->check($data);
         return $this->success((new PlayerLogic())->update($user, $data));
@@ -96,7 +96,7 @@ class ApiController extends OpenController
 
     public function createRecharge(Request $request): Response
     {
-        $user = (new MgsAuthService())->browserUser($request);
+        $user = (new MgsAuthService())->browserUser($request, true);
         $data = $request->only(['currency_code', 'pay_currency_code', 'recharge_amount', 'request_id', 'quote_key']);
         (new RechargeValidate())->scene('save')->failException()->check($data);
         return $this->success((new RechargeLogic())->create($user, $data));

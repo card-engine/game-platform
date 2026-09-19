@@ -126,7 +126,13 @@
   }
   const detailColumns = computed(() => [
     { prop: 'time', label: t('mgs.time'), width: 180 },
-    { prop: 'type', label: t('mgs.type'), width: 120 },
+    {
+      prop: 'type',
+      label: t('mgs.type'),
+      width: 120,
+      formatter: (row: { type: string }) =>
+        row.type === 'close' ? t('mgs.settled') : t(`mgs.${row.type}`)
+    },
     { prop: 'amount', label: t('mgs.amount'), width: 130, useSlot: true },
     { prop: 'transaction_id', label: t('mgs.transactionNo'), minWidth: 180 }
   ])
@@ -166,7 +172,7 @@
         { prop: 'currency_code', label: t('mgs.currency'), width: 80 },
         { prop: 'amounts', label: t('mgs.fundSummary'), minWidth: 260, useSlot: true },
         { prop: 'result', label: t('mgs.result'), width: 130, useSlot: true },
-        { prop: 'fee', label: t('mgs.platformFee'), width: 120, useSlot: true },
+        { prop: 'fee', label: t('mgs.estimatedPlatformFee'), width: 120, useSlot: true },
         { prop: 'business_date', label: t('mgs.businessDate'), width: 110 },
         { prop: 'status', label: t('mgs.status'), width: 90, fixed: 'right', useSlot: true }
       ]

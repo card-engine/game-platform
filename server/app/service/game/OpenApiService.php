@@ -95,6 +95,19 @@ class OpenApiService
         return ['game_id' => (string) $data['game_id'], 'currency' => $currency, 'rtp' => $rtp, 'scope' => 'players', 'user_ids' => $userIds];
     }
 
+    public function monthlyBills(Merchant $merchant, ?string $month, bool $generate = false): array
+    {
+        $zone = new \DateTimeZone($merchant->timezone);
+        $month ??= (new \DateTimeImmutable('first day of last month', $zone))->format('Y-m');
+        $end = (new \DateTimeImmutable($month . '-01', $zone))->modify('+1 month');
+        if ($end > new \DateTimeImmutable('now', $zone)) throw new ApiException('只能查询已结束月份的正式月账单');
+        $service = new \app\service\game\report\MonthlyBillingService();
+        if ($generate) $service->generateGgr($merchant, $month);
+        return ['month' => $month, 'timezone' => $zone->getName(), 'bills' => \app\model\MerchantMonthlyBill::where([
+            'merchant_id' => $merchant->id, 'billing_mode' => 1, 'source_month' => $month . '-01',
+        ])->orderBy('currency_code')->get()->map(fn ($bill) => $service->snapshot($bill))->all()];
+    }
+
     public function bets(Merchant $merchant, array $where): array
     {
         $month = (string) ($where['month'] ?? gmdate('ym'));

@@ -18,16 +18,18 @@ export const useUserStore = defineStore('user', () => {
   const mgsUserId = ref(0)
   const uniqueId = ref(localStorage.getItem(UNIQUE_ID_KEY) || '')
   const nickname = ref('')
+  const status = ref(1)
   const language = ref(localStorage.getItem(LANGUAGE_KEY) || 'en-US')
   const currencyCode = ref(localStorage.getItem(CURRENCY_KEY) || 'INR')
   const ready = createSession(token, language.value).then((data) => {
     mgsUserId.value = data.user.mgs_user_id
     uniqueId.value = String(data.user.unique_id)
     nickname.value = data.user.nickname || ''
+    status.value = data.user.status
     currencyCode.value = data.default_currency_code
     localStorage.setItem(UNIQUE_ID_KEY, uniqueId.value)
     localStorage.setItem(CURRENCY_KEY, currencyCode.value)
   }).catch(() => undefined)
   watch(language, (value) => localStorage.setItem(LANGUAGE_KEY, value))
-  return { token, mgsUserId, uniqueId, nickname, language, currencyCode, ready }
+  return { token, status, mgsUserId, uniqueId, nickname, language, currencyCode, ready }
 })

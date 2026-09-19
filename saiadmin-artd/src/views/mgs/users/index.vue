@@ -46,6 +46,16 @@
             row.status === 1 ? $t('mgs.enabled') : $t('mgs.disabled')
           }}</ElTag></template
         >
+        <template #operation="{ row }"
+          ><ElButton
+            v-if="Number(row.id) !== 1"
+            v-permission="'app:mgs:user:update'"
+            link
+            :type="row.status === 1 ? 'danger' : 'success'"
+            @click="changeStatus(row)"
+            >{{ row.status === 1 ? t('mgs.disableUser') : t('mgs.enableUser') }}</ElButton
+          ></template
+        >
       </ArtTable>
     </ElCard>
   </div>
@@ -53,6 +63,7 @@
 
 <script setup lang="ts">
   import { useI18n } from 'vue-i18n'
+  import { ElMessageBox } from 'element-plus'
   import { useTable } from '@/hooks/core/useTable'
   import { money } from '@/utils/game/amount'
   import api from '@/api/mgs'
@@ -92,10 +103,20 @@
         { prop: 'access', label: t('mgs.lastLogin'), minWidth: 170, useSlot: true },
         { prop: 'last_launch_time', label: t('mgs.lastLaunch'), width: 170 },
         { prop: 'create_time', label: t('mgs.createTime'), width: 170 },
-        { prop: 'status', label: t('mgs.status'), width: 90, fixed: 'right', useSlot: true }
+        { prop: 'status', label: t('mgs.status'), width: 90, useSlot: true },
+        { prop: 'operation', label: t('mgs.status'), width: 110, fixed: 'right', useSlot: true }
       ]
     }
   })
+  async function changeStatus(row: { id: number; status: number }) {
+    const { value } = await ElMessageBox.prompt(
+      t('mgs.userStatusHint'),
+      row.status === 1 ? t('mgs.disableUser') : t('mgs.enableUser'),
+      { inputPattern: /\S/, inputErrorMessage: t('mgs.reasonRequired') }
+    )
+    await api.userStatus({ id: row.id, status: row.status === 1 ? 0 : 1, remark: value.trim() })
+    refreshData()
+  }
   watch(locale, () => resetColumns?.())
 </script>
 

@@ -67,6 +67,12 @@ class MgsLogic extends BaseLogic
         ], fn ($value) => $value !== null));
     }
 
+    public function userStatus(int $id, int $status): void
+    {
+        if ($id === 1) throw new ApiException('系统玩家不能停用');
+        User::findOrFail($id)->update(['status' => $status]);
+    }
+
     public function users(array $where): array
     {
         $query = User::with('wallets:id,user_id,currency_code,balance')->when($where['status'] !== '', fn ($q) => $q->where('status', (int) $where['status']))

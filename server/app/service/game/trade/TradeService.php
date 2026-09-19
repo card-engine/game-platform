@@ -61,26 +61,26 @@ class TradeService
             $callbackAction = ['debit' => 'bet', 'credit' => 'win', 'rollback_debit' => 'cancel', 'rollback_credit' => 'cancel'][$action];
             $payload = [
                 'user_id' => $user->merchant_user_id,
-                'game_id' => (string) id2big((int) $prepared['bill']['game_id']),
+                'game_id' => (string) id2big((int) $prepared['event']['game_id']),
                 'currency' => $currency,
                 'transaction_id' => $operation['source_no'],
                 'parent_round_id' => (string) ($operation['parent_round_id'] ?? $operation['round_id']),
                 'round_id' => $operation['round_id'],
             ];
-            if ($action === 'debit') $payload['bet_amount'] = $prepared['bill']['amount'];
+            if ($action === 'debit') $payload['bet_amount'] = $prepared['event']['amount'];
             elseif ($action === 'credit') {
-                $payload['win_amount'] = $prepared['bill']['amount'];
+                $payload['win_amount'] = $prepared['event']['amount'];
                 $payload['is_end'] = empty($operation['finished']) ? 0 : 1;
             } else {
                 $payload['original_transaction_id'] = (string) ($operation['original_source_no'] ?? '');
                 $payload['original_type'] = $action === 'rollback_debit' ? 'bet' : 'win';
-                $payload['cancel_amount'] = $prepared['bill']['amount'];
+                $payload['cancel_amount'] = $prepared['event']['amount'];
             }
             $wallet = (new MerchantCallbackClient())->request($merchant, $callbackAction, $payload);
             $result = $this->complete($prepared, $wallet, $operation, $merchant, $currency);
             if (($result['status'] ?? 0) === 2) {
-                $this->syncBetClose($prepared['bet_table'], $prepared['bill']['bet_no']);
-                GameStatsRefresh::dispatch($prepared['bet_table'], $prepared['bill']['bet_no']);
+                $this->syncBetClose($prepared['bet_table'], $prepared['event']['bet_no']);
+                GameStatsRefresh::dispatch($prepared['bet_table'], $prepared['event']['bet_no']);
             }
             return $result;
         } finally {
@@ -94,7 +94,7 @@ class TradeService
         $month = new DateTimeImmutable('first day of this month', new DateTimeZone('UTC'));
         for ($i = 0; $i < 3 && $retried < $limit; $i++) {
             $suffix = $month->modify("-{$i} month")->format('ym');
-            $table = (new MonthlyTableService())->table('bills', $suffix);
+            $table = (new MonthlyTableService())->table('trade_events', $suffix);
             Db::table($table)->where('status', 1)->where('update_time', '<', date('Y-m-d H:i:s', time() - 60))->update(['status' => 4]);
             $rows = Db::table($table)->where('status', 4)->orderBy('id')->limit($limit - $retried)->get();
             foreach ($rows as $row) {
@@ -110,13 +110,13 @@ class TradeService
     private function prepare(string $platform, array $operation, User $user, Merchant $merchant, string $currency): array
     {
         $month = gmdate('ym');
-        $billTable = (new MonthlyTableService())->table('bills', $month);
+        $eventTable = (new MonthlyTableService())->table('trade_events', $month);
         $betTable = (new MonthlyTableService())->table('bets', $month);
         $searchMonth = new DateTimeImmutable('first day of this month', new DateTimeZone('UTC'));
-        $billTables = $betTables = [];
+        $eventTables = $betTables = [];
         for ($i = 0; $i < 3; $i++) {
             $suffix = $searchMonth->modify("-{$i} month")->format('ym');
-            $billTables[] = (new MonthlyTableService())->table('bills', $suffix);
+            $eventTables[] = (new MonthlyTableService())->table('trade_events', $suffix);
             $betTables[] = (new MonthlyTableService())->table('bets', $suffix);
         }
         $autoCloseBetTable = isset($operation['auto_close_month'])
@@ -127,25 +127,25 @@ class TradeService
         $requestHash = hash('sha256', json_encode($operation, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         $request = $operation;
 
-        return Db::transaction(function () use ($platform, $operation, $request, $user, $merchant, $currency, $month, $billTable, $betTable, $billTables, $betTables, $autoCloseBetTable, $idempotencyKey, $requestHash, $action) {
-            $bill = null;
-            foreach ($billTables as $candidate) {
-                $bill = (array) Db::table($candidate)->where(['source' => $platform, 'idempotency_key' => $idempotencyKey])->whereNull('delete_time')->lockForUpdate()->first();
-                if ($bill) {
-                    $billTable = $candidate;
+        return Db::transaction(function () use ($platform, $operation, $request, $user, $merchant, $currency, $month, $eventTable, $betTable, $eventTables, $betTables, $autoCloseBetTable, $idempotencyKey, $requestHash, $action) {
+            $event = null;
+            foreach ($eventTables as $candidate) {
+                $event = (array) Db::table($candidate)->where(['source' => $platform, 'idempotency_key' => $idempotencyKey])->whereNull('delete_time')->lockForUpdate()->first();
+                if ($event) {
+                    $eventTable = $candidate;
                     break;
                 }
             }
-            if ($bill) {
-                if (($bill['request_hash'] ?? '') !== $requestHash) return ['result' => $this->result(3, 1005, '重复交易参数不一致', [], $action)];
-                $data = json_decode($bill['data'] ?: '{}', true) ?: [];
-                if (in_array((int) $bill['status'], [2, 3], true)) {
+            if ($event) {
+                if (($event['request_hash'] ?? '') !== $requestHash) return ['result' => $this->result(3, 1005, '重复交易参数不一致', [], $action)];
+                $data = json_decode($event['data'] ?: '{}', true) ?: [];
+                if (in_array((int) $event['status'], [2, 3], true)) {
                     $wallet = $data['wallet_response'] ?? [];
-                    return ['result' => $this->result((int) $bill['status'], (int) ($wallet['code'] ?? 0), (string) ($wallet['message'] ?? ''), $wallet['data'] ?? [], $action, $bill)];
+                    return ['result' => $this->result((int) $event['status'], (int) ($wallet['code'] ?? 0), (string) ($wallet['message'] ?? ''), $wallet['data'] ?? [], $action, $event)];
                 }
-                if ((int) $bill['status'] === 1) return ['result' => $this->result(3, 1005, '交易处理中', [], $action, $bill)];
-                Db::table($billTable)->where('id', $bill['id'])->update(['status' => 1, 'update_time' => $this->now()]);
-                return ['bill' => $bill, 'bill_table' => $billTable, 'bet_table' => $this->betTable($bill['bet_no'])];
+                if ((int) $event['status'] === 1) return ['result' => $this->result(3, 1005, '交易处理中', [], $action, $event)];
+                Db::table($eventTable)->where('id', $event['id'])->update(['status' => 1, 'update_time' => $this->now()]);
+                return ['event' => $event, 'event_table' => $eventTable, 'bet_table' => $this->betTable($event['bet_no'])];
             }
 
             $original = null;
@@ -164,7 +164,7 @@ class TradeService
             } elseif (str_starts_with($action, 'rollback')) {
                 $originalAction = str_replace('rollback_', '', $action);
                 $originalKey = hash('sha256', "{$originalAction}|{$user->id}|{$currency}|" . ($operation['original_source_no'] ?? $operation['source_no']));
-                foreach ($billTables as $originalTable) {
+                foreach ($eventTables as $originalTable) {
                     $original = (array) Db::table($originalTable)->where(['source' => $platform, 'idempotency_key' => $originalKey])->whereNull('delete_time')->lockForUpdate()->first();
                     if ($original) break;
                 }
@@ -242,56 +242,64 @@ class TradeService
                 Db::table($originalTable)->where('id', $original['id'])->update(['data' => json_encode($originalData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'update_time' => $this->now()]);
             }
 
-            $bill = [
-                'bill_no' => mg_no('BL', $month), 'bet_no' => $betNo, 'merchant_id' => $merchant->id, 'user_id' => $user->id,
+            $event = [
+                'event_no' => mg_no('TE', $month), 'bill_no' => bccomp($operation['amount'], '0', 8) > 0 ? mg_no('BL', $month) : null, 'bet_no' => $betNo, 'merchant_id' => $merchant->id, 'user_id' => $user->id,
                 'game_id' => $original['game_id'] ?? $bet['game_id'], 'type' => self::TYPE[$action], 'source' => $platform,
                 'source_no' => $operation['source_no'], 'amount' => $operation['amount'], 'currency_code' => $currency,
-                'original_bill_no' => $original['bill_no'] ?? null, 'idempotency_key' => $idempotencyKey, 'request_hash' => $requestHash,
+                'original_event_no' => $original['event_no'] ?? null, 'original_bill_no' => $original['bill_no'] ?? null, 'idempotency_key' => $idempotencyKey, 'request_hash' => $requestHash,
                 'status' => 1, 'data' => json_encode(['request' => $request, 'reserved_fee' => $reserved, 'rollback_reserved_fee' => $rollbackReserved], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 'business_date' => $this->businessDate($merchant), 'platform_date' => $this->platformDate(),
                 'received_time' => $this->now(), 'create_time' => $this->now(), 'update_time' => $this->now(),
             ];
-            Db::table($billTable)->insert($bill);
-            return ['bill' => $bill, 'bill_table' => $billTable, 'bet_table' => $betTable];
+            Db::table($eventTable)->insert($event);
+            return ['event' => $event, 'event_table' => $eventTable, 'bet_table' => $betTable];
         });
     }
 
     private function complete(array $prepared, array $wallet, array $operation, Merchant $merchant, string $currency): array
     {
         return Db::transaction(function () use ($prepared, $wallet, $operation, $merchant, $currency) {
-            $bill = (array) Db::table($prepared['bill_table'])->where('bill_no', $prepared['bill']['bill_no'])->lockForUpdate()->first();
-            $data = json_decode($bill['data'] ?: '{}', true) ?: [];
+            $event = (array) Db::table($prepared['event_table'])->where('event_no', $prepared['event']['event_no'])->lockForUpdate()->first();
+            $data = json_decode($event['data'] ?: '{}', true) ?: [];
             $data['wallet_response'] = ['code' => $wallet['code'], 'message' => $wallet['message'], 'data' => $wallet['data']];
-            Db::table($prepared['bill_table'])->where('id', $bill['id'])->update([
+            Db::table($prepared['event_table'])->where('id', $event['id'])->update([
                 'status' => $wallet['status'], 'data' => json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 'completed_time' => $wallet['status'] === 4 ? null : $this->now(), 'update_time' => $this->now(),
             ]);
-            if ($wallet['status'] === 4) return $this->result(4, 1006, $wallet['message'], [], $operation['action'], $bill);
+            if ($wallet['status'] === 4) return $this->result(4, 1006, $wallet['message'], [], $operation['action'], $event);
             if (str_starts_with($operation['action'], 'rollback')) {
-                if (preg_match('/^BL(\d{4})/', (string) $bill['original_bill_no'], $match) !== 1) throw new RuntimeException('Bill 编号无效');
-                $originalTable = (new MonthlyTableService())->table('bills', $match[1]);
-                $original = (array) Db::table($originalTable)->where('bill_no', $bill['original_bill_no'])->lockForUpdate()->first();
+                if (preg_match('/^TE(\d{4})/', (string) $event['original_event_no'], $match) !== 1) throw new RuntimeException('交易事件编号无效');
+                $originalTable = (new MonthlyTableService())->table('trade_events', $match[1]);
+                $original = (array) Db::table($originalTable)->where('event_no', $event['original_event_no'])->lockForUpdate()->first();
                 $originalData = json_decode($original['data'] ?: '{}', true) ?: [];
-                $originalData['rollback_pending_amount'] = bcsub((string) ($originalData['rollback_pending_amount'] ?? '0'), $bill['amount'], 8);
-                if ($wallet['status'] === 2) $originalData['rollback_amount'] = bcadd((string) ($originalData['rollback_amount'] ?? '0'), $bill['amount'], 8);
+                $originalData['rollback_pending_amount'] = bcsub((string) ($originalData['rollback_pending_amount'] ?? '0'), $event['amount'], 8);
+                if ($wallet['status'] === 2) $originalData['rollback_amount'] = bcadd((string) ($originalData['rollback_amount'] ?? '0'), $event['amount'], 8);
                 Db::table($originalTable)->where('id', $original['id'])->update(['data' => json_encode($originalData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'update_time' => $this->now()]);
             }
             if ($wallet['status'] === 3) {
-                $this->release($prepared['bet_table'], $bill, $merchant, $currency, (string) ($data['reserved_fee'] ?? '0'));
-                return $this->result(3, $wallet['code'], $wallet['message'], $wallet['data'], $operation['action'], $bill);
+                $this->release($prepared['bet_table'], $event, $merchant, $currency, (string) ($data['reserved_fee'] ?? '0'));
+                return $this->result(3, $wallet['code'], $wallet['message'], $wallet['data'], $operation['action'], $event);
             }
 
-            $bet = (array) Db::table($prepared['bet_table'])->where('bet_no', $bill['bet_no'])->lockForUpdate()->first();
+            if (bccomp($event['amount'], '0', 8) > 0) {
+                $movement = array_diff_key($event, array_flip(['id', 'event_no', 'original_event_no']));
+                $movement['status'] = 2;
+                $movement['completed_time'] = $this->now();
+                $movement['data'] = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                Db::table((new MonthlyTableService())->table('bills', substr($event['event_no'], 2, 4)))->insert($movement);
+            }
+
+            $bet = (array) Db::table($prepared['bet_table'])->where('bet_no', $event['bet_no'])->lockForUpdate()->first();
             $action = $operation['action'];
             $map = [
                 'debit' => ['bet_amount', 'debit_count'], 'credit' => ['win_amount', 'credit_count'],
                 'rollback_debit' => ['bet_rollback_amount', 'rollback_count'], 'rollback_credit' => ['win_rollback_amount', 'rollback_count'],
             ];
             [$amountField, $countField] = $map[$action];
-            $bet[$amountField] = bcadd((string) $bet[$amountField], $bill['amount'], 8);
-            $bet[$countField]++;
+            $bet[$amountField] = bcadd((string) $bet[$amountField], $event['amount'], 8);
+            $bet[$countField] += (int) (bccomp($event['amount'], '0', 8) > 0);
             $actions = json_decode($bet['actions'] ?: '[]', true) ?: [];
-            $actions[] = ['bill_no' => $bill['bill_no'], 'type' => $action, 'amount' => $bill['amount'], 'source_no' => $bill['source_no'], 'time' => $this->now()];
+            $actions[] = ['event_no' => $event['event_no'], 'bill_no' => $event['bill_no'], 'type' => $action === 'credit' && bccomp($event['amount'], '0', 8) === 0 && !empty($operation['finished']) ? 'close' : $action, 'amount' => $event['amount'], 'source_no' => $event['source_no'], 'time' => $this->now()];
             $bet['ggr_amount'] = bcsub(bcsub($bet['bet_amount'], $bet['bet_rollback_amount'], 8), bcsub($bet['win_amount'], $bet['win_rollback_amount'], 8), 8);
             $bet['billable_ggr_amount'] = (int) $bet['settlement_enabled'] === 1 ? $bet['ggr_amount'] : '0.00000000';
             $updates = [
@@ -301,7 +309,7 @@ class TradeService
             if (str_starts_with($action, 'rollback') && (int) $bet['status'] !== 2) {
                 if ($action === 'rollback_debit') {
                     $released = (string) ($data['rollback_reserved_fee'] ?? '0');
-                    $this->release($prepared['bet_table'], $bill, $merchant, $currency, $released);
+                    $this->release($prepared['bet_table'], $event, $merchant, $currency, $released);
                     $bet['reserved_fee'] = bcsub((string) $bet['reserved_fee'], $released, 8);
                     if (bccomp($bet['reserved_fee'], '0', 8) < 0) $bet['reserved_fee'] = '0.00000000';
                     $updates['reserved_fee'] = $bet['reserved_fee'];
@@ -313,7 +321,7 @@ class TradeService
                 $updates = array_merge($updates, $this->settle($bet, $merchant, $currency));
             }
             Db::table($prepared['bet_table'])->where('id', $bet['id'])->update($updates);
-            return $this->result(2, 0, 'success', $wallet['data'], $action, $bill);
+            return $this->result(2, 0, 'success', $wallet['data'], $action, $event);
         });
     }
 
@@ -338,7 +346,7 @@ class TradeService
         return ['reserved_fee' => bcsub((string) $bet['reserved_fee'], $reserved, 8), 'status' => 2, 'settled_time' => $bet['settled_time'] ?: $this->now()];
     }
 
-    private function release(string $betTable, array $bill, Merchant $merchant, string $currency, string $amount): void
+    private function release(string $betTable, array $event, Merchant $merchant, string $currency, string $amount): void
     {
         if (bccomp($amount, '0', 8) <= 0) return;
         $credit = MerchantCredit::where(['merchant_id' => $merchant->id, 'currency_code' => $currency])->lockForUpdate()->first();
@@ -347,8 +355,8 @@ class TradeService
             'available_amount' => bcadd((string) $credit->available_amount, $amount, 8),
             'reserved_amount' => bcsub((string) $credit->reserved_amount, $amount, 8),
         ]);
-        Db::table($betTable)->where('bet_no', $bill['bet_no'])->update(['reserved_fee' => Db::raw("GREATEST(reserved_fee - {$amount}, 0)")]);
-        Db::table('mg_merchant_monthly_usages')->where(['credit_id' => $credit->id, 'billing_month' => substr($bill['business_date'], 0, 7) . '-01'])->update([
+        Db::table($betTable)->where('bet_no', $event['bet_no'])->update(['reserved_fee' => Db::raw("GREATEST(reserved_fee - {$amount}, 0)")]);
+        Db::table('mg_merchant_monthly_usages')->where(['credit_id' => $credit->id, 'billing_month' => substr($event['business_date'], 0, 7) . '-01'])->update([
             'reserved_amount' => Db::raw("GREATEST(reserved_amount - {$amount}, 0)"), 'update_time' => $this->now(),
         ]);
     }
@@ -364,9 +372,9 @@ class TradeService
         return [$user, $merchant, $currency];
     }
 
-    private function result(int $status, int $code, string $message, array $data, string $operation, array $bill = []): array
+    private function result(int $status, int $code, string $message, array $data, string $operation, array $event = []): array
     {
-        return compact('status', 'code', 'message', 'data', 'operation') + ['bill_no' => $bill['bill_no'] ?? null, 'bet_no' => $bill['bet_no'] ?? null];
+        return compact('status', 'code', 'message', 'data', 'operation') + ['bill_no' => $event['bill_no'] ?? null, 'bet_no' => $event['bet_no'] ?? null];
     }
 
     private function businessDate(Merchant $merchant): string

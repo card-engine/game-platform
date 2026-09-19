@@ -11,7 +11,7 @@ use support\Response;
 
 class OpenApiController extends OpenController
 {
-    protected array $noNeedLogin = ['games', 'launch', 'setRtp', 'bets'];
+    protected array $noNeedLogin = ['games', 'launch', 'setRtp', 'bets', 'monthlyBills', 'generateMonthlyBills'];
     private OpenApiService $service;
 
     public function __construct()
@@ -59,6 +59,18 @@ class OpenApiController extends OpenController
     {
         foreach (['game_id', 'rtp'] as $field) if (!$request->post($field)) return $this->fail("{$field} 不能为空");
         return $this->success($this->service->setRtp($this->merchant($request), $request->post()));
+    }
+
+    public function monthlyBills(Request $request): Response
+    {
+        (new OpenApiValidate())->scene('monthlyBills')->failException()->check($request->post());
+        return $this->success($this->service->monthlyBills($this->merchant($request), $request->post('month')));
+    }
+
+    public function generateMonthlyBills(Request $request): Response
+    {
+        (new OpenApiValidate())->scene('monthlyBills')->failException()->check($request->post());
+        return $this->success($this->service->monthlyBills($this->merchant($request), $request->post('month'), true));
     }
 
     public function bets(Request $request): Response

@@ -90,3 +90,22 @@ cd /www/wwwroot/game-platform
 ./deploy.sh uninstall
 ./deploy.sh
 ```
+
+
+### 首次分离交易事件和资金流水
+
+本次首次切换前停止交易服务并备份，避免文件监听提前重载新代码后缺少幂等凭据。普通发布不自动清理业务记录。
+
+```bash
+systemctl stop mgames.service
+# 拉取已验证的新版本并安装依赖后
+cd /www/wwwroot/game-platform/server
+/www/server/php/84/bin/php webman db:upgrade --dry-run
+/www/server/php/84/bin/php webman db:upgrade
+/www/server/php/84/bin/php webman trade:events
+/www/server/php/84/bin/php webman trade:events --apply
+# 核对钱包、事件数、非零流水、结单状态后再恢复服务并完成常规构建
+systemctl start mgames.service
+```
+
+`trade:events --apply` 为一次性数据处理：保留事件幂等凭据，删除零金额及未成功的游戏资金流水；不清理充值流水、不改变玩家余额。日常 `deploy.sh` 只调用 `--prepare-only` 预建事件月表。

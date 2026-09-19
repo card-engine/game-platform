@@ -33,6 +33,7 @@ const { data: recommendations, isLoading, isError, refetch } = useQuery({
 watch(profile, (value) => {
   if (!value) return
   user.nickname = value.nickname || ''
+  user.status = value.status
   nickname.value = user.nickname
 }, { immediate: true })
 
@@ -55,6 +56,7 @@ async function saveNickname() {
   try {
     const value = await updateUser(nickname.value.trim())
     user.nickname = value.nickname || ''
+    user.status = value.status
     queryClient.setQueryData(['user'], value)
     editing.value = false
     ElMessage.success(t('me.saved'))
@@ -69,6 +71,7 @@ async function saveNickname() {
 <template>
   <section class="me-page">
     <aside class="me-sidebar">
+  <el-alert v-if="user.status === 0" :title="t('accountDisabled')" type="warning" :closable="false" />
       <section class="profile-card">
         <span class="profile-avatar" :style="avatarStyle"><UserRound :size="40" /></span>
         <div class="profile-card__identity">
@@ -80,7 +83,7 @@ async function saveNickname() {
             </div>
           </template>
           <template v-else>
-            <button class="profile-name" type="button" @click="editing = true">{{ displayName }}<Pencil :size="14" /></button>
+            <button class="profile-name" type="button" :disabled="user.status === 0" @click="editing = true">{{ displayName }}<Pencil :size="14" /></button>
             <button class="profile-id" type="button" @click="copyId">ID {{ profile?.unique_id || user.uniqueId }}<Copy :size="14" /></button>
           </template>
         </div>
@@ -89,7 +92,7 @@ async function saveNickname() {
       <section class="me-panel wallet-panel">
         <div><WalletCards :size="22" /><span>{{ t('me.wallet') }}</span></div>
         <strong><CurrencyIcon :code="balance?.currency || user.currencyCode" :size="22" />{{ formattedBalance }}</strong>
-        <button type="button" @click="emit('recharge')"><CreditCard :size="18" />{{ t('me.recharge') }}</button>
+        <button type="button" :disabled="user.status === 0" @click="emit('recharge')"><CreditCard :size="18" />{{ t('me.recharge') }}</button>
       </section>
 
       <section class="me-panel account-notice">

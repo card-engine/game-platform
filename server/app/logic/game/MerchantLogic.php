@@ -190,16 +190,20 @@ class MerchantLogic extends BaseLogic
         ];
     }
 
-    public function billStatus(int $id, int $status, string $remark): bool
+    public function billStatus(int $id, int $status, string $remark, ?array $expected = null, ?string $paidTime = null): bool|array
     {
         if (EnterpriseScope::current((int) $this->adminInfo['id'])) throw new ApiException('企业账号不能修改月费账单');
         if (!in_array($status, [0, 1, 2, 3], true)) throw new ApiException('账单状态无效');
         $bill = MerchantMonthlyBill::findOrFail($id);
         $this->findScoped((int) $bill->merchant_id);
-        return $this->transaction(function () use ($bill, $status, $remark) {
+        return $this->transaction(function () use ($bill, $status, $remark, $expected, $paidTime) {
             $credit = (int) $bill->billing_mode === 1 ? MerchantCredit::where(['merchant_id' => $bill->merchant_id, 'currency_code' => $bill->currency_code])->lockForUpdate()->firstOrFail() : null;
             $bill = MerchantMonthlyBill::lockForUpdate()->findOrFail($bill->id);
-            if ((int) $bill->status === $status) return true;
+            if ($expected && ((string) $bill->merchant->mch_id !== $expected['mch_id'] || !hash_equals((new MonthlyBillingService())->snapshot($bill)['snapshot_hash'], $expected['snapshot_hash']))) {
+                throw new ApiException('来源月账单已变化，请撤回确认并重新生成结算');
+            }
+            if ($expected && bccomp((string) $bill->amount, '0', 8) === 0 && (int) $bill->status === 3) return (new MonthlyBillingService())->snapshot($bill);
+            if ((int) $bill->status === $status) return $expected ? (new MonthlyBillingService())->snapshot($bill) : true;
             if ($credit && in_array((int) $bill->status, [1, 3], true)) throw new ApiException('已支付或减免的 GGR 账单不能重复变更');
             if ($credit && in_array($status, [1, 3], true)) {
                 $before = (string) $credit->payable_amount;
@@ -211,7 +215,8 @@ class MerchantLogic extends BaseLogic
                     'source_no' => $bill->bill_no, 'remark' => $remark, 'created_by' => $this->adminInfo['id'], 'create_time' => gmdate('Y-m-d H:i:s'),
                 ]);
             }
-            return $bill->update(['status' => $status, 'paid_time' => in_array($status, [1, 3], true) ? gmdate('Y-m-d H:i:s') : null, 'remark' => $remark]);
+            $bill->update(['status' => $status, 'paid_time' => in_array($status, [1, 3], true) ? ($paidTime ?: gmdate('Y-m-d H:i:s.v')) : null, 'remark' => $remark]);
+            return $expected ? (new MonthlyBillingService())->snapshot($bill) : true;
         });
     }
 

@@ -82,6 +82,43 @@ CREATE TABLE `mg_bills_template` (
   KEY `idx_original` (`original_bill_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='玩家资金流水月表模板';
 
+CREATE TABLE `mg_trade_events_template` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `event_no` varchar(40) NOT NULL COMMENT 'MG 交易事件号，包含 UTC 创建日期',
+  `bill_no` varchar(40) DEFAULT NULL COMMENT '非零交易预留的资金流水号，成功后落库；零金额为空',
+  `bet_no` varchar(40) DEFAULT NULL COMMENT '关联 MG 注单号',
+  `merchant_id` bigint unsigned NOT NULL COMMENT '商户 ID',
+  `user_id` bigint unsigned NOT NULL COMMENT '玩家 ID',
+  `game_id` bigint unsigned NOT NULL COMMENT '游戏资源 ID',
+  `type` tinyint unsigned NOT NULL COMMENT '流水类型：1下注，2派奖，3下注回滚，4派奖回滚',
+  `source` varchar(32) NOT NULL COMMENT '游戏平台编码',
+  `source_no` varchar(128) NOT NULL COMMENT '上游交易标识',
+  `amount` decimal(24,8) NOT NULL COMMENT '流水金额',
+  `currency_code` varchar(16) NOT NULL COMMENT '业务钱包编码',
+  `original_event_no` varchar(40) DEFAULT NULL COMMENT '原交易事件号，回滚查重使用',
+  `original_bill_no` varchar(40) DEFAULT NULL COMMENT '回滚对应的原 MG 流水号',
+  `idempotency_key` char(64) NOT NULL COMMENT '上游资金动作幂等作用域 SHA-256',
+  `request_hash` char(64) NOT NULL COMMENT '规范化请求内容 SHA-256',
+  `status` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '状态：0待处理，1处理中，2成功，3失败，4结果未知',
+  `data` json DEFAULT NULL COMMENT '请求和商户响应摘要',
+  `business_date` date NOT NULL COMMENT '按商户业务时区计算的营业日期',
+  `platform_date` date NOT NULL COMMENT '按 mg_configs.platform_timezone 计算的平台统计日期',
+  `received_time` datetime(3) NOT NULL COMMENT 'UTC 接收请求时间',
+  `completed_time` datetime(3) DEFAULT NULL COMMENT 'UTC 完成时间',
+  `create_time` datetime(3) NOT NULL,
+  `update_time` datetime(3) NOT NULL,
+  `delete_time` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_event_no` (`event_no`),
+  UNIQUE KEY `uk_source_idempotency` (`source`,`idempotency_key`),
+  KEY `idx_bet` (`bet_no`,`id`),
+  KEY `idx_merchant_date` (`merchant_id`,`business_date`,`id`),
+  KEY `idx_platform_date` (`platform_date`,`merchant_id`,`id`),
+  KEY `idx_user_time` (`user_id`,`create_time`,`id`),
+  KEY `idx_status_time` (`status`,`update_time`),
+  KEY `idx_original` (`original_bill_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='MG交易事件月表模板，含零金额结单和未决回调';
+
 CREATE TABLE `mg_configs` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `type` varchar(32) NOT NULL COMMENT '后台配置分组',
@@ -1122,6 +1159,36 @@ CREATE TABLE `mgs_bills_template` (
   KEY `idx_status_time` (`status`,`update_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='MGS 用户流水月表模板';
 
+CREATE TABLE `mgs_trade_events_template` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `event_no` varchar(40) NOT NULL COMMENT 'MGS 交易事件号，包含 UTC 创建日期',
+  `bill_no` varchar(40) DEFAULT NULL COMMENT '非零交易预留的资金流水号，成功后落库；零金额为空',
+  `bet_no` varchar(40) DEFAULT NULL COMMENT '关联 MGS 注单号',
+  `user_id` bigint unsigned NOT NULL COMMENT 'MGS 用户 ID',
+  `game_id` bigint unsigned DEFAULT NULL COMMENT 'MGS 游戏 ID',
+  `type` varchar(24) NOT NULL COMMENT '流水类型：bet、win、cancel、rollback、adjust、recharge',
+  `direction` tinyint unsigned NOT NULL COMMENT '资金方向：1增加，2减少',
+  `transaction_id` varchar(128) NOT NULL COMMENT '游戏平台交易号',
+  `original_transaction_id` varchar(128) DEFAULT NULL COMMENT '原交易号',
+  `amount` decimal(24,8) NOT NULL COMMENT '流水金额',
+  `currency_code` varchar(16) NOT NULL COMMENT '流水币种编码',
+  `before_balance` decimal(24,8) NOT NULL COMMENT '变动前余额',
+  `after_balance` decimal(24,8) NOT NULL COMMENT '变动后余额',
+  `status` tinyint unsigned NOT NULL DEFAULT '2' COMMENT '状态：1处理中，2成功，3失败，4未知',
+  `request_hash` char(64) NOT NULL COMMENT '规范化请求 SHA-256',
+  `data` json DEFAULT NULL COMMENT '请求和结果摘要',
+  `create_time` datetime(3) DEFAULT NULL,
+  `update_time` datetime(3) DEFAULT NULL,
+  `delete_time` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_event_no` (`event_no`),
+  UNIQUE KEY `uk_user_currency_transaction` (`user_id`,`currency_code`,`transaction_id`,`type`),
+  KEY `idx_user_time` (`user_id`,`create_time`,`id`),
+  KEY `idx_bet` (`bet_no`,`id`),
+  KEY `idx_original_transaction` (`user_id`,`currency_code`,`original_transaction_id`,`type`,`status`,`direction`),
+  KEY `idx_status_time` (`status`,`update_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='MGS交易事件月表模板，含零金额结单';
+
 CREATE TABLE `mgs_daily_stats` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `stat_date` date NOT NULL COMMENT '按 MGS 平台时区计算的自然日',
@@ -1199,6 +1266,11 @@ CREATE TABLE `mgs_settlements` (
   `exchange_rate_value` decimal(36,18) DEFAULT NULL COMMENT '实际采用的换算值',
   `status` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '状态：0待确认，1已确认，2已支付',
   `paid_time` datetime(3) DEFAULT NULL COMMENT 'UTC 支付时间',
+  `confirmed_by` bigint unsigned DEFAULT NULL COMMENT '确认结算的后台管理员ID',
+  `confirmed_time` datetime(3) DEFAULT NULL COMMENT 'UTC 确认结算时间',
+  `paid_by` bigint unsigned DEFAULT NULL COMMENT '登记结清的后台管理员ID',
+  `payment_reference` varchar(200) DEFAULT NULL COMMENT '付款凭证或业务参考号',
+  `remark` varchar(500) DEFAULT NULL COMMENT '对账及结清备注',
   `data` json DEFAULT NULL COMMENT '结算来源快照',
   `create_time` datetime(3) DEFAULT NULL,
   `update_time` datetime(3) DEFAULT NULL,

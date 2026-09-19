@@ -108,7 +108,7 @@
         { prop: 'activity', label: t('mgs.activity'), minWidth: 135, useSlot: true },
         { prop: 'volume', label: t('mgs.fundSummary'), minWidth: 275, useSlot: true },
         { prop: 'result', label: t('mgs.result'), width: 150, useSlot: true },
-        { prop: 'fee', label: t('mgs.platformFee'), width: 130, useSlot: true },
+        { prop: 'fee', label: t('mgs.estimatedPlatformFee'), width: 130, useSlot: true },
         { prop: 'update_time', label: t('mgs.updateTime'), width: 175 }
       ]
     }

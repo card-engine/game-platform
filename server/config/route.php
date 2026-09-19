@@ -78,6 +78,8 @@ Route::group('/open_api', function () {
     Route::post('/launch', [app\controller\openapi\OpenApiController::class, 'launch']);
     Route::post('/rtp', [app\controller\openapi\OpenApiController::class, 'setRtp']);
     Route::post('/bets', [app\controller\openapi\OpenApiController::class, 'bets']);
+    Route::post('/monthly-bills', [app\controller\openapi\OpenApiController::class, 'monthlyBills']);
+    Route::post('/monthly-bills/generate', [app\controller\openapi\OpenApiController::class, 'generateMonthlyBills']);
 })->middleware([app\middleware\MerchantAuth::class]);
 
 // 上游游戏平台回调：按平台前缀区分适配器。
@@ -99,11 +101,16 @@ Route::group('/mgs', function () {
     Route::put('/games/config', [app\controller\mgs\AdminController::class, 'config']);
     Route::post('/games/trial', [app\controller\mgs\AdminController::class, 'trial'])->middleware([app\middleware\EnterpriseStatus::class]);
     Route::get('/users', [app\controller\mgs\AdminController::class, 'users']);
+    Route::put('/users/status', [app\controller\mgs\AdminController::class, 'userStatus']);
     Route::get('/bets', [app\controller\mgs\AdminController::class, 'bets']);
     Route::get('/bills', [app\controller\mgs\AdminController::class, 'bills']);
     Route::get('/reports', [app\controller\mgs\AdminController::class, 'reports']);
     Route::get('/settlements', [app\controller\mgs\AdminController::class, 'settlements']);
     Route::post('/settlements/generate', [app\controller\mgs\AdminController::class, 'generateSettlement']);
+    Route::get('/settlements/{id:\d+}', [app\controller\mgs\SettlementController::class, 'read']);
+    Route::put('/settlements/{id:\d+}/confirm', [app\controller\mgs\SettlementController::class, 'confirm']);
+    Route::put('/settlements/{id:\d+}/reopen', [app\controller\mgs\SettlementController::class, 'reopen']);
+    Route::put('/settlements/{id:\d+}/pay', [app\controller\mgs\SettlementController::class, 'pay']);
 });
 
 // MGS 自营平台玩家接口：浏览器凭证认证；资金回调仍单独验签。

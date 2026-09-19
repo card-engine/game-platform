@@ -22,16 +22,16 @@ class MgsAuthService
             });
         }
         if (!$user->unique_id) $user->update(['unique_id' => id2big((int) $user->id)]);
-        if ((int) $user->status !== 1) throw new ApiException('MGS 用户已停用', 403);
         $user->update(['language' => (string) ($request->input('language') ?: $user->language), 'last_login_time' => gmdate('Y-m-d H:i:s.v'), 'last_ip' => $request->getRealIp()]);
         return ['token' => $token, 'user' => $user, 'wallets' => $user->wallets()->get(['id', 'currency_code', 'balance'])];
     }
 
-    public function browserUser(Request $request): User
+    public function browserUser(Request $request, bool $requireEnabled = false): User
     {
         $token = $this->token($request);
         $user = $token ? User::where('browser_token_hash', hash('sha256', $token))->first() : null;
-        if (!$user || (int) $user->status !== 1) throw new ApiException('MGS 用户认证失败', 401);
+        if (!$user) throw new ApiException('MGS 用户认证失败', 401);
+        if ($requireEnabled && (int) $user->status !== 1) throw new ApiException('账号已停用，不能进行此操作', 403);
         return $user;
     }
 

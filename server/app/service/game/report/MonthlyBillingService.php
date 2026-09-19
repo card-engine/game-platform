@@ -51,7 +51,7 @@ class MonthlyBillingService
             $created++;
         }
         // 按注单快照出账；停用或切换计费模式不能抹掉历史费用，任务停机后补齐遗漏月份。
-        $tables = array_filter(Db::connection()->getSchemaBuilder()->getTableListing(null, false), fn ($table) => preg_match('/^mg_bets_\d{4}$/', $table));
+        $tables = array_filter(Db::table('information_schema.tables')->where('table_schema', config('database.connections.mysql.database'))->pluck('TABLE_NAME')->all(), fn ($table) => preg_match('/^mg_bets_\d{4}$/', $table));
         foreach (Merchant::get() as $merchant) {
             $source = (new DateTimeImmutable($month ?: 'first day of this month', new DateTimeZone($merchant->timezone)))->modify('first day of last month')->format('Y-m');
             $periods = collect([$source]);
@@ -79,12 +79,12 @@ class MonthlyBillingService
         $start = new DateTimeImmutable($month . '-01 00:00:00', $zone);
         $end = $start->modify('+1 month');
         if ($end > new DateTimeImmutable('now', $zone)) return 0;
-        $tables = array_values(array_filter(Db::connection()->getSchemaBuilder()->getTableListing(null, false), fn ($table) => preg_match('/^mg_bets_\d{4}$/', $table)));
+        $tables = array_values(array_filter(Db::table('information_schema.tables')->where('table_schema', config('database.connections.mysql.database'))->pluck('TABLE_NAME')->all(), fn ($table) => preg_match('/^mg_bets_\d{4}$/', $table)));
         if (!$tables) return 0;
         $utc = new DateTimeZone('UTC');
-        $union = implode(' UNION ALL ', array_map(fn ($table) => "SELECT currency_code, merchant_rate_value, ggr_amount, merchant_fee FROM `{$table}` WHERE merchant_id = ? AND settled_time >= ? AND settled_time < ? AND status = 2 AND billing_mode = 1 AND settlement_enabled = 1 AND currency_code <> 'GC' AND delete_time IS NULL", $tables));
+        $union = implode(' UNION ALL ', array_map(fn ($table) => "SELECT currency_code, merchant_rate_value, bet_amount, win_amount, ggr_amount, merchant_fee FROM `{$table}` WHERE merchant_id = ? AND settled_time >= ? AND settled_time < ? AND status = 2 AND billing_mode = 1 AND settlement_enabled = 1 AND currency_code <> 'GC' AND delete_time IS NULL", $tables));
         $bindings = array_merge(...array_fill(0, count($tables), [$merchant->id, $start->setTimezone($utc)->format('Y-m-d H:i:s'), $end->setTimezone($utc)->format('Y-m-d H:i:s')]));
-        $rows = collect(Db::select("SELECT currency_code, merchant_rate_value, COUNT(*) bet_count, SUM(ggr_amount) ggr_amount, SUM(merchant_fee) legacy_fee FROM ({$union}) bets GROUP BY currency_code, merchant_rate_value", $bindings))->groupBy('currency_code');
+        $rows = collect(Db::select("SELECT currency_code, merchant_rate_value, COUNT(*) bet_count, SUM(bet_amount) bet_amount, SUM(win_amount) win_amount, SUM(ggr_amount) ggr_amount, SUM(merchant_fee) legacy_fee FROM ({$union}) bets GROUP BY currency_code, merchant_rate_value", $bindings))->groupBy('currency_code');
         $created = 0;
         foreach ($rows as $currency => $rates) {
             $created += Db::transaction(function () use ($merchant, $currency, $rates, $start, $end) {
@@ -126,6 +126,14 @@ class MonthlyBillingService
             });
         }
         return $created;
+    }
+
+    /** 对外只读月账单快照；版本仅涵盖账务口径，不包含支付状态。 */
+    public function snapshot(MerchantMonthlyBill $bill): array
+    {
+        $data = $bill->only(['id', 'bill_no', 'merchant_id', 'source_month', 'currency_code', 'ggr_amount', 'amount', 'rules_snapshot']);
+        $data['snapshot_hash'] = hash('sha256', json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        return $data + $bill->only(['status', 'paid_time', 'remark']);
     }
 
     private function fee(Merchant $merchant, string $value): string

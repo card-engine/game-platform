@@ -25,6 +25,7 @@ export interface Balance {
 }
 
 export interface UserProfile {
+  status: number
   mgs_user_id: number
   unique_id: number
   nickname: string | null

@@ -31,7 +31,7 @@ class MgsCallbackService
         $id = big2id((int) $uniqueId);
         $user = $id === false ? null : User::find($id);
         if (!$user) throw new RuntimeException('用户不存在');
-        if ((int) $user->status !== 1) throw new RuntimeException('用户已停用');
+        // 用户停用仅禁止新进游，已进入游戏的签名钱包回调继续处理。
         if ($action === 'balance') {
             $wallet = Wallet::firstOrCreate(['user_id' => $user->id, 'currency_code' => $currency], ['balance' => '0.00000000']);
             return ['balance' => (string) $wallet->balance, 'balance_after' => (string) $wallet->balance];
@@ -50,13 +50,13 @@ class MgsCallbackService
         try {
             foreach ($this->months() as $month) {
                 (new MgsTableService())->table('bets', $month);
-                (new MgsTableService())->table('bills', $month);
+                (new MgsTableService())->table('trade_events', $month);
             }
             $wallet = Wallet::firstOrCreate(['user_id' => $user->id, 'currency_code' => $currency], ['balance' => '0.00000000']);
-            $existing = $this->findBill($transactionId, $type, $user->id, $currency);
+            $existing = $this->findEvent($transactionId, $type, $user->id, $currency);
             if ($existing) {
                 if (!hash_equals((string) $existing->request_hash, $requestHash)) throw new RuntimeException('重复交易参数不一致');
-                return ['balance' => $existing->after_balance, 'balance_after' => $existing->after_balance];
+                return ['balance' => $existing->after_balance, 'balance_after' => $existing->after_balance, 'bet_no' => $existing->bet_no];
             }
             $result = Db::transaction(function () use ($action, $params, $requestData, $requestHash, $currency, $user, $wallet, $transactionId, $type) {
                 $wallet = Wallet::whereKey($wallet->id)->lockForUpdate()->firstOrFail();
@@ -87,8 +87,8 @@ class MgsCallbackService
                     $originalTransactionId = trim((string) ($params['original_transaction_id'] ?? ''));
                     $originalType = (string) ($params['original_type'] ?? '');
                     $original = in_array($originalType, ['bet', 'win'], true)
-                        ? $this->findBill($originalTransactionId, $originalType, $user->id, $currency)
-                        : ($this->findBill($originalTransactionId, 'bet', $user->id, $currency) ?: $this->findBill($originalTransactionId, 'win', $user->id, $currency));
+                        ? $this->findEvent($originalTransactionId, $originalType, $user->id, $currency)
+                        : ($this->findEvent($originalTransactionId, 'bet', $user->id, $currency) ?: $this->findEvent($originalTransactionId, 'win', $user->id, $currency));
                     if (!$original) throw new RuntimeException('原交易不存在');
                     $betNo = (string) ($original->bet_no ?? '');
                     $betTable = $this->betTable($betNo);
@@ -98,7 +98,7 @@ class MgsCallbackService
                     $params['original_type'] = (string) $original->type;
                     $cancelled = '0';
                     foreach ($this->months() as $month) {
-                        $cancelled = bcadd($cancelled, (string) Db::table((new MgsTableService())->table('bills', $month))
+                        $cancelled = bcadd($cancelled, (string) Db::table((new MgsTableService())->table('trade_events', $month))
                             ->where(['user_id' => $user->id, 'currency_code' => $currency, 'type' => 'cancel', 'status' => 2,
                                 'original_transaction_id' => $originalTransactionId, 'direction' => $original->type === 'bet' ? 1 : 2])
                             ->sum('amount'), 8);
@@ -116,16 +116,19 @@ class MgsCallbackService
                 $before = (string) $wallet->balance;
                 $after = $increase ? bcadd($before, $amount, 8) : bcsub($before, $amount, 8);
                 if (!$increase && bccomp($after, '0', 8) < 0) throw new RuntimeException('余额不足');
-                $wallet->update(['balance' => $after, 'version' => Db::raw('version + 1'), 'update_time' => $this->now()]);
-                $billNo = mg_no('ML');
-                Db::table((new MgsTableService())->table('bills', substr($billNo, 2, 4)))->insert([
-                    'bill_no' => $billNo, 'bet_no' => $bet['bet_no'] ?? null, 'user_id' => $user->id,
+                $hasAmount = bccomp($amount, '0', 8) > 0;
+                if ($hasAmount) $wallet->update(['balance' => $after, 'version' => Db::raw('version + 1'), 'update_time' => $this->now()]);
+                $eventNo = mg_no('ME');
+                $event = [
+                    'event_no' => $eventNo, 'bill_no' => $hasAmount ? mg_no('ML') : null, 'bet_no' => $bet['bet_no'] ?? null, 'user_id' => $user->id,
                     'game_id' => $game?->id, 'type' => $type, 'direction' => $increase ? 1 : 2, 'transaction_id' => $transactionId,
                     'original_transaction_id' => $params['original_transaction_id'] ?? null, 'amount' => $amount, 'currency_code' => $currency,
                     'before_balance' => $before, 'after_balance' => $after, 'status' => 2,
                     'request_hash' => $requestHash,
                     'data' => json_encode($requestData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'create_time' => $this->now(), 'update_time' => $this->now(),
-                ]);
+                ];
+                Db::table((new MgsTableService())->table('trade_events', substr($eventNo, 2, 4)))->insert($event);
+                if ($hasAmount) Db::table((new MgsTableService())->table('bills', substr($eventNo, 2, 4)))->insert(array_diff_key($event, ['event_no' => true]));
                 $this->updateBet($bet, $betTable, $action, $amount, $params);
                 return ['balance' => $after, 'balance_after' => $after, 'bet_no' => $bet['bet_no'] ?? null];
             });
@@ -153,12 +156,12 @@ class MgsCallbackService
         $bet['platform_fee'] = bcmul($billableGgr, (string) $bet['rate_value'], 8);
         $bet['rtp_value'] = bccomp((string) $bet['bet_amount'], '0', 8) > 0 ? bcdiv((string) $bet['win_amount'], (string) $bet['bet_amount'], 10) : null;
         $settledTime = $bet['settled_time'] ?: ($action === 'win' && (int) ($params['is_end'] ?? 0) === 1 ? $this->now() : null);
-        $status = bccomp(bcsub((string) $bet['bet_amount'], (string) $bet['bet_rollback_amount'], 8), '0', 8) === 0
+        $status = $action === 'cancel' && bccomp(bcsub((string) $bet['bet_amount'], (string) $bet['bet_rollback_amount'], 8), '0', 8) === 0
             && bccomp(bcsub((string) $bet['win_amount'], (string) $bet['win_rollback_amount'], 8), '0', 8) === 0
             ? 3 : ($settledTime ? 2 : 1);
         $actions = json_decode($bet['actions'] ?: '[]', true) ?: [];
         $actions[] = array_filter([
-            'type' => $action, 'transaction_id' => $params['transaction_id'] ?? null,
+            'type' => $action === 'win' && bccomp($amount, '0', 8) === 0 && (int) ($params['is_end'] ?? 0) === 1 ? 'close' : $action, 'transaction_id' => $params['transaction_id'] ?? null,
             'original_transaction_id' => $params['original_transaction_id'] ?? null,
             'amount' => $amount, 'is_end' => $action === 'win' ? (int) ($params['is_end'] ?? 0) : null, 'time' => $this->now(),
         ], fn ($value) => $value !== null);
@@ -169,11 +172,11 @@ class MgsCallbackService
         ]);
     }
 
-    private function findBill(string $transactionId, string $type, int $userId, string $currency): ?object
+    private function findEvent(string $transactionId, string $type, int $userId, string $currency): ?object
     {
         if ($transactionId === '') return null;
         foreach ($this->months() as $month) {
-            $row = Db::table((new MgsTableService())->table('bills', $month))->where(['user_id' => $userId, 'currency_code' => $currency, 'transaction_id' => $transactionId, 'type' => $type])->first();
+            $row = Db::table((new MgsTableService())->table('trade_events', $month))->where(['user_id' => $userId, 'currency_code' => $currency, 'transaction_id' => $transactionId, 'type' => $type])->first();
             if ($row) return $row;
         }
         return null;

@@ -42,6 +42,7 @@ cd "$SERVER_DIR"
 /www/server/php/84/bin/php webman mgs:recharge-schema
 /www/server/php/84/bin/php webman db:upgrade --dry-run
 /www/server/php/84/bin/php webman db:upgrade
+/www/server/php/84/bin/php webman trade:events --prepare-only
 /www/server/php/84/bin/php -r 'require "vendor/autoload.php"; require "support/bootstrap.php"; plugin\saiadmin\app\cache\ReflectionCache::clear();'
 
 if [[ ! -f /etc/systemd/system/mgames.service ]]; then

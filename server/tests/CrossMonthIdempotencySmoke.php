@@ -14,7 +14,7 @@ require dirname(__DIR__) . '/support/bootstrap.php';
 
 $suffix = bin2hex(random_bytes(4));
 $month = (new DateTimeImmutable('first day of last month', new DateTimeZone('UTC')))->format('ym');
-$table = (new MonthlyTableService())->table('bills', $month);
+$table = (new MonthlyTableService())->table('trade_events', $month);
 $enterprise = Enterprise::create(['name' => "Cross Month {$suffix}", 'merchant_limit' => 1, 'timezone' => 'UTC', 'default_language' => 'en', 'status' => 1]);
 $merchant = Merchant::create([
     'enterprise_id' => $enterprise->id, 'name' => "Cross Month {$suffix}", 'wallet_mode' => 1, 'callback_url' => 'http://127.0.0.1:1',
@@ -30,7 +30,7 @@ $billNo = 'BL' . $month . '01000000' . $suffix;
 
 try {
     Db::table($table)->insert([
-        'bill_no' => $billNo, 'merchant_id' => $merchant->id, 'user_id' => $user->id, 'game_id' => Game::value('id'),
+        'event_no' => 'TE' . substr($billNo, 2), 'bill_no' => $billNo, 'merchant_id' => $merchant->id, 'user_id' => $user->id, 'game_id' => Game::value('id'),
         'type' => 1, 'source' => 'wxgame', 'source_no' => $operation['source_no'], 'amount' => $operation['amount'], 'currency_code' => 'USD',
         'idempotency_key' => $key, 'request_hash' => $requestHash, 'status' => 2,
         'data' => json_encode(['wallet_response' => ['code' => 0, 'message' => 'success', 'data' => ['balance' => '97.00000000']]]),

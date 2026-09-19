@@ -149,6 +149,7 @@
   const actionNames = computed<Record<string, string>>(() => ({
     debit: t('game.debit'),
     credit: t('game.credit'),
+    close: t('mgs.settled'),
     rollback_debit: t('game.betRollback'),
     rollback_credit: t('game.winRollback')
   }))

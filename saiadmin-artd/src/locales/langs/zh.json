@@ -101,6 +101,7 @@
     "logOutTips": "您是否要退出登录?"
   },
   "game": {
+    "installOnlySettings": "统计时区和币种在首次安装时确定，安装后只读；修改 .env 或升级不会覆盖现有值。",
     "superAdmin": "超管",
     "platformSuperAdmin": "平台超管",
     "newPlatformAccount": "新增平台账号",
@@ -640,6 +641,24 @@
     }
   },
   "mgs": {
+    "billingTimezone": "账期时区",
+    "confirmSettlement": "确认结算",
+    "close": "关闭",
+    "submit": "确认操作",
+    "actions": "操作",
+    "sourceBill": "来源月账单",
+    "rateDetails": "查看费率明细",
+    "paymentReference": "付款凭证 / 业务参考号",
+    "settlementActionHint": "确认以正式月账单为准；登记付款仅记录已经完成的结算，不会执行真实转账。零费用确认后直接结清。",
+    "registerPayment": "登记付款",
+    "reopen": "撤回确认",
+
+    "estimatedPlatformFee": "预估平台服务费",
+    "disableUser": "禁用",
+    "enableUser": "启用",
+    "reasonRequired": "请填写操作原因",
+    "userStatusHint": "请输入原因。禁用后仍可查看账户和继续当前游戏，但不能再次进游、新建充值或修改资料。",
+
     "overview": "平台概览",
     "overviewHint": "查看自营平台实时经营与结算数据",
     "currency": "币种",

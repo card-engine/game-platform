@@ -69,9 +69,14 @@ try {
     $_ENV['INITIAL_GAME_ADMIN_PASSWORD'] = $_SERVER['INITIAL_GAME_ADMIN_PASSWORD'] = 'Game-Test-123!';
     useUpgradeDatabase($database);
 
+    putenv('INITIAL_PLATFORM_TIMEZONE=Pacific/Auckland');
+    putenv('INITIAL_PLATFORM_CURRENCY_CODE=EUR');
     $upgrade = new CommandTester(new DbUpgradeCommand());
     checkUpgrade($upgrade->execute(['--dry-run' => true]) === 0, $upgrade->getDisplay());
     checkUpgrade($upgrade->execute([]) === 0, $upgrade->getDisplay());
+    checkUpgrade((new ConfigService())->get('platform_timezone') === 'Pacific/Auckland' && (new ConfigService())->get('platform_currency_code') === 'EUR', '首次安装未采用环境统计口径');
+    putenv('INITIAL_PLATFORM_TIMEZONE=UTC');
+    putenv('INITIAL_PLATFORM_CURRENCY_CODE=USD');
     $tableCount = support\Db::table('information_schema.tables')->where('table_schema', $database)->count();
     preg_match_all('/^CREATE TABLE `/m', file_get_contents(dirname(__DIR__) . '/database/schema.sql'), $schemaTables);
     checkUpgrade($tableCount === count($schemaTables[0]), "空库结构未完整创建：{$tableCount}");
@@ -116,6 +121,7 @@ try {
     checkUpgrade(support\Db::table('information_schema.statistics')->where('table_schema', $database)->where('table_name', 'mg_bets_2701')->where('index_name', 'idx_status_time')->exists(), '月表索引未补齐');
     checkUpgrade(support\Db::connection()->getSchemaBuilder()->hasColumn('mg_configs', 'manual_note'), '额外字段被错误删除');
     checkUpgrade(json_decode(support\Db::table('mg_configs')->where('code', 'platform_timezone')->value('value'), true) === 'Pacific/Auckland', '后台配置值被覆盖');
+    checkUpgrade(json_decode(support\Db::table('mg_configs')->where('code', 'platform_currency_code')->value('value'), true) === 'EUR', '环境变量覆盖了已安装币种');
     $currentMgsMchId = json_decode(support\Db::table('mgs_configs')->where('code', 'game_platform_mch_id')->value('value'), true);
     checkUpgrade($currentMgsMchId === $mgsMchId, "自营商户编号未恢复到真实商户：{$mgsMchId} != {$currentMgsMchId}");
     checkUpgrade((int) support\Db::table('sa_tool_crontab')->where('name', 'MG 汇率同步')->value('status') === 2, '定时任务启停状态被覆盖');

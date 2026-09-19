@@ -6,6 +6,15 @@
   import { displayAmount } from '@/utils/game/amount'
   import TableSearch from './modules/table-search.vue'
   const { t, locale } = useI18n()
+  const statusTypes = {
+    pending: 'primary',
+    paid: 'success',
+    credited: 'success',
+    review: 'warning',
+    expired: 'info',
+    closed: 'info',
+    ignored: 'info'
+  } as const
   const route = useRoute()
   const filters = ref({
     keyword: typeof route.query.keyword === 'string' ? route.query.keyword : '',
@@ -91,7 +100,11 @@
         <template #pay_amount="{ row }"
           >{{ displayAmount(row.pay_amount) }} {{ row.pay_currency_code }}</template
         >
-        <template #status="{ row }">{{ t(`mgsRecharge.${row.status}`) }}</template>
+        <template #status="{ row }"
+          ><ElTag :type="statusTypes[row.status as keyof typeof statusTypes]">{{
+            t(`mgsRecharge.${row.status}`)
+          }}</ElTag></template
+        >
       </ArtTable>
     </ElCard>
     <ElDialog v-model="dialogVisible" :title="t('mgsRecharge.detail')" width="min(90vw, 800px)">

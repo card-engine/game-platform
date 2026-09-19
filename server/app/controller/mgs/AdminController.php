@@ -3,6 +3,7 @@
 namespace app\controller\mgs;
 
 use app\logic\mgs\MgsLogic;
+use app\validate\mgs\UserValidate;
 use app\service\mgs\MgsSettlementService;
 use plugin\saiadmin\basic\BaseController;
 use plugin\saiadmin\service\Permission;
@@ -61,6 +62,15 @@ class AdminController extends BaseController
     public function users(Request $request): Response
     {
         return $this->success($this->logic->users($request->more([['status', ''], ['keyword', '']])));
+    }
+
+    #[Permission('启停自营用户', 'app:mgs:user:update')]
+    public function userStatus(Request $request): Response
+    {
+        $data = $request->only(['id', 'status', 'remark']);
+        (new UserValidate())->scene('status')->failException()->check($data);
+        $this->logic->userStatus((int) $data['id'], (int) $data['status']);
+        return $this->success();
     }
 
     #[Permission('自营注单列表', 'app:mgs:bet:index')]

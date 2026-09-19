@@ -49,7 +49,7 @@ if (!function_exists('format_amount')) {
         $text = trim((string) $value);
         if (!preg_match('/^([+-]?)(\d+)(?:\.(\d+))?$/D', $text, $match)) return $text;
         $fraction = rtrim($match[3] ?? '', '0');
-        $sign = $match[1] === '-' && ltrim($match[2], '0') !== '' ? '-' : '';
+        $sign = $match[1] === '-' && (ltrim($match[2], '0') !== '' || $fraction !== '') ? '-' : '';
         $integer = ltrim($match[2], '0') ?: '0';
         return $sign . $integer . ($fraction === '' ? '.00' : '.' . str_pad($fraction, 2, '0'));
     }

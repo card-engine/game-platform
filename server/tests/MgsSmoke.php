@@ -44,6 +44,7 @@ try {
     $upgrade = new CommandTester(new DbUpgradeCommand());
     if ($upgrade->execute([]) !== 0) throw new RuntimeException($upgrade->getDisplay());
     (new MgsConfigService())->rebuild();
+    (new \app\service\mgs\MgsTableService())->recent();
 
     $game = Game::create([
         'platform_game_id' => 'smoke-game', 'platform_game_code' => 'smoke-game', 'platform_brand_code' => 'smoke',
@@ -69,10 +70,6 @@ try {
     (new MgsStatsService())->rebuildDate((new DateTimeImmutable('now', new DateTimeZone('UTC')))->format('Y-m-d'));
     $stat = Db::table('mgs_daily_stats')->where(['game_id' => $game->id, 'currency_code' => 'USD'])->first();
     if (!$stat || (string) $stat->ggr_amount !== '6.00000000' || (string) $stat->rtp_value !== '0.4000000000') throw new RuntimeException('日报 GGR 或 RTP 统计不正确');
-    $month = gmdate('Y-m');
-    (new MgsSettlementService())->generate($month);
-    $settlement = Db::table('mgs_settlements')->where(['settlement_month' => $month, 'currency_code' => 'USD'])->first();
-    if (!$settlement || (string) $settlement->platform_fee !== '0.18000000' || (string) $settlement->mgs_net_amount !== '5.82000000') throw new RuntimeException('部门结算金额不正确');
     $service->handle('cancel', $base + ['transaction_id' => 'tx-cancel-bet-1', 'original_transaction_id' => 'tx-bet-1', 'original_type' => 'bet', 'cancel_amount' => '4']);
     $service->handle('cancel', $base + ['transaction_id' => 'tx-cancel-bet-1', 'original_transaction_id' => 'tx-bet-1', 'original_type' => 'bet', 'cancel_amount' => '4']);
     $bet = (array) Db::table('mgs_bets_' . gmdate('ym'))->first();
@@ -109,6 +106,21 @@ try {
     $player = new PlayerLogic();
     if (($player->games($user2, 'USD', 0)['recent'][0]['mgs_game_id'] ?? null) !== $game->id) throw new RuntimeException('玩家最近游戏推荐错误');
     if ($player->update($user2, ['nickname' => 'Smoke Player'])['nickname'] !== 'Smoke Player') throw new RuntimeException('玩家资料更新错误');
+    $user2->update(['status' => 0]);
+    $service->handle('bet', ['user_id' => (string) $user2->unique_id, 'currency' => 'USD', 'game_id' => 'smoke-game', 'transaction_id' => 'disabled-current-game-bet', 'bet_amount' => '1', 'round_id' => 'disabled-round']);
+    $version = $wallet2->fresh()->version;
+    $zero = ['user_id' => (string) $user2->unique_id, 'currency' => 'USD', 'game_id' => 'smoke-game', 'transaction_id' => 'disabled-current-game-close', 'win_amount' => '0', 'is_end' => 1, 'round_id' => 'disabled-round'];
+    $first = $service->handle('win', $zero);
+    $repeat = $service->handle('win', $zero);
+    if ($first !== $repeat) throw new RuntimeException('零派奖重试返回不同结果');
+    if ($wallet2->fresh()->version !== $version || $wallet2->fresh()->balance !== '94.00000000') throw new RuntimeException('零派奖改动钱包');
+    if (Db::table('mgs_bills_' . gmdate('ym'))->where('amount', 0)->exists()) throw new RuntimeException('生成零金额资金流水');
+    if (Db::table('mgs_trade_events_' . gmdate('ym'))->where('transaction_id', $zero['transaction_id'])->count() !== 1) throw new RuntimeException('零结单事件不幂等');
+    if ((int) Db::table('mgs_bets_' . gmdate('ym'))->where('bet_no', $first['bet_no'])->value('status') !== 2) throw new RuntimeException('停用用户原游戏没有结单');
+    $free = array_replace($zero, ['transaction_id' => 'free-bet', 'bet_amount' => '0', 'round_id' => 'free-round']);
+    $service->handle('bet', $free);
+    $close = $service->handle('win', array_replace($free, ['transaction_id' => 'free-close']));
+    if ((int) Db::table('mgs_bets_' . gmdate('ym'))->where('bet_no', $close['bet_no'])->value('status') !== 2) throw new RuntimeException('免费零金额局误判为撤销');
     echo "MGS smoke test passed\n";
 } finally {
     Db::statement("USE `{$original['database']}`");

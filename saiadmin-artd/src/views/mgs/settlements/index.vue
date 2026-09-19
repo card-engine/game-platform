@@ -63,7 +63,7 @@
         >
         <template #fee="{ row }"
           ><div>{{ money(row.platform_fee) }}</div
-          ><div class="text-xs text-g-500">{{ percent(row.rate_value) }}</div></template
+          ><div class="text-xs text-g-500">{{ t('mgs.rateDetails') }}</div></template
         >
         <template #net="{ row }">{{ money(row.mgs_net_amount) }}</template>
         <template #status="{ row }"
@@ -71,8 +71,45 @@
             statuses[row.status] || row.status
           }}</ElTag></template
         >
+        <template #operation="{ row }"
+          ><ElSpace wrap>
+            <ElButton link type="primary" @click="open(row.id, 'view')">{{
+              t('mgsRecharge.detail')
+            }}</ElButton>
+            <ElButton
+              v-if="row.status === 0"
+              v-permission="'app:mgs:settlement:confirm'"
+              link
+              type="primary"
+              @click="open(row.id, 'confirm')"
+              >{{ t('mgs.confirmSettlement') }}</ElButton
+            >
+            <ElButton
+              v-if="row.status === 1"
+              v-permission="'app:mgs:settlement:pay'"
+              link
+              type="success"
+              @click="open(row.id, 'pay')"
+              >{{ t('mgs.registerPayment') }}</ElButton
+            >
+            <ElButton
+              v-if="row.status === 1"
+              v-permission="'app:mgs:settlement:confirm'"
+              link
+              @click="open(row.id, 'reopen')"
+              >{{ t('mgs.reopen') }}</ElButton
+            >
+          </ElSpace></template
+        >
       </ArtTable>
     </ElCard>
+    <SettlementDialog
+      v-if="current"
+      :data="current"
+      :mode="mode"
+      @close="current = undefined"
+      @success="refreshData"
+    />
   </div>
 </template>
 
@@ -82,9 +119,17 @@
   import { useTable } from '@/hooks/core/useTable'
   import { money } from '@/utils/game/amount'
   import api from '@/api/mgs'
+  import settlementApi, { type Settlement } from '@/api/mgs/settlements'
+  import SettlementDialog from './modules/settlement-dialog.vue'
   import TableSearch from '../modules/table-search.vue'
 
   const { t, locale } = useI18n()
+  const current = ref<Settlement>()
+  const mode = ref<'view' | 'confirm' | 'pay' | 'reopen'>('view')
+  async function open(id: number, action: typeof mode.value) {
+    mode.value = action
+    current.value = await settlementApi.read(id)
+  }
   const previousMonth = () => {
     const date = new Date()
     date.setUTCDate(1)
@@ -94,7 +139,7 @@
   const statuses = computed<Record<number, string>>(() => ({
     0: t('mgs.pendingConfirmation'),
     1: t('mgs.confirmed'),
-    2: t('mgs.paid')
+    2: t('mgs.settled')
   }))
   const statusTypes: Record<number, 'warning' | 'success' | 'info'> = {
     0: 'warning',
@@ -104,7 +149,6 @@
   const filters = reactive<any>({ settlement_month: '', currency_code: '', status: '' })
   const generateMonth = ref(previousMonth())
   const generating = ref(false)
-  const percent = (value: string) => `${Number(value || 0) * 100}%`
   const search = () => {
     Object.assign(searchParams, filters)
     getData()
@@ -147,7 +191,8 @@
         { prop: 'net', label: t('mgs.mgsNet'), width: 140, useSlot: true },
         { prop: 'paid_time', label: t('mgs.paidTime'), width: 175 },
         { prop: 'create_time', label: t('mgs.createTime'), width: 175 },
-        { prop: 'status', label: t('mgs.status'), width: 100, fixed: 'right', useSlot: true }
+        { prop: 'status', label: t('mgs.status'), width: 100, useSlot: true },
+        { prop: 'operation', label: t('mgs.actions'), minWidth: 260, fixed: 'right', useSlot: true }
       ]
     }
   })
