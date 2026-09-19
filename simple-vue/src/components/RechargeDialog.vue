@@ -27,22 +27,20 @@ let timer: ReturnType<typeof setTimeout> | undefined
 let clockTimer: ReturnType<typeof setInterval> | undefined
 let disposed = false
 
-async function load(newOrder = false) {
+async function load() {
   clearTimeout(timer)
   busy.value = true
   error.value = ''
+  options.value = undefined
   try {
-    if (newOrder) {
-      localStorage.removeItem(`${storageKey}:order`)
-      order.value = null
+    order.value = await getCurrentRecharge(props.currency)
+    // 订单只从服务端恢复；开始新一轮时丢弃旧订单指针和提交请求号。
+    for (const key of Object.keys(localStorage)) {
+      if (key === `${storageKey}:order` || key.startsWith(`${storageKey}:request:`)) localStorage.removeItem(key)
     }
-    const current = await getCurrentRecharge(props.currency)
-    const previous = localStorage.getItem(`${storageKey}:order`)
-    order.value = current || (previous ? await getRecharge(previous) : null)
     options.value = await getRechargeOptions(props.currency)
     amount.value = options.value.default_amount
     payCurrency.value = options.value.payments[0]?.pay_currency_code || 'USDT'
-    if (order.value?.status === 'paid' && !disposed) emit('paid')
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : t('recharge.failed')
   } finally {
@@ -55,14 +53,13 @@ async function submit() {
   if (busy.value || !options.value?.available || !payment.value) return
   busy.value = true
   error.value = ''
-  // 同一账号、币种和档位的网络重试复用请求编号，刷新页面也不丢失。
+  // 同一次提交的网络重试复用请求编号，重新打开时由服务端恢复订单。
   const requestKey = `${storageKey}:request:${amount.value}:${payCurrency.value}`
   const requestId = localStorage.getItem(requestKey) || crypto.randomUUID()
   localStorage.setItem(requestKey, requestId)
   try {
     order.value = await createRecharge({ currency_code: props.currency, recharge_amount: amount.value,
       pay_currency_code: payCurrency.value, request_id: requestId, quote_key: payment.value.quote_key })
-    localStorage.setItem(`${storageKey}:order`, order.value.mgs_recharge_id)
     localStorage.removeItem(requestKey)
     if (order.value.status === 'paid' && !disposed) emit('paid')
   } catch (cause) {
@@ -129,7 +126,7 @@ onBeforeUnmount(() => {
         <p>{{ t('recharge.expires') }}: {{ Math.floor(remaining / 60) }}:{{ String(remaining % 60).padStart(2, '0') }}</p>
       </template>
       <el-button :loading="busy" @click="refresh">{{ t('recharge.refresh') }}</el-button>
-      <el-button v-if="['paid', 'expired', 'closed'].includes(order.status)" :disabled="busy" @click="load(true)">
+      <el-button v-if="order.status !== 'review' && !canPay" :disabled="busy" @click="load">
         {{ t('recharge.newOrder') }}
       </el-button>
     </template>
@@ -145,8 +142,7 @@ onBeforeUnmount(() => {
       <p>{{ t('recharge.credit') }}: <CurrencyIcon :code="currency" /> {{ formatAmount(amount) }} {{ currency }}</p>
       <p v-if="payment">{{ t('recharge.estimate') }}: {{ formatAmount(payment.amounts[String(amount)]) }} {{ payCurrency }}</p>
       <el-button type="primary" :loading="busy" :disabled="!options?.available || !payment" @click="submit">{{ t('recharge.create') }}</el-button>
-      <el-button :disabled="busy" @click="load()">{{ t('recharge.refresh') }}</el-button>
-      <el-button v-if="error" :disabled="busy" @click="load(true)">{{ t('recharge.newOrder') }}</el-button>
+      <el-button :disabled="busy" @click="load">{{ t('recharge.refresh') }}</el-button>
     </template>
   </el-dialog>
 </template>

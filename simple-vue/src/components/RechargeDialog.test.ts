@@ -14,6 +14,7 @@ const order = { mgs_recharge_id: '1', recharge_no: 'MR-test', create_time: '2026
   expire_time: '2026-09-17T01:15:00.000Z', server_time: '2026-09-17T01:00:00.000Z' }
 let app: ReturnType<typeof createApp>
 let root: HTMLDivElement
+const paid = vi.fn()
 
 async function settle() {
   for (let i = 0; i < 8; i++) await Promise.resolve()
@@ -23,7 +24,7 @@ async function settle() {
 function mount() {
   root = document.createElement('div')
   document.body.append(root)
-  app = createApp(RechargeDialog, { currency: 'INR', userId: 'player' })
+  app = createApp(RechargeDialog, { currency: 'INR', userId: 'player', onPaid: paid })
   const container = defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) })
   app.component('el-dialog', container)
   app.component('el-radio-group', container)
@@ -36,7 +37,7 @@ function mount() {
 
 beforeEach(() => {
   vi.useFakeTimers()
-  vi.clearAllMocks()
+  vi.resetAllMocks()
   localStorage.clear()
   Object.defineProperty(document, 'hidden', { configurable: true, value: false })
   vi.mocked(getCurrentRecharge).mockResolvedValue(null)
@@ -80,7 +81,7 @@ describe('recharge dialog', () => {
     expect(calls[0][0].request_id).toBe(calls[1][0].request_id)
     expect(calls[1][0].quote_key).toBe('quote')
     expect(root.textContent).toContain('1.2501 USDT')
-    expect(localStorage.getItem('mgs-recharge:player:INR:order')).toBe('1')
+    expect(localStorage.getItem('mgs-recharge:player:INR:order')).toBeNull()
   })
 
   it('restores the active order and stops polling while hidden or unmounted', async () => {
@@ -103,16 +104,89 @@ describe('recharge dialog', () => {
     expect(getRecharge).toHaveBeenCalledTimes(2)
   })
 
-  it('can recover when the locally saved order no longer exists', async () => {
-    localStorage.setItem('mgs-recharge:player:INR:order', 'missing-order')
-    vi.mocked(getRecharge).mockRejectedValueOnce(new Error('not found'))
+  it.each(['paid', 'expired', 'closed', 'missing'] as const)('ignores the old %s order when the server has no active order', async (status) => {
+    localStorage.setItem('mgs-recharge:player:INR:order', status)
+    localStorage.setItem('mgs-recharge:player:INR:request:100:USDT', 'old-request')
+    localStorage.setItem('mgs-recharge:other:INR:order', 'other-order')
     mount()
     await settle()
-    const reset = [...root.querySelectorAll('button')].find((button) => button.textContent === 'recharge.newOrder')!
-    reset.click()
-    await settle()
+    expect(getCurrentRecharge).toHaveBeenCalledWith('INR')
+    expect(getRecharge).not.toHaveBeenCalled()
+    expect(root.textContent).not.toContain('MR-test')
+    expect(root.querySelector('.recharge-amounts')).not.toBeNull()
     expect(localStorage.getItem('mgs-recharge:player:INR:order')).toBeNull()
-    expect(root.textContent).toContain('1.25 USDT')
+    expect(localStorage.getItem('mgs-recharge:other:INR:order')).toBe('other-order')
+    expect(createRecharge).not.toHaveBeenCalled()
+    const submit = [...root.querySelectorAll('button')].find(button => button.textContent === 'recharge.create')!
+    submit.click()
+    await settle()
+    expect(vi.mocked(createRecharge).mock.calls[0][0].request_id).not.toBe('old-request')
+  })
+
+  it('restores a review order without showing payment instructions or creating another order', async () => {
+    vi.mocked(getCurrentRecharge).mockResolvedValue({ ...order, status: 'review' })
+    mount()
+    await settle()
+    expect(root.textContent).toContain('MR-test')
+    expect(root.textContent).toContain('recharge.review')
+    expect(root.querySelector('.recharge-qr')).toBeNull()
+    expect(root.textContent).not.toContain('recharge.newOrder')
+    expect(createRecharge).not.toHaveBeenCalled()
+  })
+
+  it.each(['paid', 'expired', 'closed'] as const)('starts a fresh order after %s and reopening', async (status) => {
+    mount()
+    await settle()
+    const submit = [...root.querySelectorAll('button')].find(button => button.textContent === 'recharge.create')!
+    submit.click()
+    await settle()
+    const firstRequest = vi.mocked(createRecharge).mock.calls[0][0].request_id
+    vi.mocked(getRecharge).mockResolvedValue({ ...order, status })
+    await vi.advanceTimersByTimeAsync(5000)
+    await settle()
+    expect(root.textContent).toContain(`recharge.${status}`)
+    expect(root.querySelector('.recharge-qr')).toBeNull()
+    expect(paid).toHaveBeenCalledTimes(status === 'paid' ? 1 : 0)
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(getRecharge).toHaveBeenCalledTimes(1)
+    app.unmount()
+    root.remove()
+    mount()
+    await settle()
+    expect(root.textContent).not.toContain('MR-test')
+    expect(root.querySelector('.recharge-amounts')).not.toBeNull()
+    const next = [...root.querySelectorAll('button')].find(button => button.textContent === 'recharge.create')!
+    next.click()
+    await settle()
+    expect(vi.mocked(createRecharge).mock.calls[1][0].request_id).not.toBe(firstRequest)
+  })
+
+  it('allows a new order immediately when the displayed countdown expires', async () => {
+    vi.mocked(getCurrentRecharge).mockResolvedValueOnce({ ...order, expire_time: '2026-09-17T01:00:01.000Z' })
+    mount()
+    await settle()
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(root.querySelector('.recharge-qr')).toBeNull()
+    const next = [...root.querySelectorAll('button')].find(button => button.textContent === 'recharge.newOrder')!
+    expect(next).toBeDefined()
+    next.click()
+    await settle()
+    expect(root.querySelector('.recharge-amounts')).not.toBeNull()
+    expect(createRecharge).not.toHaveBeenCalled()
+  })
+
+  it('keeps creation disabled if current-order lookup fails, and recovers on retry', async () => {
+    vi.mocked(getCurrentRecharge).mockRejectedValueOnce(new Error('offline'))
+    mount()
+    await settle()
+    expect(root.textContent).toContain('offline')
+    const submit = [...root.querySelectorAll('button')].find(button => button.textContent === 'recharge.create')!
+    expect(submit.disabled).toBe(true)
+    expect(getRechargeOptions).not.toHaveBeenCalled()
+    const retry = [...root.querySelectorAll('button')].find(button => button.textContent === 'recharge.refresh')!
+    retry.click()
+    await settle()
+    expect(submit.disabled).toBe(false)
     expect(createRecharge).not.toHaveBeenCalled()
   })
 })
