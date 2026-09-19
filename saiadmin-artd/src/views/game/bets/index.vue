@@ -110,9 +110,11 @@
         }}</ElDescriptionsItem></ElDescriptions
       >
       <ElTable :data="current?.actions || []"
-        ><ElTableColumn prop="time" :label="$t('game.time')" width="190" /><ElTableColumn
-          :label="$t('game.actions')"
-          width="100"
+        ><ElTableColumn
+          prop="time"
+          :formatter="(row) => formatTime(row.time)"
+          :label="$t('game.time')"
+          width="190" /><ElTableColumn :label="$t('game.actions')" width="100"
           ><template #default="{ row }">{{
             actionNames[row.type] || row.type
           }}</template></ElTableColumn
@@ -128,6 +130,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { useTable } from '@/hooks/core/useTable'
   import merchantApi from '@/api/game/merchant'
   import api from '@/api/game/operations'
@@ -136,6 +139,7 @@
   import { currentMonthRange } from '@/utils/game/date'
   import { useI18n } from 'vue-i18n'
 
+  const { formatTime } = useGameTime()
   const { t, locale } = useI18n()
   const merchants = ref<any[]>([])
   const dateRange = ref(currentMonthRange())

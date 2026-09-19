@@ -71,7 +71,12 @@
           </div>
         </template>
       </ElTableColumn>
-      <ElTableColumn prop="user.login_time" :label="$t('game.lastLogin')" min-width="170" />
+      <ElTableColumn
+        prop="user.login_time"
+        :formatter="(row) => formatTime(row.user.login_time)"
+        :label="$t('game.lastLogin')"
+        min-width="170"
+      />
       <ElTableColumn :label="$t('game.status')" width="80">
         <template #default="{ row }">
           <ElSwitch
@@ -95,6 +100,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { useI18n } from 'vue-i18n'
   import enterpriseApi from '@/api/game/enterprise'
@@ -107,6 +113,7 @@
     set: (value) => emit('update:modelValue', value)
   })
   const loading = ref(false)
+  const { formatTime } = useGameTime()
   const { t } = useI18n()
   const users = ref<any[]>([])
   const merchants = ref<any[]>([])

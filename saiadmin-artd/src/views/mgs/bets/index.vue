@@ -93,6 +93,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { useI18n } from 'vue-i18n'
   import { useTable } from '@/hooks/core/useTable'
   import { money } from '@/utils/game/amount'
@@ -100,6 +101,7 @@
   import api from '@/api/mgs'
   import TableSearch from '../modules/table-search.vue'
 
+  const { formatTime } = useGameTime()
   const { t, locale } = useI18n()
   const statuses = computed<Record<number, string>>(() => ({
     1: t('mgs.inProgress'),
@@ -125,7 +127,12 @@
     drawer.value = true
   }
   const detailColumns = computed(() => [
-    { prop: 'time', label: t('mgs.time'), width: 180 },
+    {
+      prop: 'time',
+      label: t('mgs.time'),
+      width: 180,
+      formatter: (row: { time: string | null }) => formatTime(row.time)
+    },
     {
       prop: 'type',
       label: t('mgs.type'),

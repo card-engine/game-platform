@@ -114,6 +114,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { ElMessage } from 'element-plus'
   import { useI18n } from 'vue-i18n'
   import { useTable } from '@/hooks/core/useTable'
@@ -123,6 +124,7 @@
   import SettlementDialog from './modules/settlement-dialog.vue'
   import TableSearch from '../modules/table-search.vue'
 
+  const { formatTime } = useGameTime()
   const { t, locale } = useI18n()
   const current = ref<Settlement>()
   const mode = ref<'view' | 'confirm' | 'pay' | 'reopen'>('view')
@@ -189,8 +191,18 @@
         { prop: 'volume', label: t('mgs.fundSummary'), minWidth: 270, useSlot: true },
         { prop: 'fee', label: t('mgs.platformFee'), width: 140, useSlot: true },
         { prop: 'net', label: t('mgs.mgsNet'), width: 140, useSlot: true },
-        { prop: 'paid_time', label: t('mgs.paidTime'), width: 175 },
-        { prop: 'create_time', label: t('mgs.createTime'), width: 175 },
+        {
+          prop: 'paid_time',
+          label: t('mgs.paidTime'),
+          width: 175,
+          formatter: (row: { paid_time: string | null }) => formatTime(row.paid_time)
+        },
+        {
+          prop: 'create_time',
+          label: t('mgs.createTime'),
+          width: 175,
+          formatter: (row: { create_time: string | null }) => formatTime(row.create_time)
+        },
         { prop: 'status', label: t('mgs.status'), width: 100, useSlot: true },
         { prop: 'operation', label: t('mgs.actions'), minWidth: 260, fixed: 'right', useSlot: true }
       ]

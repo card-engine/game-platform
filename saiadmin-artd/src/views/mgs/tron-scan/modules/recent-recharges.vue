@@ -1,10 +1,12 @@
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { useI18n } from 'vue-i18n'
   import type { RecentRecharge } from '@/api/mgs/recharges'
   import { displayAmount } from '@/utils/game/amount'
 
   defineProps<{ rows: RecentRecharge[] }>()
   const { t } = useI18n()
+  const { timezone, formatTime } = useGameTime()
 </script>
 
 <template>
@@ -25,7 +27,7 @@
             <th>{{ t('mgs.user') }}</th>
             <th class="numeric">{{ t('mgsRecharge.creditAmount') }}</th>
             <th class="numeric">{{ t('mgsRecharge.payAmount') }}</th>
-            <th>{{ t('tronScan.creditedTime') }} · UTC</th>
+            <th>{{ t('tronScan.creditedTime') }} · {{ timezone }}</th>
             <th>{{ t('mgsRecharge.transaction') }}</th>
           </tr>
         </thead>
@@ -46,9 +48,9 @@
               >{{ displayAmount(row.pay_amount) }} {{ row.pay_currency_code }}</td
             >
             <td
-              :title="row.credited_time + ' UTC'"
-              :data-label="t('tronScan.creditedTime') + ' · UTC'"
-              >{{ row.credited_time.slice(5, 19) }}</td
+              :title="formatTime(row.credited_time) + ' ' + timezone"
+              :data-label="t('tronScan.creditedTime') + ' · ' + timezone"
+              >{{ formatTime(row.credited_time, 'short') }}</td
             >
             <td class="transfer-cell">
               <template v-for="transfer in row.transfers" :key="transfer.transaction_id">

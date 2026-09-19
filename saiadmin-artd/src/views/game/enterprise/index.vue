@@ -73,6 +73,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { useTable } from '@/hooks/core/useTable'
   import { useSaiAdmin } from '@/composables/useSaiAdmin'
   import api from '@/api/game/enterprise'
@@ -82,6 +83,7 @@
   import SuperBadge from '@/components/business/super-badge.vue'
   import { useI18n } from 'vue-i18n'
 
+  const { formatTime } = useGameTime()
   const { t, locale } = useI18n()
   const searchForm = reactive<{ name: string; status: number | '' }>({ name: '', status: '' })
   const search = () => {
@@ -117,7 +119,12 @@
         { prop: 'timezone', label: t('game.timezone'), minWidth: 140 },
         { prop: 'default_language', label: t('game.defaultLanguage'), width: 100 },
         { prop: 'status', label: t('game.status'), width: 90, useSlot: true },
-        { prop: 'create_time', label: t('game.createdAt'), width: 170 },
+        {
+          prop: 'create_time',
+          label: t('game.createdAt'),
+          width: 170,
+          formatter: (row: { create_time: string | null }) => formatTime(row.create_time)
+        },
         { prop: 'operation', label: t('game.operation'), width: 130, fixed: 'right', useSlot: true }
       ]
     }

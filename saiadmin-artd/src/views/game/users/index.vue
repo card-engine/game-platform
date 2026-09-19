@@ -67,12 +67,14 @@
 </template>
 
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { useTable } from '@/hooks/core/useTable'
   import merchantApi from '@/api/game/merchant'
   import api from '@/api/game/operations'
   import { mittBus } from '@/utils/sys'
   import { useI18n } from 'vue-i18n'
 
+  const { formatTime } = useGameTime()
   const { t, locale } = useI18n()
   const merchants = ref<any[]>([])
   const userStatuses = computed<Record<number, string>>(() => ({
@@ -110,8 +112,18 @@
         { prop: 'player', label: t('game.player'), minWidth: 190, useSlot: true },
         { prop: 'merchant', label: t('game.merchantParam'), minWidth: 180, useSlot: true },
         { prop: 'last_ip', label: t('game.lastIp'), minWidth: 130 },
-        { prop: 'last_launch_time', label: t('game.lastLaunch'), width: 170 },
-        { prop: 'create_time', label: t('game.firstSync'), width: 170 },
+        {
+          prop: 'last_launch_time',
+          label: t('game.lastLaunch'),
+          width: 170,
+          formatter: (row: { last_launch_time: string | null }) => formatTime(row.last_launch_time)
+        },
+        {
+          prop: 'create_time',
+          label: t('game.firstSync'),
+          width: 170,
+          formatter: (row: { create_time: string | null }) => formatTime(row.create_time)
+        },
         { prop: 'status', label: t('game.status'), width: 90, useSlot: true }
       ]
     }

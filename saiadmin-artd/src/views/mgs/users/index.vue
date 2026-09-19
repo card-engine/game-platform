@@ -38,7 +38,7 @@
           ><span v-if="!row.wallets?.length">-</span></template
         >
         <template #access="{ row }"
-          ><div>{{ row.last_login_time || '-' }}</div
+          ><div>{{ formatTime(row.last_login_time) }}</div
           ><div class="text-xs text-g-500">{{ row.last_ip || '-' }}</div></template
         >
         <template #status="{ row }"
@@ -62,6 +62,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { useI18n } from 'vue-i18n'
   import { ElMessageBox } from 'element-plus'
   import { useTable } from '@/hooks/core/useTable'
@@ -69,6 +70,7 @@
   import api from '@/api/mgs'
   import TableSearch from '../modules/table-search.vue'
 
+  const { formatTime } = useGameTime()
   const { t, locale } = useI18n()
   const filters = reactive<any>({ keyword: '', status: '' })
   const search = () => {
@@ -101,8 +103,18 @@
         { prop: 'wallets', label: t('mgs.walletBalance'), minWidth: 150, useSlot: true },
         { prop: 'language', label: t('mgs.language'), width: 90 },
         { prop: 'access', label: t('mgs.lastLogin'), minWidth: 170, useSlot: true },
-        { prop: 'last_launch_time', label: t('mgs.lastLaunch'), width: 170 },
-        { prop: 'create_time', label: t('mgs.createTime'), width: 170 },
+        {
+          prop: 'last_launch_time',
+          label: t('mgs.lastLaunch'),
+          width: 170,
+          formatter: (row: { last_launch_time: string | null }) => formatTime(row.last_launch_time)
+        },
+        {
+          prop: 'create_time',
+          label: t('mgs.createTime'),
+          width: 170,
+          formatter: (row: { create_time: string | null }) => formatTime(row.create_time)
+        },
         { prop: 'status', label: t('mgs.status'), width: 90, useSlot: true },
         { prop: 'operation', label: t('mgs.status'), width: 110, fixed: 'right', useSlot: true }
       ]

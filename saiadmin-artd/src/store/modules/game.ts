@@ -4,6 +4,7 @@ import { ref } from 'vue'
 export const useGameStore = defineStore('gameStore', () => {
   const merchantId = ref<number>()
   const role = ref('')
+  const timezone = ref('UTC')
   const setMerchant = (id?: number) => {
     merchantId.value = id
     if (id) localStorage.setItem('mg-current-merchant', String(id))
@@ -15,5 +16,5 @@ export const useGameStore = defineStore('gameStore', () => {
     if (id) merchantId.value = id
   }
   restore()
-  return { merchantId, role, setMerchant, setRole }
+  return { merchantId, role, timezone, setMerchant, setRole }
 })

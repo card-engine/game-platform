@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { useI18n } from 'vue-i18n'
   import { ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
   import api, { type Settlement } from '@/api/mgs/settlements'
@@ -6,6 +7,7 @@
   const props = defineProps<{ data: Settlement; mode: 'view' | 'confirm' | 'pay' | 'reopen' }>()
   const emit = defineEmits<{ close: []; success: [] }>()
   const { t } = useI18n()
+  const { timezone, formatTime } = useGameTime()
   const formRef = ref<FormInstance>()
   const busy = ref(false)
   const form = reactive({
@@ -68,10 +70,12 @@
         ></ElDescriptionsItem
       >
       <ElDescriptionsItem :label="t('mgs.confirmed')"
-        >{{ data.confirmed_by || '—' }} · {{ data.confirmed_time || '—' }} UTC</ElDescriptionsItem
+        >{{ data.confirmed_by || '—' }} · {{ formatTime(data.confirmed_time) }} ·
+        {{ timezone }}</ElDescriptionsItem
       >
       <ElDescriptionsItem :label="t('mgs.paidTime')"
-        >{{ data.paid_by || '—' }} · {{ data.paid_time || '—' }} UTC</ElDescriptionsItem
+        >{{ data.paid_by || '—' }} · {{ formatTime(data.paid_time) }} ·
+        {{ timezone }}</ElDescriptionsItem
       >
       <ElDescriptionsItem :label="t('mgs.paymentReference')">{{
         data.payment_reference || '—'

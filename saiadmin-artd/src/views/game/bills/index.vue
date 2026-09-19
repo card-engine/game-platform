@@ -181,13 +181,14 @@
 
     <ElDrawer v-model="drawer" :title="$t('game.billDetail')" size="min(620px, 92vw)">
       <pre class="whitespace-pre-wrap break-all rounded bg-g-100 p-4 text-xs">{{
-        JSON.stringify(current?.data || {}, null, 2)
+        formatJson(current?.data || {})
       }}</pre>
     </ElDrawer>
   </div>
 </template>
 
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { useTable } from '@/hooks/core/useTable'
   import merchantApi from '@/api/game/merchant'
   import api from '@/api/game/operations'
@@ -196,6 +197,7 @@
   import { currentMonthRange, recentMonthRange } from '@/utils/game/date'
   import { useI18n } from 'vue-i18n'
 
+  const { formatTime, formatJson } = useGameTime()
   const { t, locale } = useI18n()
   const tab = ref('player')
   const merchants = ref<any[]>([])
@@ -270,7 +272,12 @@
         { prop: 'amount', label: t('game.amount'), width: 120, useSlot: true },
         { prop: 'currency_code', label: t('game.currency'), width: 75 },
         { prop: 'source', label: t('game.source'), width: 100 },
-        { prop: 'received_time', label: t('game.receivedAt'), width: 190 },
+        {
+          prop: 'received_time',
+          label: t('game.receivedAt'),
+          width: 190,
+          formatter: (row: { received_time: string | null }) => formatTime(row.received_time)
+        },
         { prop: 'status', label: t('game.status'), width: 105, useSlot: true },
         { prop: 'detail', label: '', width: 70, fixed: 'right', useSlot: true }
       ]
@@ -304,7 +311,12 @@
         { prop: 'merchantAfter', label: t('game.after'), width: 120, useSlot: true },
         { prop: 'source', label: t('game.source'), minWidth: 160, useSlot: true },
         { prop: 'remark', label: t('game.remark'), minWidth: 140 },
-        { prop: 'create_time', label: t('game.time'), width: 190 }
+        {
+          prop: 'create_time',
+          label: t('game.time'),
+          width: 190,
+          formatter: (row: { create_time: string | null }) => formatTime(row.create_time)
+        }
       ]
     }
   })

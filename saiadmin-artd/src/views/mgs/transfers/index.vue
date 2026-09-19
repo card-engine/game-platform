@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { useI18n } from 'vue-i18n'
   import { useTable } from '@/hooks/core/useTable'
   import { useSaiAdmin } from '@/composables/useSaiAdmin'
@@ -6,6 +7,7 @@
   import { displayAmount } from '@/utils/game/amount'
   import TableSearch from './modules/table-search.vue'
   import EditDialog from './modules/edit-dialog.vue'
+  const { formatTime, formatJson } = useGameTime()
   const { t, locale } = useI18n()
   const statusTypes = {
     pending: 'primary',
@@ -46,7 +48,12 @@
         { prop: 'amount', label: t('mgsRecharge.payAmount'), minWidth: 150, useSlot: true },
         { prop: 'status', label: t('mgs.status'), width: 120, useSlot: true },
         { prop: 'remark', label: t('mgsRecharge.reason'), minWidth: 220 },
-        { prop: 'block_time', label: t('mgsRecharge.blockTime'), width: 180 },
+        {
+          prop: 'block_time',
+          label: t('mgsRecharge.blockTime'),
+          width: 180,
+          formatter: (row: { block_time: string | null }) => formatTime(row.block_time)
+        },
         { prop: 'operation', label: t('mgsRecharge.review'), width: 100, useSlot: true }
       ]
     }
@@ -115,7 +122,7 @@
     </ElCard>
     <EditDialog v-model="dialogVisible" :data="dialogData" @success="refreshData" />
     <ElDialog v-model="detailVisible" :title="t('mgsRecharge.detail')" width="min(90vw, 800px)">
-      <pre class="whitespace-pre-wrap break-all">{{ JSON.stringify(detailData, null, 2) }}</pre>
+      <pre class="whitespace-pre-wrap break-all">{{ formatJson(detailData) }}</pre>
     </ElDialog>
   </div>
 </template>

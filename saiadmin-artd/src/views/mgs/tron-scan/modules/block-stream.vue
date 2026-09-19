@@ -1,10 +1,12 @@
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { useClipboard } from '@vueuse/core'
   import { useI18n } from 'vue-i18n'
   import type { TronBlock } from '@/api/mgs/recharges'
 
   const props = defineProps<{ blocks: TronBlock[] }>()
   const { t } = useI18n()
+  const { timezone, formatTime } = useGameTime()
   const { copy, copied } = useClipboard()
   const visible = computed(() => props.blocks.slice(0, 6).reverse())
 </script>
@@ -13,7 +15,7 @@
   <section class="blocks-panel" :aria-label="t('tronScan.recentBlocks')">
     <header
       ><strong>{{ t('tronScan.recentBlocks') }}</strong
-      ><span>{{ t('tronScan.blockOrder') }} · UTC</span></header
+      ><span>{{ t('tronScan.blockOrder') }} · {{ timezone }}</span></header
     >
     <ElEmpty v-if="!blocks.length" :description="t('tronScan.waitingBlocks')" :image-size="40" />
     <div v-else class="block-stream">
@@ -30,7 +32,7 @@
         }"
       >
         <span class="block-time"
-          >{{ block.block_time.slice(11, 19)
+          >{{ formatTime(block.block_time, 'time')
           }}<span v-if="block.height === blocks[0].height" class="latest-label">{{
             t('tronScan.latest')
           }}</span></span

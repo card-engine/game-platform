@@ -44,6 +44,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { ElMessage } from 'element-plus'
   import { useI18n } from 'vue-i18n'
   import { useTable } from '@/hooks/core/useTable'
@@ -51,6 +52,7 @@
   import api from '@/api/game/settings'
   import SuperBadge from '@/components/business/super-badge.vue'
 
+  const { formatTime } = useGameTime()
   const { t } = useI18n()
 
   const filters = reactive({})
@@ -86,7 +88,13 @@
         { prop: 'base_currency_code', label: t('game.baseCurrency'), width: 80 },
         { prop: 'rates', label: t('game.displayedRates'), minWidth: 620, useSlot: true },
         { prop: 'source', label: t('game.source'), width: 120 },
-        { prop: 'source_update_time', label: t('game.sourceUpdateUtc'), width: 190 }
+        {
+          prop: 'source_update_time',
+          label: t('game.sourceUpdateTime'),
+          width: 190,
+          formatter: (row: { source_update_time: string | null }) =>
+            formatTime(row.source_update_time)
+        }
       ]
     }
   })

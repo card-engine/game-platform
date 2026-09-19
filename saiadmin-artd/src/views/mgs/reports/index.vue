@@ -60,6 +60,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { useI18n } from 'vue-i18n'
   import { useTable } from '@/hooks/core/useTable'
   import { money } from '@/utils/game/amount'
@@ -67,6 +68,7 @@
   import api from '@/api/mgs'
   import TableSearch from '../modules/table-search.vue'
 
+  const { formatTime } = useGameTime()
   const { t, locale } = useI18n()
   const dateRange = ref(recentMonthRange())
   const filters = reactive<any>({ currency_code: '', keyword: '' })
@@ -109,7 +111,12 @@
         { prop: 'volume', label: t('mgs.fundSummary'), minWidth: 275, useSlot: true },
         { prop: 'result', label: t('mgs.result'), width: 150, useSlot: true },
         { prop: 'fee', label: t('mgs.estimatedPlatformFee'), width: 130, useSlot: true },
-        { prop: 'update_time', label: t('mgs.updateTime'), width: 175 }
+        {
+          prop: 'update_time',
+          label: t('mgs.updateTime'),
+          width: 175,
+          formatter: (row: { update_time: string | null }) => formatTime(row.update_time)
+        }
       ]
     }
   })

@@ -159,6 +159,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { ElMessage } from 'element-plus'
   import { useI18n } from 'vue-i18n'
   import { useTable } from '@/hooks/core/useTable'
@@ -166,6 +167,7 @@
   import SuperBadge from '@/components/business/super-badge.vue'
   import { checkAuth } from '@/utils/tool'
 
+  const { formatTime } = useGameTime()
   const { t, locale } = useI18n()
   const canManage = computed(() => checkAuth('app:game:list:update'))
 
@@ -212,7 +214,12 @@
           useSlot: true,
           useHeaderSlot: true
         },
-        { prop: 'last_sync_time', label: t('game.lastSync'), width: 170 },
+        {
+          prop: 'last_sync_time',
+          label: t('game.lastSync'),
+          width: 170,
+          formatter: (row: { last_sync_time: string | null }) => formatTime(row.last_sync_time)
+        },
         { prop: 'operation', label: t('game.operation'), width: 100, fixed: 'right', useSlot: true }
       ]
     }

@@ -185,6 +185,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { ElMessage } from 'element-plus'
   import { useTable } from '@/hooks/core/useTable'
   import api from '@/api/game/list'
@@ -195,6 +196,7 @@
   import { checkAuth } from '@/utils/tool'
   import { useI18n } from 'vue-i18n'
 
+  const { formatTime } = useGameTime()
   const { t, locale } = useI18n()
   const canTrial = computed(() => checkAuth('app:game:list:trial'))
   const canManage = computed(() => checkAuth('app:game:list:update'))
@@ -313,7 +315,12 @@
           useHeaderSlot: true
         },
         { prop: 'capabilities', label: t('game.capability'), width: 105, useSlot: true },
-        { prop: 'last_sync_time', label: t('game.lastSync'), width: 170 },
+        {
+          prop: 'last_sync_time',
+          label: t('game.lastSync'),
+          width: 170,
+          formatter: (row: { last_sync_time: string | null }) => formatTime(row.last_sync_time)
+        },
         {
           prop: 'status',
           label: t('game.status'),

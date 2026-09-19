@@ -1,10 +1,12 @@
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { useI18n } from 'vue-i18n'
   import { useTable } from '@/hooks/core/useTable'
   import { useSaiAdmin } from '@/composables/useSaiAdmin'
   import api from '@/api/mgs/recharges'
   import { displayAmount } from '@/utils/game/amount'
   import TableSearch from './modules/table-search.vue'
+  const { formatTime, formatJson } = useGameTime()
   const { t, locale } = useI18n()
   const statusTypes = {
     pending: 'primary',
@@ -49,7 +51,12 @@
         },
         { prop: 'pay_amount', label: t('mgsRecharge.payAmount'), minWidth: 160, useSlot: true },
         { prop: 'status', label: t('mgs.status'), width: 110, useSlot: true },
-        { prop: 'create_time', label: t('mgs.createTime'), width: 180 }
+        {
+          prop: 'create_time',
+          label: t('mgs.createTime'),
+          width: 180,
+          formatter: (row: { create_time: string | null }) => formatTime(row.create_time)
+        }
       ]
     }
   })
@@ -108,7 +115,7 @@
       </ArtTable>
     </ElCard>
     <ElDialog v-model="dialogVisible" :title="t('mgsRecharge.detail')" width="min(90vw, 800px)">
-      <pre class="whitespace-pre-wrap break-all">{{ JSON.stringify(dialogData, null, 2) }}</pre>
+      <pre class="whitespace-pre-wrap break-all">{{ formatJson(dialogData) }}</pre>
     </ElDialog>
   </div>
 </template>

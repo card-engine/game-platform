@@ -90,18 +90,19 @@
           current.game_name || '-'
         }}</ElDescriptionsItem
         ><ElDescriptionsItem :label="$t('mgs.createTime')">{{
-          current.create_time
+          formatTime(current.create_time)
         }}</ElDescriptionsItem></ElDescriptions
       >
       <pre
         v-if="current?.data"
         class="mt-4 whitespace-pre-wrap break-all rounded bg-g-100 p-4 text-xs"
-        >{{ JSON.stringify(current.data, null, 2) }}</pre>
+        >{{ formatJson(current.data) }}</pre>
     </ElDrawer>
   </div>
 </template>
 
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { useI18n } from 'vue-i18n'
   import { useTable } from '@/hooks/core/useTable'
   import { money } from '@/utils/game/amount'
@@ -109,6 +110,7 @@
   import api from '@/api/mgs'
   import TableSearch from '../modules/table-search.vue'
 
+  const { formatTime, formatJson } = useGameTime()
   const { t, locale } = useI18n()
   const types = computed<Record<string, string>>(() => ({
     bet: t('mgs.betDebit'),
@@ -174,7 +176,12 @@
         { prop: 'amount', label: t('mgs.amountBalance'), minWidth: 190, useSlot: true },
         { prop: 'game_name', label: t('mgs.game'), minWidth: 140 },
         { prop: 'bet_no', label: t('mgs.betNo'), minWidth: 190, showOverflowTooltip: true },
-        { prop: 'create_time', label: t('mgs.createTime'), width: 175 },
+        {
+          prop: 'create_time',
+          label: t('mgs.createTime'),
+          width: 175,
+          formatter: (row: { create_time: string | null }) => formatTime(row.create_time)
+        },
         { prop: 'status', label: t('mgs.status'), width: 90, fixed: 'right', useSlot: true }
       ]
     }

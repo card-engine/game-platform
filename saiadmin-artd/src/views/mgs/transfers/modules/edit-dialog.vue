@@ -1,10 +1,12 @@
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { useI18n } from 'vue-i18n'
   import { ElMessageBox } from 'element-plus'
   import api from '@/api/mgs/recharges'
   const props = defineProps<{ data: Partial<Record<string, unknown>> }>()
   const visible = defineModel<boolean>({ required: true })
   const emit = defineEmits<{ success: [] }>()
+  const { formatJson } = useGameTime()
   const { t } = useI18n()
   const form = reactive({ mgs_recharge_id: '', remark: '', status: 'review' })
   const formRef = ref()
@@ -40,9 +42,7 @@
 </script>
 <template>
   <ElDialog v-model="visible" :title="t('mgsRecharge.review')" width="min(90vw, 700px)">
-    <pre class="max-h-60 overflow-auto whitespace-pre-wrap break-all">{{
-      JSON.stringify(data, null, 2)
-    }}</pre>
+    <pre class="max-h-60 overflow-auto whitespace-pre-wrap break-all">{{ formatJson(data) }}</pre>
     <ElForm ref="formRef" :model="form" :rules="rules" label-position="top">
       <ElFormItem :label="t('mgsRecharge.rechargeId')"
         ><ElInput v-model="form.mgs_recharge_id"

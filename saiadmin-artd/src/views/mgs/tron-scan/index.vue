@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { useDocumentVisibility, useIntervalFn } from '@vueuse/core'
   import { useI18n } from 'vue-i18n'
   import api, { type TronStatus } from '@/api/mgs/recharges'
@@ -6,6 +7,7 @@
   import RecentRecharges from './modules/recent-recharges.vue'
 
   const { t } = useI18n()
+  const { timezone, formatTime } = useGameTime()
   const state = ref<TronStatus>()
   const busy = ref(false)
   const failed = ref(false)
@@ -26,7 +28,7 @@
       label: t('tronScan.solid'),
       value: state.value?.health?.solid_number || null,
       hint: state.value?.health?.solid_time
-        ? new Date(state.value.health.solid_time * 1000).toISOString().slice(11, 19) + ' UTC'
+        ? formatTime(state.value.health.solid_time, 'time')
         : '—'
     },
     {
@@ -97,8 +99,8 @@
         <p
           >TRON MAINNET · {{ t('tronScan.subtitle')
           }}<span v-if="state">
-            · {{ t('tronScan.updated') }}
-            {{ new Date(state.server_time * 1000).toISOString().slice(11, 19) }} UTC</span
+            · {{ t('tronScan.updated') }} {{ formatTime(state.server_time, 'time') }} ·
+            {{ timezone }}</span
           ></p
         >
       </div>
@@ -107,7 +109,6 @@
           :type="failed || state?.health?.error ? 'danger' : state?.ready ? 'success' : 'warning'"
           >{{ statusText }}</ElTag
         >
-        <span class="tron-muted">{{ t('tronScan.polling') }}</span>
         <ElButton size="small" :loading="busy && !state" @click="load">{{
           t('mgsRecharge.refresh')
         }}</ElButton>
@@ -145,16 +146,19 @@
           <span>{{ t('tronScan.nextBlock') }} #{{ gap.next }}</span>
           <span>{{ t('tronScan.attempts', { count: gap.attempts }) }}</span>
           <span v-if="gap.retry_time"
-            >{{ t('tronScan.retryTime') }}
-            {{ new Date(gap.retry_time * 1000).toISOString().replace('T', ' ').slice(0, 19) }}
-            UTC</span
+            >{{ t('tronScan.retryTime') }} {{ formatTime(gap.retry_time) }} · {{ timezone }}</span
           >
           <span v-if="gap.error" class="text-danger">{{ gap.error }}</span>
         </div>
         <pre>{{
           JSON.stringify(
             { checkpoint: state.checkpoint, health: state.health, gaps: state.gaps },
-            null,
+            (key, value) =>
+              ['last_success_time', 'solid_time', 'heartbeat_time', 'retry_time'].includes(key)
+                ? value
+                  ? `${formatTime(value)} ${timezone}`
+                  : '—'
+                : value,
             2
           )
         }}</pre>
@@ -182,8 +186,7 @@
     font-size: 20px;
     font-weight: 600;
   }
-  .tron-heading p,
-  .tron-muted {
+  .tron-heading p {
     color: var(--el-text-color-secondary);
     font-size: 12px;
   }

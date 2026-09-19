@@ -120,8 +120,8 @@
           </ElTag>
         </template>
         <template #time="{ row }">
-          <div>{{ row.login_time || '-' }}</div>
-          <div class="text-xs text-g-500">{{ row.create_time }}</div>
+          <div>{{ formatTime(row.login_time) }}</div>
+          <div class="text-xs text-g-500">{{ formatTime(row.create_time) }}</div>
         </template>
         <template #operation="{ row }">
           <ElSpace>
@@ -163,6 +163,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { useI18n } from 'vue-i18n'
   import { useTable } from '@/hooks/core/useTable'
@@ -171,6 +172,7 @@
   import EditDialog from './modules/edit-dialog.vue'
   import SuperBadge from '@/components/business/super-badge.vue'
 
+  const { formatTime } = useGameTime()
   const { t, locale } = useI18n()
   const filters = reactive<any>({ keyword: '', role_code: '', enterprise_id: '', status: '' })
   const options = reactive<{ roles: any[]; enterprises: any[]; merchants: any[] }>({

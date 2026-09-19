@@ -104,6 +104,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import { ElMessage } from 'element-plus'
   import { useI18n } from 'vue-i18n'
   import { useTable } from '@/hooks/core/useTable'
@@ -115,6 +116,7 @@
   import GameDefaultIcon from '@/views/game/list/modules/game-default-icon.vue'
   import { checkAuth } from '@/utils/tool'
 
+  const { formatTime } = useGameTime()
   const { t, locale } = useI18n()
   const filters = reactive<any>({ keyword: '', status: '' })
   const syncing = ref(false)
@@ -188,7 +190,12 @@
         { prop: 'tags', label: t('mgs.tags'), width: 110, useSlot: true },
         { prop: 'default_rtp', label: 'RTP', width: 90 },
         { prop: 'rate', label: t('mgs.rate'), width: 90, useSlot: true },
-        { prop: 'last_sync_time', label: t('mgs.lastSync'), width: 170 },
+        {
+          prop: 'last_sync_time',
+          label: t('mgs.lastSync'),
+          width: 170,
+          formatter: (row: { last_sync_time: string | null }) => formatTime(row.last_sync_time)
+        },
         { prop: 'status', label: t('mgs.status'), width: 80, useSlot: true },
         { prop: 'operation', label: t('mgs.operation'), width: 80, fixed: 'right', useSlot: true }
       ]

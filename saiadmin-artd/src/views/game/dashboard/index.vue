@@ -127,7 +127,12 @@
           <ElTableColumn :label="$t('game.enabledTotalGames')" width="120">
             <template #default="{ row }">{{ row.enabled_count }} / {{ row.game_count }}</template>
           </ElTableColumn>
-          <ElTableColumn prop="last_sync_time" :label="$t('game.lastSync')" min-width="165" />
+          <ElTableColumn
+            prop="last_sync_time"
+            :formatter="(row) => formatTime(row.last_sync_time)"
+            :label="$t('game.lastSync')"
+            min-width="165"
+          />
         </ElTable>
       </ElCard>
 
@@ -164,6 +169,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useGameTime } from '@/composables/useGameTime'
   import api from '@/api/game/operations'
   import { useChartOps } from '@/hooks/core/useChart'
   import { useSettingStore } from '@/store/modules/setting'
@@ -172,6 +178,7 @@
   import { hexToRgba } from '@/utils/ui'
   import { useI18n } from 'vue-i18n'
 
+  const { formatTime } = useGameTime()
   const { t } = useI18n()
   const { isDark } = storeToRefs(useSettingStore())
   const chartColors = computed(() => {

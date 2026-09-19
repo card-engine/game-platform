@@ -15,6 +15,7 @@
 </template>
 
 <script setup lang="ts">
+  import { storeToRefs } from 'pinia'
   import api from '@/api/game/context'
   import { useGameStore } from '@/store/modules/game'
   import { mittBus } from '@/utils/sys'
@@ -24,7 +25,7 @@
   const store = useGameStore()
   const merchantId = ref<number>()
   const merchants = ref<any[]>([])
-  const timezone = ref('UTC')
+  const { timezone } = storeToRefs(store)
   const time = ref('')
   const loading = ref(false)
   let timer: number
@@ -46,14 +47,18 @@
       const data = await api.read()
       merchants.value =
         data.role === 'super_admin'
-          ? [{ id: 0, label: t('game.allMerchants'), timezone: data.timezone }, ...data.merchants]
+          ? [
+              { id: 0, label: t('game.allMerchants'), timezone: data.platform_timezone },
+              ...data.merchants
+            ]
           : data.merchants
       store.setRole(data.role)
       offset = Number(data.server_time) * 1000 - Date.now()
       const selected = merchants.value.find((item) => item.id === store.merchantId)
       merchantId.value = selected?.id ?? data.merchant_id
       store.setMerchant(merchantId.value)
-      timezone.value = selected?.timezone || data.timezone
+      timezone.value =
+        merchants.value.find((item) => item.id === merchantId.value)?.timezone || data.timezone
       tick()
     } finally {
       loading.value = false
@@ -62,6 +67,7 @@
   const change = (id: number) => {
     store.setMerchant(id)
     timezone.value = merchants.value.find((item) => item.id === id)?.timezone || timezone.value
+    tick()
     mittBus.emit('gameMerchantChanged', id)
   }
   onMounted(async () => {

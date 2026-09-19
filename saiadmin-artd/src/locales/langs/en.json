@@ -2,7 +2,6 @@
   "tronScan": {
     "title": "Block status",
     "subtitle": "Solidified block monitoring",
-    "polling": "Refresh every second",
     "refreshFailed": "Refresh failed",
     "waiting": "Waiting for scan data",
     "error": "Scanner error",
@@ -396,7 +395,7 @@
     "utcDate": "UTC Date",
     "baseCurrency": "Base",
     "displayedRates": "Displayed Currencies",
-    "sourceUpdateUtc": "Source Updated At (UTC)",
+    "sourceUpdateTime": "Source Updated At",
     "rateUpdated": "Today's rates updated",
     "betActions": "Bet Transactions",
     "betNo": "Bet No.",

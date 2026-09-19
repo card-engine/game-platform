@@ -2,7 +2,6 @@
   "tronScan": {
     "title": "区块状态",
     "subtitle": "固化区块监控",
-    "polling": "每 1 秒刷新",
     "refreshFailed": "刷新失败",
     "waiting": "等待扫描数据",
     "error": "扫描异常",
@@ -396,7 +395,7 @@
     "utcDate": "UTC 日期",
     "baseCurrency": "基准",
     "displayedRates": "常用币种",
-    "sourceUpdateUtc": "数据源更新时间（UTC）",
+    "sourceUpdateTime": "数据源更新时间",
     "rateUpdated": "今日汇率已更新",
     "betActions": "注单资金动作",
     "betNo": "注单号",

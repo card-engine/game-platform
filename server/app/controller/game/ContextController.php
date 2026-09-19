@@ -24,6 +24,7 @@ class ContextController extends BaseController
             'role_name' => !$scope ? '平台超管' : ($scope->is_owner ? '企业负责人' : '企业子账号'),
             'merchant_id' => $selected?->id ?: 0,
             'timezone' => $selected?->timezone ?: $platformTimezone,
+            'platform_timezone' => $platformTimezone,
             'server_time' => time(),
             'merchants' => $merchants->map(fn ($merchant) => [
                 'id' => $merchant->id, 'timezone' => $merchant->timezone,
