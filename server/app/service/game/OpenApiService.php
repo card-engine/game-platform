@@ -26,7 +26,7 @@ class OpenApiService
             ->when($where['keyword'] ?? null, fn ($query, $value) => $query->where(fn ($q) => $q->where('mg_games.name', 'like', "%{$value}%")->orWhere('mg_games.game_code', 'like', "%{$value}%")));
     }
 
-    public function launch(Merchant $merchant, array $data, string $ip): array
+    public function launch(Merchant $merchant, array $data, ?string $ip): array
     {
         $gameId = big2id((int) $data['game_id']);
         $game = $this->games($merchant)->where('mg_games.id', $gameId ?: -1)->first();

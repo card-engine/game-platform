@@ -4,6 +4,7 @@ namespace app\controller\openapi;
 
 use app\model\Merchant;
 use app\service\game\OpenApiService;
+use app\validate\game\OpenApiValidate;
 use plugin\saiadmin\basic\OpenController;
 use support\Request;
 use support\Response;
@@ -50,8 +51,8 @@ class OpenApiController extends OpenController
 
     public function launch(Request $request): Response
     {
-        foreach (['user_id', 'game_id'] as $field) if (!$request->post($field)) return $this->fail("{$field} 不能为空");
-        return $this->success($this->service->launch($this->merchant($request), $request->post(), $request->getRealIp()));
+        (new OpenApiValidate())->scene('launch')->failException()->check($request->post());
+        return $this->success($this->service->launch($this->merchant($request), $request->post(), $request->post('ip') ?: null));
     }
 
     public function setRtp(Request $request): Response
